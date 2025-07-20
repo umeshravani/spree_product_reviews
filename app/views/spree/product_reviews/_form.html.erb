@@ -1,0 +1,47 @@
+<div class="review-form-container mb-8 p-4 border border-gray-200 rounded-md shadow-sm bg-white">
+  <%= form_for [:product, product_review], url: spree.product_product_reviews_path(@product) do |f| %>
+    <% if product_review.errors.any? %>
+      <div class="error-messages bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        <h2 class="font-bold mb-2"><%= pluralize(product_review.errors.count, "error") %> prohibited this review from being saved:</h2>
+        <ul class="list-disc list-inside">
+          <% product_review.errors.full_messages.each do |message| %>
+            <li><%= message %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
+<div class="form-group mb-4">
+  <%= f.label :rating, Spree.t("product_review_rating"), class: "block mb-2 font-medium text-gray-700" %>
+  <div class="flex items-center mb-2">
+    <% (1..5).each do |i| %>
+      <div class="flex items-center mr-4">
+        <%= f.radio_button :rating, i, required: true, class: "mr-1" %>
+        <%= label_tag "product_review_rating_#{i}", raw("<span class='text-gray-700 font-semibold'>#{i}</span>"), class: "" %>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+    <div class="form-group mb-4">
+      <%= f.label :title, Spree.t("review_title"), class: "block mb-2 font-medium" %>
+      <%= f.text_field :title, required: true, class: "focus:border-primary focus:ring-primary text-base bg-accent rounded-md border-accent py-2 px-4 w-full" %>
+    </div>
+
+    <div class="form-group mb-4">
+      <%= f.label :review, Spree.t("page_blocks.product_review_form.placeholder_default"), class: "block mb-2 font-medium" %>
+      <%= f.text_area :review, required: true, class: "focus:border-primary focus:ring-primary text-base bg-accent rounded-md border-accent py-2 px-4 w-full", rows: 4, placeholder: block.preferred_placeholder %>
+    </div>
+
+    <div class="form-group mb-4">
+      <div class="flex items-center">
+        <%= f.check_box :show_identifier, class: "mr-2" %>
+        <%= f.label :show_identifier, "Show my name in the review", class: "text-sm text-gray-600" %>
+      </div>
+    </div>
+
+    <% button_class = "btn-primary" %>
+    <% button_class = "btn-secondary" if block.preferred_button_style == "secondary" %>
+    <%= f.submit block.preferred_button_text, class: "#{button_class} py-2 px-6 rounded-md text-white font-medium" %>
+  <% end %>
+</div>
