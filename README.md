@@ -24,13 +24,10 @@ Easy Reviews &amp; Ratings integration for Latest Spree Commerce 5
     ```ruby
     With this Product Reviews can generate Schema Validiation in Google Schema Like
     ```
-    <img width="712" height="686" alt="Screenshot 2025-08-15 at 1 24 00 PM" src="https://github.com/user-attachments/assets/87b36187-2bc1-4715-97dc-851545da713f" />
-    
-    <br><br>
+    <img width="712" height="686" alt="Screenshot 2025-08-15 at 1 24 00 PM" src="https://github.com/user-attachments/assets/87b36187-2bc1-4715-97dc-851545da713f" /><br><br>
     
 **Note:** This can make product reviews visible and notable to Google search engine, Also if you are using a separate theme then replace **_json_ld.html.erb** file in the exact directory mentioned for example "app/views/themes/mytheme/spree/products/" to make schema work, always recommend to check product link in [Rich Results Test](https://search.google.com/test/rich-results). or [Schema Markup Validiator](https://validator.schema.org/). to ensure if script is updated in your store.
-
-    <br><br>
+<br><br>
 
 6. Compile Assests for Proper Images & JS loading:
    
