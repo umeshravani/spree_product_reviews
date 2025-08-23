@@ -17,72 +17,68 @@
   <h1 class="text-2xl font-bold mb-6 text-center"><%= Spree.t('customer_reviews') %></h1>
 
   <% if product_reviews.any? %>
-    <div class="reviews-summary mb-6">
-      <div class="flex items-center mb-2">
-        <div class="text-xl font-bold mr-2">
-          <%= product_reviews.average(:rating).to_f.round(1) %>
-        </div>
-<div class="text-yellow-400 text-xl flex gap-0.5">
-  <% full_stars = product_reviews.average(:rating).to_f.floor %>
-  <% half_star = (product_reviews.average(:rating).to_f - full_stars) >= 0.5 %>
-  <% full_stars.times do %>
-    <span>★</span>
-  <% end %>
-  <% if half_star %>
-    <span>★</span>
-  <% end %>
-  <% (5 - full_stars - (half_star ? 1 : 0)).times do %>
-    <span class="text-gray-300">☆</span>
-  <% end %>
-</div>
-        <div class="ml-2 text-gray-600">
-          (<%= product_reviews.count %> <%= 'review'.pluralize(product_reviews.count) %>)
+    <% cache ["product-reviews", product.id, product_reviews.maximum(:updated_at)] do %>
+      <div class="reviews-summary mb-6">
+        <div class="flex items-center mb-2">
+          <div class="text-xl font-bold mr-2">
+            <%= product_reviews.average(:rating).to_f.round(1) %>
+          </div>
+          <div class="text-yellow-400 text-xl flex gap-0.5">
+            <% full_stars = product_reviews.average(:rating).to_f.floor %>
+            <% half_star = (product_reviews.average(:rating).to_f - full_stars) >= 0.5 %>
+            <% full_stars.times do %> <span>★</span> <% end %>
+            <% if half_star %> <span>★</span> <% end %>
+            <% (5 - full_stars - (half_star ? 1 : 0)).times do %>
+              <span class="text-gray-300">☆</span>
+            <% end %>
+          </div>
+          <div class="ml-2 text-gray-600">
+            (<%= product_reviews.count %> <%= 'review'.pluralize(product_reviews.count) %>)
+          </div>
         </div>
       </div>
-    </div>
 
-    <div class="reviews-list grid gap-3">
-      <% product_reviews.each do |review| %>
-        <div class="review-item border p-4 border-gray-200 py-4 rounded-md">
-          <div class="flex justify-between items-start mb-2">
-            <div>
-              <h3 class="text-lg font-medium"><%= review.title %></h3>
-              <div class="text-yellow-400">
-                <%= '★' * review.rating %>
-                <%= '☆' * (5 - review.rating) %>
+      <div class="reviews-list grid gap-3">
+        <% product_reviews.each do |review| %>
+          <div class="review-item border p-4 border-gray-200 py-4 rounded-md">
+            <div class="flex justify-between items-start mb-2">
+              <div>
+                <h3 class="text-lg font-medium"><%= review.title %></h3>
+                <div class="text-yellow-400">
+                  <%= '★' * review.rating %>
+                  <%= '☆' * (5 - review.rating) %>
+                </div>
+              </div>
+              <div class="text-sm text-gray-500">
+                <%= l(review.created_at.to_date, format: :long) %>
               </div>
             </div>
-            <div class="text-sm text-gray-500">
-              <%= l(review.created_at.to_date, format: :long) %>
+
+            <div class="review-content my-2">
+              <p><%= review.review %></p>
             </div>
+
+            <% if review.show_identifier && review.user %>
+              <div class="review-author text-sm text-gray-600">
+                <%= Spree.t(:by) %> <%= review.user.email.split('@').first %>
+                <% if review.purchase_date.present? %>
+                  <div class="inline-flex items-center gap-1 mt-1">
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="h-4 w-4 text-green-600 icon icon-tabler icons-tabler-filled icon-tabler-rosette-discount-check">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                    <path d="M12.01 2.011a3.2 3.2 0 0 1 2.113 .797l.154 .145l.698 .698a1.2 1.2 0 0 0 .71 .341l.135 .008h1a3.2 3.2 0 0 1 3.195 3.018l.005 .182v1c0 .27 .092 .533 .258 .743l.09 .1l.697 .698a3.2 3.2 0 0 1 .147 4.382l-.145 .154l-.698 .698a1.2 1.2 0 0 0 -.341 .71l-.008 .135v1a3.2 3.2 0 0 1 -3.018 3.195l-.182 .005h-1a1.2 1.2 0 0 0 -.743 .258l-.1 .09l-.698 .697a3.2 3.2 0 0 1 -4.382 .147l-.154 -.145l-.698 -.698a1.2 1.2 0 0 0 -.71 -.341l-.135 -.008h-1a3.2 3.2 0 0 1 -3.195 -3.018l-.005 -.182v-1a1.2 1.2 0 0 0 -.258 -.743l-.09 -.1l-.697 -.698a3.2 3.2 0 0 1 -.147 -4.382l.145 -.154l.698 -.698a1.2 1.2 0 0 0 .341 -.71l.008 -.135v-1l.005 -.182a3.2 3.2 0 0 1 3.013 -3.013l.182 -.005h1a1.2 1.2 0 0 0 .743 -.258l.1 -.09l.698 -.697a3.2 3.2 0 0 1 2.269 -.944zm3.697 7.282a1 1 0 0 0 -1.414 0l-3.293 3.292l-1.293 -1.292l-.094 -.083a1 1 0 0 0 -1.32 1.497l2 2l.094 .083a1 1 0 0 0 1.32 -.083l4 -4l.083 -.094a1 1 0 0 0 -.083 -1.32z" />
+                    </svg>
+                    <span class="text-sm font-medium text-green-600">Verified purchase</span>
+                  </div>
+                <% end %>
+              </div>
+            <% end %>
           </div>
-
-          <div class="review-content my-2">
-            <p><%= review.review %></p>
-          </div>
-
-          <% if review.show_identifier && review.user %>
-  <div class="review-author text-sm text-gray-600">
-    <%= Spree.t(:by) %> <%= review.user.email.split('@').first %>
-
-    <% if review.purchase_date.present? %>
-      <div class="inline-flex items-center gap-1 mt-1">
-        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="h-4 w-4 text-green-600 icon icon-tabler icons-tabler-filled icon-tabler-rosette-discount-check">
-          <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-          <path d="M12.01 2.011a3.2 3.2 0 0 1 2.113 .797l.154 .145l.698 .698a1.2 1.2 0 0 0 .71 .341l.135 .008h1a3.2 3.2 0 0 1 3.195 3.018l.005 .182v1c0 .27 .092 .533 .258 .743l.09 .1l.697 .698a3.2 3.2 0 0 1 .147 4.382l-.145 .154l-.698 .698a1.2 1.2 0 0 0 -.341 .71l-.008 .135v1a3.2 3.2 0 0 1 -3.018 3.195l-.182 .005h-1a1.2 1.2 0 0 0 -.743 .258l-.1 .09l-.698 .697a3.2 3.2 0 0 1 -4.382 .147l-.154 -.145l-.698 -.698a1.2 1.2 0 0 0 -.71 -.341l-.135 -.008h-1a3.2 3.2 0 0 1 -3.195 -3.018l-.005 -.182v-1a1.2 1.2 0 0 0 -.258 -.743l-.09 -.1l-.697 -.698a3.2 3.2 0 0 1 -.147 -4.382l.145 -.154l.698 -.698a1.2 1.2 0 0 0 .341 -.71l.008 -.135v-1l.005 -.182a3.2 3.2 0 0 1 3.013 -3.013l.182 -.005h1a1.2 1.2 0 0 0 .743 -.258l.1 -.09l.698 -.697a3.2 3.2 0 0 1 2.269 -.944zm3.697 7.282a1 1 0 0 0 -1.414 0l-3.293 3.292l-1.293 -1.292l-.094 -.083a1 1 0 0 0 -1.32 1.497l2 2l.094 .083a1 1 0 0 0 1.32 -.083l4 -4l.083 -.094a1 1 0 0 0 -.083 -1.32z" />
-        </svg>
-        <span class="text-sm font-medium text-green-600">Verified purchase</span>
+        <% end %>
       </div>
     <% end %>
-  </div>
-<% end %>
-
-        </div>
-      <% end %>
-    </div>
   <% else %>
     <div class="p-6 rounded-md text-center">
-    <svg width="80pt" height="80pt" viewBox="0 0 512 512" version="1.1" xmlns="http://www.w3.org/2000/svg" class="mx-auto py-3">
+        <svg width="80pt" height="80pt" viewBox="0 0 512 512" version="1.1" xmlns="http://www.w3.org/2000/svg" class="mx-auto py-3">
 <g id="#000000ff">
 <path fill="#000000" opacity="1.00" d=" M 253.18 77.30 C 258.31 75.27 264.51 79.48 264.48 84.99 C 264.60 102.02 264.52 119.06 264.52 136.09 C 264.82 140.78 260.76 145.14 256.04 145.04 C 251.28 145.19 247.14 140.79 247.48 136.05 C 247.45 119.35 247.47 102.65 247.47 85.95 C 247.24 82.22 249.58 78.47 253.18 77.30 Z" />
 <path fill="#000000" opacity="1.00" d=" M 155.34 98.52 C 159.37 96.86 164.40 98.97 166.10 102.97 C 172.57 117.18 178.86 131.47 185.30 145.70 C 187.26 149.46 189.05 154.34 185.98 158.06 C 182.50 163.12 173.85 162.31 171.51 156.59 C 164.52 141.15 157.62 125.68 150.70 110.22 C 148.46 105.91 150.75 100.10 155.34 98.52 Z" />
@@ -92,10 +88,10 @@
 <path fill="#000000" opacity="1.00" d=" M 421.41 290.37 C 424.08 284.53 430.69 280.84 437.06 281.74 C 442.36 282.30 447.02 285.94 449.18 290.76 C 454.32 301.56 459.37 312.41 464.52 323.21 C 476.29 325.02 488.10 326.62 499.83 328.66 C 506.49 329.93 511.34 336.06 512.00 342.67 L 512.00 345.10 C 511.54 349.41 509.41 353.35 506.26 356.29 C 498.28 364.40 490.32 372.52 482.36 380.65 C 484.34 392.82 486.44 404.98 488.35 417.16 C 489.36 423.29 486.31 429.79 480.97 432.95 C 476.41 435.79 470.37 435.83 465.72 433.18 C 455.52 427.64 445.41 421.97 435.21 416.44 C 425.15 421.97 415.10 427.53 405.04 433.06 C 400.84 435.49 395.52 435.96 391.08 433.90 C 384.72 431.14 380.79 423.85 382.05 417.00 C 383.98 404.91 386.03 392.83 388.02 380.75 C 379.69 372.12 371.22 363.63 362.88 355.01 C 359.33 351.38 357.68 345.99 358.71 341.00 C 359.77 334.81 364.90 329.56 371.12 328.54 C 382.70 326.73 394.30 325.05 405.87 323.21 C 411.08 312.28 416.18 301.29 421.41 290.37 M 419.43 334.42 C 418.22 337.05 415.71 338.96 412.85 339.37 C 400.86 341.33 388.83 343.02 376.83 344.90 C 385.44 353.72 394.11 362.48 402.71 371.30 C 405.03 373.45 406.10 376.72 405.42 379.83 C 403.44 392.11 401.39 404.38 399.40 416.66 C 410.03 410.89 420.59 404.99 431.22 399.22 C 434.07 397.60 437.60 398.11 440.31 399.77 C 450.54 405.39 460.77 411.01 470.98 416.65 C 468.99 404.43 466.96 392.21 464.98 379.99 C 464.28 376.94 465.20 373.67 467.49 371.52 C 476.16 362.63 484.90 353.80 493.56 344.90 C 481.53 343.02 469.48 341.23 457.46 339.36 C 454.54 338.93 452.05 336.92 450.87 334.24 C 445.61 323.22 440.45 312.15 435.22 301.12 C 429.88 312.19 424.75 323.35 419.43 334.42 Z" />
 </g>
 </svg>
-  <div class="text-center text-gray-500 mt-6">
-  <p class="text-lg font-semibold"><%= Spree.t('no_reviews_yet') %></p>
-  <p class="mt-1 text-blue-600 text-sm"><%= Spree.t('be_the_first_to_write_a_review') %></p>
-</div>
+      <div class="text-center text-gray-500 mt-6">
+        <p class="text-lg font-semibold"><%= Spree.t('no_reviews_yet') %></p>
+        <p class="mt-1 text-blue-600 text-sm"><%= Spree.t('be_the_first_to_write_a_review') %></p>
+      </div>
     </div>
   <% end %>
 </div>
