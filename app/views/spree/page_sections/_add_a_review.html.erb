@@ -1,30 +1,32 @@
-<% cache_unless page_builder_enabled?, spree_base_cache_scope.call(section) do %>
-  <%
-    product = local_assigns[:product] || (defined?(section) && section.try(:product)) || @product
-    user_reviewed = current_user&.product_review_for(product)
-    user_purchased = current_user&.recent_purchase_date_for(product).present?
-    allow_unverified = section.preferred_allow_unverified_purchase_reviews
-    show_form = current_user && (user_purchased || allow_unverified)
-  %>
+<%
+  product = local_assigns[:product] || (defined?(section) && section.try(:product)) || @product
+  user_reviewed = current_user&.product_review_for(product)
+  user_purchased = current_user&.recent_purchase_date_for(product).present?
+  allow_unverified = section.preferred_allow_unverified_purchase_reviews
+  show_form = current_user && (user_purchased || allow_unverified)
+%>
 
-  <div id="section-<%= section.id %>" class="section-add-a-review">
-    <div class="page-container" style="<%= section_styles(section) %>">
-      <div class="flex flex-col">
-        <div class="">
-          <h2 class="<%= section.preferred_heading_size == 'small' ? 'text-lg' : 'text-2xl' %> font-medium">
-            <% if current_user %>
-              <% if user_reviewed&.pending? %>
-                <%= section.preferred_heading_pending_review %>
-              <% elsif user_reviewed&.approved? %>
-                <%= section.preferred_heading_review_approved %>
-              <% else %>
-                <%= section.preferred_heading_no_review_yet %>
-              <% end %>
+<div id="section-<%= section.id %>" class="section-add-a-review">
+  <div class="page-container" style="<%= section_styles(section) %>">
+    <div class="flex flex-col">
+      <div class="">
+        <h2 class="<%= section.preferred_heading_size == 'small' ? 'text-lg' : 'text-2xl' %> font-medium">
+          <% if current_user %>
+            <% if user_reviewed&.pending? %>
+              <%= section.preferred_heading_pending_review %>
+            <% elsif user_reviewed&.approved? %>
+              <%= section.preferred_heading_review_approved %>
             <% else %>
               <%= section.preferred_heading_no_review_yet %>
             <% end %>
-          </h2>
+          <% else %>
+            <%= section.preferred_heading_no_review_yet %>
+          <% end %>
+        </h2>
 
+        <%# Cache only static content blocks (not form/pending/reviews) %>
+        <% cache_unless page_builder_enabled?,
+             [spree_base_cache_scope.call(section), "static-blocks", section.updated_at] do %>
           <% section.blocks.includes(:rich_text_text).each do |block| %>
             <% case block.type %>
             <% when "Spree::PageBlocks::Heading" %>
@@ -45,7 +47,10 @@
                   <% if user_reviewed %>
                     <%= render "spree/product_reviews/pending", product_review: user_reviewed, section: section %>
                   <% else %>
-                    <%= render "spree/product_reviews/form", product: product, product_review: Spree::ProductReview.new(product: product), block: block %>
+                    <%= render "spree/product_reviews/form",
+                          product: product,
+                          product_review: Spree::ProductReview.new(product: product),
+                          block: block %>
                   <% end %>
                 </div>
               <% else %>
@@ -59,12 +64,13 @@
               <% end %>
             <% end %>
           <% end %>
-        </div>
+        <% end %>
       </div>
     </div>
   </div>
-    <!-- Always show reviews, even to logged-out users -->
-    <% if product.present? %>
-      <%= render 'spree/page_sections/product_reviews', product: product %>
-    <% end %>
+</div>
+
+<%# Always show reviews (cached separately per product + updated_at) %>
+<% if product.present? %>
+  <%= render 'spree/page_sections/product_reviews', product: product %>
 <% end %>
