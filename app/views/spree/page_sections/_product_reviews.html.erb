@@ -59,8 +59,8 @@
             </div>
 
             <% if review.show_identifier && review.user %>
-              <div class="review-author text-sm text-gray-600">
-                <%= Spree.t(:by) %> <%= review.user.email.split('@').first %>
+              <div class="review-author text-sm text-gray-600" style="display: flex;align-items: flex-end;height: 35px;column-gap: 5px;">
+                <%= Spree.t(:by) %> <span style="font-weight: 600;"><%= review.user.email.split('@').first %></span>
                 <% if review.purchase_date.present? %>
                   <div class="inline-flex items-center gap-1 mt-1">
                     <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" class="h-4 w-4 text-green-600 icon icon-tabler icons-tabler-filled icon-tabler-rosette-discount-check">
