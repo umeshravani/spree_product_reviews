@@ -62,7 +62,7 @@
             <% if spree_current_user %>
               <p>You must purchase this product to leave a review.</p>
             <% else %>
-              <p>Please <a href="<%= spree.login_path %>" class="text-blue-600 underline">log in</a> to leave a review.</p>
+              <p>Please <a href="<%= spree_login_path %>" class="text-blue-600 underline">log in</a> to leave a review.</p>
             <% end %>
           </div>
         <% end %>
