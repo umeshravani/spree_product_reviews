@@ -62,24 +62,33 @@
     ) %>,
     <% end %>
 
-"offers": [
-   <% if product.has_variants? %>
-    <%= raw(
-      product.variants.map { |variant|
-        render(
-          partial: "spree/products/json_ld_variant",
-          locals: { product: product, variant: variant }
-        ).strip
-      }.join(",")
-    ) %>
+    <% if product.has_variants? %>
+    "offers": {
+      "@type": "AggregateOffer",
+      "lowPrice": <%= product.variants.map(&:price).min.to_f.round(2) %>,
+      "highPrice": <%= product.variants.map(&:price).max.to_f.round(2) %>,
+      "offerCount": <%= product.variants.count %>,
+      "priceCurrency": <%= current_currency.to_json.html_safe %>,
+      "offers": [
+        <%= raw(
+          product.variants.map { |variant|
+            render(
+              partial: "spree/products/json_ld_variant",
+              locals: { product: product, variant: variant }
+            ).strip
+          }.join(",")
+        ) %>
+      ]
+    }
     <% else %>
-     <%= render(
-      "spree/products/json_ld_variant",
-      product: product,
-      variant: first_or_default_variant
-     ) %>
+    "offers": {
+      "@type": "Offer",
+      "price": <%= first_or_default_variant.price.to_f.round(2) %>,
+      "priceCurrency": <%= current_currency.to_json.html_safe %>,
+      "availability": "https://schema.org/<%= first_or_default_variant.in_stock? ? 'InStock' : 'OutOfStock' %>",
+      "url": <%= spree.product_url(product, host: current_store.url_or_custom_domain).to_json.html_safe %>
+    }
     <% end %>
-   ]
   }
 </script>
 
