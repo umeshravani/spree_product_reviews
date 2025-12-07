@@ -21,9 +21,10 @@ Gem::Specification.new do |s|
   s.require_path = "lib"
   s.requirements << "none"
   s.add_dependency "spree_core", ">= 5.0"
+  
   s.add_dependency "spree_admin", ">= 5.0"
   s.add_dependency "spree_storefront", ">= 5.0"
-
+  
   s.add_dependency "spree_auth_devise"
   s.add_dependency "spree_extension"
 
