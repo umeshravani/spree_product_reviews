@@ -5,6 +5,8 @@ Spree::Core::Engine.add_routes do
         member do
           get :approve
           get :disapprove
+          post :attach_image
+          delete :purge_images
         end
       end
     end
