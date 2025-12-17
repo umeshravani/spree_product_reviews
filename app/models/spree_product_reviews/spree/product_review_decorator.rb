@@ -3,6 +3,7 @@ module SpreeProductReviews
     module ProductReviewDecorator
       def self.prepended(base)
         base.has_one_attached :attachment
+        base.has_many_attached :images
       end
     end
   end
