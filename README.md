@@ -11,21 +11,15 @@ Easy Reviews &amp; Ratings integration for Latest Spree Commerce 5.2
 1. Add this your Gemfile with this line:
 
     ```ruby
-    gem 'spree_product_reviews', git: 'https://github.com/umeshravani/spree_product_reviews'
+    bundle add spree_product_reviews
     ```
 
-2. Install the Gem using Bundle Install:
-
-    ```ruby
-    bundle install
-    ```
-
-3. Copy & Run Migrations:
+2. Copy & Run Migrations:
 
     ```ruby
     bundle exec rails g spree_product_reviews:install
     ```
-4. Copy _json_ld.html.erb from 'app/views/spree/products/' to 'app/views/themes/default/spree/products/' directory:
+3. Copy _json_ld.html.erb from 'app/views/spree/products/' to 'app/views/themes/default/spree/products/' directory:
 
     ```ruby
     With this Product Reviews can generate Schema Validiation in Google Schema Like
