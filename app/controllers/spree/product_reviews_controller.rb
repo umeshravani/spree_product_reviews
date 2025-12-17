@@ -57,7 +57,8 @@ module Spree
         :rating,
         :review,
         :show_identifier,
-        :title
+        :title,
+        images: []
       )
     end
 
