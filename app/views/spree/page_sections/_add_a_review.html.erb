@@ -8,7 +8,7 @@
 
 <div id="section-<%= section.id %>" class="section-add-a-review">
   <div class="page-container" style="<%= section_styles(section) %>">
-    <div class="flex flex-col">
+    <div class="flex flex-col items-center">
       <h2 class="<%= section.preferred_heading_size == 'small' ? 'text-lg' : 'text-2xl' %> font-medium">
         <% if spree_current_user %>
           <% if user_reviewed&.pending? %>
@@ -44,10 +44,9 @@
         <% end %>
       <% end %>
 
-      <%# --- RENDER THE PRODUCT REVIEW FORM / PENDING OUTSIDE THE CACHE (always fresh) --- %>
       <% section.blocks.where(type: "Spree::PageBlocks::ProductReviewForm").each do |block| %>
         <% if show_form %>
-          <div class="flex-1">
+          <div class="flex-1 w-full">
             <% if user_reviewed %>
               <%= render "spree/product_reviews/pending", product_review: user_reviewed, section: section %>
             <% else %>
@@ -62,7 +61,7 @@
             <% if spree_current_user %>
               <p>You must purchase this product to leave a review.</p>
             <% else %>
-              <p>Please <a href="<%= spree_login_path %>" class="text-blue-600 underline">log in</a> to leave a review.</p>
+              <p>Please <a href="<%= spree_login_path(redirect_to: request.fullpath) %>" class="text-blue-600 underline">log in</a> to leave a review.</p>
             <% end %>
           </div>
         <% end %>
@@ -71,6 +70,5 @@
     </div>
   </div>
 </div>
-
 <%# Always show reviews (cached separately) %>
 <%= render 'spree/page_sections/product_reviews', product: product if product.present? %>
