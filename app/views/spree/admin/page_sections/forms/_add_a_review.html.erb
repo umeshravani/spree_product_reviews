@@ -1,66 +1,112 @@
-<div class="alert alert-warning">
-  <p>
-    <%= Spree.t("admin.page_sections.product_reviews.display_description") %>
-  </p>
-</div>
-
+<div class="alert alert-warning"><p><%= Spree.t("admin.page_sections.product_reviews.display_description") %></p></div>
 <h6 style="font-size: 1rem; padding-bottom: 0.8rem;"><%= Spree.t("admin.page_sections.product_reviews.display_style.heading_options") %></h6>
 <div class="container">
   <div class="form-group">
     <%= f.label :preferred_heading_size, Spree.t("admin.page_builder.heading_size") %>
     <%= f.select :preferred_heading_size, options_for_select([ ["Small", "small"], ["Medium", "medium"], ["Large", "large"] ], @page_section.preferred_heading_size ), {}, data: { action: "auto-submit#submit" }, class: "custom-select" %>
   </div>
-
   <div class="form-group">
     <%= f.label :preferred_heading_alignment, Spree.t("admin.page_builder.heading_alignment") %>
     <%= f.select :preferred_heading_alignment, options_for_select([ ["Left", "left"], ["Center", "center"], ["Right", "right"] ], @page_section.preferred_heading_alignment ), {}, data: { action: "auto-submit#submit" }, class: "custom-select" %>
   </div>
 </div>
-
 <hr class="mb-4">
-
 <h6 style="font-size: 1rem; padding-bottom: 0.8rem;"><%= Spree.t("admin.page_sections.product_reviews.heading_labels.heading") %></h6>
-
 <div class="container">
   <div class="form-group">
     <%= f.label :preferred_heading_no_review_yet, Spree.t("admin.page_sections.product_reviews.heading_labels.no_review_yet") %>
     <%= f.text_field :preferred_heading_no_review_yet, data: { action: "auto-submit#submit" }, class: "form-control" %>
   </div>
-
   <div class="form-group">
     <%= f.label :preferred_heading_pending_review, Spree.t("admin.page_sections.product_reviews.heading_labels.review_pending") %>
     <%= f.text_field :preferred_heading_pending_review, data: { action: "auto-submit#submit" }, class: "form-control" %>
   </div>
-
   <div class="form-group">
     <%= f.label :preferred_heading_review_approved, Spree.t("admin.page_sections.product_reviews.heading_labels.review_approved") %>
     <%= f.text_field :preferred_heading_review_approved, data: { action: "auto-submit#submit" }, class: "form-control" %>
   </div>
 </div>
-
 <hr class="mb-4">
-
 <h6 style="font-size: 1rem; padding-bottom: 0.8rem;"><%= Spree.t("admin.page_sections.product_reviews.control_preferences.label") %></h6>
-
 <div class="container">
   <div class="form-group">
     <%= f.check_box :preferred_allow_unverified_purchase_reviews, class: "checkbox-input", data: { action: "auto-submit#submit" }, checked: @page_section.preferred_allow_unverified_purchase_reviews %>
     <%= f.label :preferred_allow_unverified_purchase_reviews, Spree.t("admin.page_sections.product_reviews.control_preferences.allow_unverified_reviews") %>
     <div class="alert alert-info" style="background-position: 20px 10px;">
-      <p>
-        <%= Spree.t("admin.page_sections.product_reviews.control_preferences.allow_unverified_reviews_enabled_description") %>
-      </p>
-      <p>
-        <%= Spree.t("admin.page_sections.product_reviews.control_preferences.allow_unverified_reviews_disabled_description") %>
-      </p>
+      <p><%= Spree.t("admin.page_sections.product_reviews.control_preferences.allow_unverified_reviews_enabled_description") %></p>
+      <p><%= Spree.t("admin.page_sections.product_reviews.control_preferences.allow_unverified_reviews_disabled_description") %></p>
     </div>
   </div>
 </div>
-
-
-<% content_for(:design_tab) do %>
-  <div class="form-group">
-    <%= f.label :preferred_display, Spree.t("admin.page_sections.product_reviews.display_style.label") %>
-    <%= f.select :preferred_display, options_for_select([ [Spree.t("admin.page_sections.product_reviews.display_style.stacked"), "stacked"], [Spree.t("admin.page_sections.product_reviews.display_style.inline"), "inline"]], @page_section.preferred_display ), {}, data: { action: "auto-submit#submit" }, class: "custom-select" %>
+<hr class="mb-4">
+<h6 style="font-size: 1rem; padding-bottom: 0.8rem;"><%= Spree.t("admin.page_sections.product_reviews.review_settings") %></h6>
+<div class="mb-4 form-group" data-controller="color-picker" data-color-picker-clear-value="false" data-color-picker-default-color-value="<%= f.object.preferred_rating_color || '#FFA500' %>">
+  <label>Rating Color</label>
+  <%= f.hidden_field :preferred_rating_color, data: { color_picker_target: "input", action: "change->auto-submit#submit" } %>
+  <div class="d-flex align-items-center">
+    <span data-color-picker-target="value" class="text-muted"><%= f.object.preferred_rating_color || '#FFA500' %></span>
+    <div class="ml-auto" style="width:40px">
+      <div data-color-picker-target="picker" class="border rounded-circle" style="height:40px;width:40px;background:<%= f.object.preferred_rating_color || '#FFA500' %>;" role="button"></div>
+    </div>
   </div>
+</div>
+<div class="mb-4 form-group" data-controller="color-picker" data-color-picker-clear-value="false" data-color-picker-default-color-value="<%= f.object.preferred_review_star_color || '#FFA500' %>">
+  <label>Review Star Color</label>
+  <%= f.hidden_field :preferred_review_star_color, data: { color_picker_target: "input", action: "change->auto-submit#submit" } %>
+  <div class="d-flex align-items-center">
+    <span data-color-picker-target="value" class="text-muted"><%= f.object.preferred_review_star_color || '#FFA500' %></span>
+    <div class="ml-auto" style="width:40px"><div data-color-picker-target="picker" class="border rounded-circle" style="height:40px;width:40px;background:<%= f.object.preferred_review_star_color || '#FFA500' %>;" role="button"></div></div>
+  </div>
+</div>
+<div class="mb-4 form-group" data-controller="color-picker" data-color-picker-clear-value="false" data-color-picker-default-color-value="<%= f.object.preferred_verified_badge_color %>">
+  <label>Verified Badge Color</label>
+  <%= f.hidden_field :preferred_verified_badge_color, data: { color_picker_target: "input", action: "change->auto-submit#submit" } %>
+  <div class="d-flex align-items-center">
+    <span data-color-picker-target="value" class="text-muted">
+      <%= f.object.preferred_verified_badge_color %>
+    </span>
+    <div class="ml-auto" style="width:40px">
+      <div data-color-picker-target="picker" class="border rounded-circle" style="height:40px;width:40px;background:<%= f.object.preferred_verified_badge_color %>;" role="button"></div>
+    </div>
+  </div>
+</div>
+<div class="form-group">
+  <label>Title Font Size</label>
+  <div data-controller="better-slider" data-better-slider-unit-value="px">
+    <%= f.number_field :preferred_title_font_size, type: 'range', min: 12, max: 48, step: 1, class: 'custom-range', data: { better_slider_target: "rangeInput", action: "change->auto-submit#submit" } %>
+    <span data-better-slider-target="currentValueLabel"><%= f.object.preferred_title_font_size %>px</span>
+  </div>
+</div>
+<div class="form-group">
+  <label>Review Font Size</label>
+  <div data-controller="better-slider" data-better-slider-unit-value="px">
+    <%= f.number_field :preferred_review_font_size, type: 'range', min: 10, max: 30, step: 1, class: 'custom-range', data: { better_slider_target: "rangeInput", action: "change->auto-submit#submit" } %>
+    <span data-better-slider-target="currentValueLabel"> <%= f.object.preferred_review_font_size %>px </span>
+  </div>
+</div>
+<hr class="mb-4">
+<h6 style="font-size: 1rem; padding-bottom: 0.8rem;"><%= Spree.t("admin.page_sections.product_reviews.upload_preferences") %></h6>
+<div class="form-group">
+  <label>Max Images Upload</label>
+  <div data-controller="better-slider">
+    <%= f.number_field :preferred_max_images_upload, type: 'range', min: 1, max: 20, step: 1, class: 'custom-range', data: { better_slider_target: "rangeInput", action: "change->auto-submit#submit" } %>
+    <span data-better-slider-target="currentValueLabel"><%= f.object.preferred_max_images_upload %></span>
+  </div>
+</div>
+<div class="form-group">
+  <label>Max Image Size (MB)</label>
+  <div data-controller="better-slider">
+    <%= f.number_field :preferred_max_image_size_mb, type: 'range', min: 1, max: 20, step: 1, class: 'custom-range', data: { better_slider_target: "rangeInput", action: "change->auto-submit#submit" } %>
+    <span data-better-slider-target="currentValueLabel"><%= f.object.preferred_max_image_size_mb %> MB</span>
+  </div>
+</div>
+<div class="form-group">
+  <label>Thumbnail Size</label>
+  <div data-controller="better-slider" data-better-slider-unit-value="px">
+    <%= f.number_field :preferred_thumbnail_size, type: 'range', min: 10, max: 200, step: 1, class: 'custom-range', data: { better_slider_target: "rangeInput", action: "change->auto-submit#submit" } %>
+    <span data-better-slider-target="currentValueLabel"><%= f.object.preferred_thumbnail_size %>px</span>
+  </div>
+</div>
+<% content_for(:design_tab) do %>
+  <div class="form-group"><%= f.label :preferred_display, Spree.t("admin.page_sections.product_reviews.display_style.label") %><%= f.select :preferred_display, options_for_select([ [Spree.t("admin.page_sections.product_reviews.display_style.stacked"), "stacked"], [Spree.t("admin.page_sections.product_reviews.display_style.inline"), "inline"]], @page_section.preferred_display ), {}, data: { action: "auto-submit#submit" }, class: "custom-select" %></div>
 <% end %>
