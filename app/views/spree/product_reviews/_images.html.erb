@@ -1,0 +1,80 @@
+<%
+  section ||= local_assigns[:section]
+  max_images = section&.preferred_max_images_upload || 5
+  thumb_size = section&.preferred_thumbnail_size || 72
+  images = review.images.select(&:blob).first(max_images)
+  return if images.empty?
+  many_images = images.size > 4
+  cols =
+    images.size == 1 ? 'grid-cols-1' :
+    images.size == 2 ? 'grid-cols-2' :
+    images.size == 3 ? 'grid-cols-3' :
+                       'grid-cols-3 sm:grid-cols-4'
+%>
+
+<div class="mt-2 w-full">
+
+  <%# --- Swiper slider for medium+ screens --- %>
+  <div
+    class="hidden md:block"
+    data-controller="swiper lightbox"
+    data-swiper-options-value='{"slidesPerView":"auto","spaceBetween":4,"freeMode":true}'
+  >
+    <div class="swiper h-[70px] w-full overflow-hidden cursor-grab active:cursor-grabbing">
+      <div class="swiper-wrapper flex gap-1 pr-6">
+        <% images.each do |image| %>
+          <% full_w = image.blob.metadata[:width]  || 2000 %>
+          <% full_h = image.blob.metadata[:height] || 2000 %>
+          <% thumb = image.variant(
+            resize_to_fill: [thumb_size, thumb_size],
+            saver: { quality: 70 }
+          ) %>
+
+          <div class="swiper-slide !h-[<%= thumb_size %>px]" style="width:<%= thumb_size %>px; border-radius:10%; overflow:hidden;">
+            <%= link_to(
+              main_app.rails_blob_path(image, only_path: true),
+              data: { pswp_width: full_w, pswp_height: full_h },
+              class: "block w-full h-full overflow-hidden rounded-xl border border-gray-200"
+            ) do %>
+              <%= image_tag(
+                main_app.rails_representation_path(thumb, only_path: true),
+                width: thumb_size,
+                height: thumb_size,
+                loading: "lazy",
+                decoding: "async",
+                class: "w-full h-full object-cover rounded-xl"
+              ) %>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <%# --- Grid for mobile / small screens --- %>
+  <div class="md:hidden grid gap-1 <%= cols %>" data-controller="lightbox">
+    <% images.each do |image| %>
+      <% full_w = image.blob.metadata[:width]  || 2000 %>
+      <% full_h = image.blob.metadata[:height] || 2000 %>
+      <% thumb = image.variant(
+        resize_to_fill: [thumb_size, thumb_size],
+        saver: { quality: 70 }
+      ) %>
+
+      <%= link_to(
+        main_app.rails_blob_path(image, only_path: true),
+        data: { pswp_width: full_w, pswp_height: full_h },
+        class: "aspect-square block overflow-hidden rounded-xl border border-gray-200",
+        style: "border-radius: 10px;"
+      ) do %>
+        <%= image_tag(
+          main_app.rails_representation_path(thumb, only_path: true),
+          loading: "lazy",
+          decoding: "async",
+          class: "w-full h-full object-cover rounded-xl"
+        ) %>
+      <% end %>
+    <% end %>
+  </div>
+
+</div>

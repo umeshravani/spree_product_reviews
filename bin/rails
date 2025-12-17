@@ -1,0 +1,9 @@
+#!/usr/bin/env ruby
+# This command will automatically be run when you run "rails" from the root of your extension
+
+ENGINE_ROOT = File.expand_path("..", __dir__)
+ENGINE_PATH = File.expand_path("../lib/spree_product_reviews/engine", __dir__)
+
+require "rails/all"
+require "rails/engine/commands"
+
