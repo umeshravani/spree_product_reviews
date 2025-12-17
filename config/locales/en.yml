@@ -10,9 +10,11 @@ en:
     product_reviews: "Product Reviews"
     new_product_review: "Leave a new product review"
     review_title: "Review Title"
+    review_images: "Review Images"
     product_review_rating: "Rating"
     add_a_review_heading: "Leave a Review"
-    thanks_for_review_heading: "Thank you for your review!"
+    thanks_for_review_heading: "Thank you for your review! Your Review is Approved!"
+    thanks_for_review_heading_pending: "Thank you for your review! Your Review is waiting for Approval!"
     add_a_review_text: "We value your feedback! Please leave a review for this product."
     product_review:
       flash_messages:
@@ -26,6 +28,7 @@ en:
           error: "There was an error updating your review. Please try again."
           failure: "There was an error updating your review. Please try again."
     page_blocks:
+      reviews_summary: "Reviews"
       product_review_form:
         button_text_default: "Add your review"
         placeholder_default: "Write your review here..."
@@ -49,7 +52,8 @@ en:
             review_approved: "Customer's review was approved"
           control_preferences:
             label: "Control preferences"
-            allow_unverified_reviews: "Allow reviews without a verified purchase"
-            allow_unverified_reviews_enabled_description: "If enabled, customers can leave reviews without having purchased the product from your store, but will not display the \"verified purchase\" badge."
-            allow_unverified_reviews_disabled_description: "If disabled, and they haven't purchased the product, this section will simply not appear on the page inviting them to leave a review."
-
+            allow_unverified_reviews: "Allow reviews for unverified purchase"
+            allow_unverified_reviews_enabled_description: "Enable to post reviews from any customer, without the verified badge."
+            allow_unverified_reviews_disabled_description: "Disable to limit reviews strictly to only verified buyers."
+          review_settings: "Review Settings"
+          upload_preferences: "Upload Settings"
