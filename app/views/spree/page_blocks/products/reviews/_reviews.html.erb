@@ -1,0 +1,42 @@
+<%
+  star_color      = block.preferred_star_color.presence || '#FFA500'
+  star_size       = block.preferred_star_font_size || 16
+  show_numbers    = block.preferred_display_numbers
+%>
+
+<%
+  product = local_assigns[:product] || @product
+  return unless product
+
+  if spree_current_user
+    reviews = product.product_reviews.where(
+      "approved = ? OR user_id = ?",
+      true,
+      spree_current_user.id
+    )
+  else
+    reviews = product.product_reviews.where(approved: true)
+  end
+%>
+
+<% return unless reviews.any? %>
+
+<%
+  avg_rating = reviews.average(:rating).to_f
+  full_stars = avg_rating.floor
+  half_star  = (avg_rating - full_stars) >= 0.5
+%>
+
+<div class="reviews-summary mb-0">
+  <div class="flex items-center mb-0 mt-2">
+  <div class="flex gap-0.5" style="color:<%= star_color %>; font-size:<%= star_size %>px;">
+      <% full_stars.times { %><span>★</span><% } %>
+      <% if half_star %><span>★</span><% end %>
+      <% (5 - full_stars - (half_star ? 1 : 0)).times do %>
+        <span class="text-gray-300">☆</span>
+      <% end %>
+    </div>
+
+    <% if show_numbers %><div class="ml-2 text-gray-600 text-sm">(<%= reviews.count %> <%= "review".pluralize(reviews.count) %>)</div><% end %>
+  </div>
+</div>
