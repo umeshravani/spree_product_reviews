@@ -1,0 +1,74 @@
+<%
+  product = local_assigns[:product] || (defined?(section) && section.try(:product)) || @product
+  user_reviewed = spree_current_user&.product_review_for(product)
+  user_purchased = spree_current_user&.recent_purchase_date_for(product).present?
+  allow_unverified = section.preferred_allow_unverified_purchase_reviews
+  show_form = spree_current_user && (user_purchased || allow_unverified)
+%>
+
+<div id="section-<%= section.id %>" class="section-add-a-review">
+  <div class="page-container" style="<%= section_styles(section) %>">
+    <div class="flex flex-col items-center">
+      <h2 class="<%= section.preferred_heading_size == 'small' ? 'text-lg' : 'text-2xl' %> font-medium">
+        <% if spree_current_user %>
+          <% if user_reviewed&.pending? %>
+            <%= section.preferred_heading_pending_review %>
+          <% elsif user_reviewed&.approved? %>
+            <%= section.preferred_heading_review_approved %>
+          <% else %>
+            <%= section.preferred_heading_no_review_yet %>
+          <% end %>
+        <% else %>
+          <%= section.preferred_heading_no_review_yet %>
+        <% end %>
+      </h2>
+
+      <%# --- CACHE ONLY THE STATIC BLOCKS --- %>
+      <% cache_unless page_builder_enabled?,
+           [spree_base_cache_scope.call(section), "static-blocks", section.updated_at] do %>
+        <% section.blocks.includes(:rich_text_text).where.not(type: "Spree::PageBlocks::ProductReviewForm").each do |block| %>
+          <% case block.type %>
+          <% when "Spree::PageBlocks::Heading" %>
+            <h3 class="<%= block.preferred_size == 'small' ? 'text-lg' : 'text-2xl' %> font-medium" <%= block_attributes(block) %>>
+              <%= block.text %>
+            </h3>
+          <% when "Spree::PageBlocks::Text" %>
+            <div class="max-w-prose text-md leading-relaxed font-normal" <%= block_attributes(block) %>>
+              <%= block.text %>
+            </div>
+          <% when "Spree::PageBlocks::Image" %>
+            <div class="flex justify-center" <%= block_attributes(block) %>>
+              <%= render "spree/page_blocks/image", block: block %>
+            </div>
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <% section.blocks.where(type: "Spree::PageBlocks::ProductReviewForm").each do |block| %>
+        <% if show_form %>
+          <div class="flex-1 w-full">
+            <% if user_reviewed %>
+              <%= render "spree/product_reviews/pending", product_review: user_reviewed, section: section %>
+            <% else %>
+              <%= render "spree/product_reviews/form",
+                         product: product,
+                         product_review: Spree::ProductReview.new(product: product),
+                         block: block %>
+            <% end %>
+          </div>
+        <% else %>
+          <div class="text-sm text-gray-600 mt-4">
+            <% if spree_current_user %>
+              <p>You must purchase this product to leave a review.</p>
+            <% else %>
+              <p>Please <a href="<%= spree_login_path(redirect_to: request.fullpath) %>" class="text-blue-600 underline">log in</a> to leave a review.</p>
+            <% end %>
+          </div>
+        <% end %>
+      <% end %>
+
+    </div>
+  </div>
+</div>
+<%# Always show reviews (cached separately) %>
+<%= render 'spree/page_sections/product_reviews', product: product if product.present? %>
