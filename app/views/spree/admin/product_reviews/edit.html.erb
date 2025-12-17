@@ -1,27 +1,103 @@
-<turbo-frame id="dialog_modal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h5 class="modal-title"><%= Spree.t(:edit_product_review) %></h5>
-      <button name="button" type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-    </div>
-    <div class="modal-body">
-      <%= form_with(model: [:admin, @product, @product_review]) do |f| %>
-        <div class="form-group">
-          <%= f.label :title, Spree.t(:review_title) %>
-          <%= f.text_field :title, class: 'form-control' %>
+<% content_for :page_title do %>
+  <%= Spree.t(:edit_product_review) %>
+<% end %>
+
+<% content_for :page_actions do %>
+  <%= link_to(Spree.t(:back), params[:return_to].presence || admin_product_product_reviews_path(@product), class: "btn btn-secondary") %>
+<% end %>
+
+<div class="card">
+  <div class="card-body">
+
+    <%= form_with( model: [:admin, @product, @product_review], id: dom_id(@product_review, :edit), data: { turbo: true } ) do |f| %>
+
+      <div class="form-group mb-3">
+        <%= f.label :title, Spree.t(:review_title) %>
+        <%= f.text_field :title, class: "form-control" %>
+      </div>
+
+      <div class="form-group mb-3">
+        <%= f.label :review, Spree.t(:review) %>
+        <%= f.text_area :review, class: "form-control", rows: 5 %>
+      </div>
+
+      <div class="form-group mb-4">
+        <%= f.label :rating, Spree.t(:product_review_rating) %>
+        <div class="btn-group d-flex gap-2" data-rating-group>
+          <% (1..5).each do |i| %>
+            <label
+              class="btn btn-outline-primary <%= 'active' if @product_review.rating == i %>" data-rating-button >
+              <%= f.radio_button :rating, i, checked: @product_review.rating == i, class: "d-none" %>
+              <%= i %>
+            </label>
+          <% end %>
         </div>
-        <div class="form-group">
-          <%= f.label :rating, Spree.t(:product_review_rating) %>
-          <%= f.number_field :rating, in: 1..5, class: 'form-control' %>
-        </div>
-        <div class="form-group">
-          <%= f.label :review, Spree.t(:review) %>
-          <%= f.text_area :review, class: 'form-control' %>
-        </div>
-        <div class="form-group">
-          <%= f.submit Spree.t(:update), class: 'btn btn-primary' %>
+      </div>
+      <% if @product_review.images.attached? %>
+        <div class="card mb-4">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <strong>Images</strong>
+            <button type="button" class="btn btn-sm btn-danger" data-review-delete data-url="<%= purge_images_admin_product_product_review_path(@product, @product_review) %>">
+              <i class="ti ti-trash"></i> Delete Selected
+            </button>
+          </div>
+          <div class="card-body d-flex flex-wrap gap-3">
+            <% @product_review.images.each do |img| %>
+              <% thumb = img.variant(resize_to_limit: [120, 120], saver: { quality: 70 }) %>
+              <div class="position-relative review-image-thumb" id="review_image_<%= img.id %>">
+                <div class="form-check position-absolute top-0 start-0 m-1">
+                  <input type="checkbox" class="form-check-input" value="<%= img.id %>">
+                </div>
+                <%= image_tag(
+                      main_app.rails_representation_path(thumb, only_path: true),
+                      class: "rounded border",
+                      loading: "lazy"
+                    ) %>
+              </div>
+            <% end %>
+          </div>
         </div>
       <% end %>
-    </div>
+    <% end %>
   </div>
-</turbo-frame>
+</div>
+
+<script>
+document.addEventListener("click", async function(event) {
+  const ratingBtn = event.target.closest("[data-rating-button]")
+  if (ratingBtn) {
+    const group = ratingBtn.closest("[data-rating-group]")
+    group.querySelectorAll("[data-rating-button]").forEach(btn => {
+      btn.classList.remove("active")
+      btn.querySelector("input[type='radio']").checked = false
+    })
+    ratingBtn.classList.add("active")
+    ratingBtn.querySelector("input[type='radio']").checked = true
+    return
+  }
+  const button = event.target.closest("[data-review-delete]")
+  if (!button) return
+  event.preventDefault()
+  if (button.dataset.processing === "true") return
+  button.dataset.processing = "true"
+  const form = button.closest("form") || document
+  const checked = form.querySelectorAll(".review-image-thumb input[type='checkbox']:checked")
+  const ids = Array.from(checked).map(cb => cb.value)
+  if (ids.length === 0) { button.dataset.processing = "false"; return }
+  if (!confirm("Delete selected images?")) { button.dataset.processing = "false"; return }
+  try {
+    const token = document.querySelector("meta[name='csrf-token']").content
+    const response = await fetch(button.dataset.url, {
+      method: "DELETE",
+      headers: { "X-CSRF-Token": token, "Content-Type": "application/json" },
+      body: JSON.stringify({ ids })
+    })
+    if (!response.ok) throw new Error("Delete failed")
+    ids.forEach(id => form.querySelector(`#review_image_${id}`)?.remove())
+  } catch(e) {
+    alert("Failed to delete images")
+  } finally {
+    button.dataset.processing = "false"
+  }
+})
+</script>
