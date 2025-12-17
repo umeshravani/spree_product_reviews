@@ -1,8 +1,8 @@
 # Product Reviews & Ratings for Spree Commerce
-Easy Reviews &amp; Ratings integration for Latest Spree Commerce 5
+Easy Reviews &amp; Ratings integration for Latest Spree Commerce 5.2
 
 
-<img width="839" height="300" alt="product-snippet" src="https://github.com/user-attachments/assets/85973ac9-4dc8-4198-85d1-c03b85768875" />
+<img width="639" height="auto" alt="product-snippet" src="https://github.com/user-attachments/assets/85973ac9-4dc8-4198-85d1-c03b85768875" />
 
 
 ## Installation
@@ -53,14 +53,19 @@ Easy Reviews &amp; Ratings integration for Latest Spree Commerce 5
     ```
 ## Admin & Storefront Previews
 
-1. Admin Page Sections (Storefront Theme Editor):
-   <img width="998" height="729" alt="Admin Page Sections" src="https://github.com/user-attachments/assets/6f061f63-89aa-4e30-b0c7-5c20a0ff6216" />
-2. Product Review Form (Storefront Theme Editor):
-   <img width="997" height="727" alt="Product Review Form" src="https://github.com/user-attachments/assets/0b035af9-4d23-410e-b190-1e65bbf87016" />
-3. Edit Review from Product (Admin View):
-   <img width="995" height="735" alt="Edit Reviews from Admin Panel" src="https://github.com/user-attachments/assets/6cb4aaf3-4bb5-496a-95d2-6ed2b7ec9a48" />
-4. Approve/Disapprove Reviews (Admin View):
-   <img width="997" height="736" alt="Reviews Approve inside Product Page" src="https://github.com/user-attachments/assets/76e2780d-da25-4874-88f3-ae8474626286" />
+1. Admin Page Sections (Storefront Theme Editor):<br>
+   <img width="900" height="auto" alt="Widget config page builder" src="https://github.com/user-attachments/assets/ea71789d-bf01-45ea-86c4-2ca43c79ef1e" /><br>
+2. Product Review Form (Storefront Theme Editor):<br>
+   <img width="900" height="auto" alt="Product Review Form" src="https://github.com/user-attachments/assets/0b035af9-4d23-410e-b190-1e65bbf87016" /><br>
+3. Edit Review from Product (Admin View):<br>
+   <img width="auto" height="600" alt="Screenshot 2025-12-17 at 7 34 11 PM" src="https://github.com/user-attachments/assets/3a1af3f7-dd6f-4a86-b4fb-e174201cdeeb" /><br>
+4. Approve/Disapprove Reviews (Admin View):<br>
+   <img width="900" height="auto" alt="Screenshot 2025-12-17 at 7 33 57 PM" src="https://github.com/user-attachments/assets/49d551ef-7d21-498b-9629-a7ad430cb6e2" /><br>
+
+
+## Published Review:
+ <img width="981" height="440" alt="Screenshot 2025-12-17 at 7 31 18 PM copy" src="https://github.com/user-attachments/assets/0e6585dc-8686-4701-b194-1d7a8eef41ca" />
+
 
 ## Live Google Search Result Preview:
 <img width="710" height="208" alt="Screenshot 2025-08-18 at 7 21 06 PM" src="https://github.com/user-attachments/assets/71fce340-b051-4fcf-83ce-e93c74d2fe3a" />
@@ -72,4 +77,20 @@ Easy Reviews &amp; Ratings integration for Latest Spree Commerce 5
 3. Approve & Disapprove reviews
 4. Delete & Unapprove review
 5. Ratings visible for non-logged-in users
-6. Images support (Not Implemented yet) coming soon in Spree v5.2
+6. Images support (Admin side control)
+
+## Troubleshooting
+
+For common issues such as:
+
+   1. Missing PageBlocks
+
+   2. ActiveStorage upload errors
+
+   3. Turbo aborted requests
+
+   4. Docker / NGINX configuration issues
+
+Refer to the dedicated troubleshooting guide:
+
+See [Troubleshooting Guide](https://github.com/umeshravani/spree_product_reviews/blob/main/TROUBLESHOOTING.md)
