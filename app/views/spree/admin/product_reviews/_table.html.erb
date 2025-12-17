@@ -1,5 +1,4 @@
 <% colspan = 6 %> <!-- Fix: define colspan -->
-
 <table class="table">
   <thead>
     <tr>
@@ -8,15 +7,12 @@
       <th><%= Spree.t(:review_title) %></th>
       <th><%= Spree.t(:product_review_rating) %></th>
       <th><%= Spree.t(:date) %></th>
+      <th><%= Spree.t(:review_images) %></th>
       <th></th>
     </tr>
   </thead>
-
   <tbody>
-    <%= render partial: "spree/admin/product_reviews/product_review",
-               collection: @product_reviews,
-               cached: spree_base_cache_scope %>
-
+    <%= render partial: "spree/admin/product_reviews/product_review", collection: @product_reviews, cached: spree_base_cache_scope %>
     <% if @product_reviews.empty? %>
       <tr>
         <td colspan="<%= colspan %>">
