@@ -4,11 +4,14 @@ module Spree
     belongs_to :user, class_name: Spree.user_class.to_s
     belongs_to :variant, class_name: "Spree::Variant", optional: true
 
+    has_many_attached :images, dependent: :purge_later
+
     validates :product, presence: true
     validates :user, presence: true
     validates :rating, presence: true, numericality: { only_integer: true, greater_than_or_equal_to: 1, less_than_or_equal_to: 5 }
     validates :title, presence: true
     validates :review, presence: true
+    attribute :show_identifier, :boolean, default: true
 
     scope :approved, -> { where(approved: true) }
     scope :pending, -> { where(approved: false) }
@@ -38,4 +41,3 @@ module Spree
     end
   end
 end
-
