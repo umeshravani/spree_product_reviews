@@ -3,10 +3,10 @@ module Spree
     class ProductReviewsController < ResourceController
       belongs_to "spree/product", find_by: :slug
 
-      before_action :find_product_review, only: [:approve, :edit, :update, :destroy]
+      before_action :find_product_review, only: [:approve, :edit, :update, :destroy, :attach_image, :purge_images]
 
       def index
-        # You can add filtering logic or sorting here if needed
+        # optionally add filtering/sorting
       end
 
       def update
@@ -31,6 +31,25 @@ module Spree
         @product_review.update(approved: false)
         flash[:success] = Spree.t(:review_disapproved)
         redirect_to admin_product_product_reviews_path(@product_review.product)
+      end
+
+      # --- Attach a single image ---
+      def attach_image
+        if params[:file].present?
+          @product_review.images.attach(params[:file])
+        end
+        head :ok
+      end
+
+      # DELETE /admin/products/:product_id/product_reviews/:id/purge_images
+      def purge_images
+        ids = params[:ids] || []
+        @product_review.images.where(id: ids).each(&:purge_later)
+
+        respond_to do |format|
+          format.json { head :ok }
+          format.html { redirect_back fallback_location: edit_admin_product_product_review_path(@product, @product_review) }
+        end
       end
 
       private
