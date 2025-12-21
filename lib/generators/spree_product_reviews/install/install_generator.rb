@@ -22,10 +22,9 @@ module SpreeProductReviews
       def add_reviews_page_block
         say_status :spree_product_reviews, "Adding Reviews block to Product Details sections", :green
 
-        # Load app environment explicitly (important for generators)
         require Rails.root.join("config/environment")
 
-        Spree::PageSection
+        ::Spree::PageSection
           .where(type: "Spree::PageSections::ProductDetails")
           .find_each do |section|
 
