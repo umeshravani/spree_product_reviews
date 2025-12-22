@@ -1,0 +1,97 @@
+<script type="application/ld+json" data-test-id="product-json-ld">
+  <% first_or_default_variant = product.first_or_default_variant(current_currency) %>
+  <% approved_reviews = product.product_reviews.where(approved: true) %>
+
+  {
+    "@context": "https://schema.org/",
+    "@type": "Product",
+    "name": <%= product.name.to_json.html_safe %>,
+    "url": <%= spree.product_url(product, host: current_store.url_or_custom_domain).to_json.html_safe %>,
+
+    <% if product.featured_image %>
+    "image": [
+      <%= spree_image_url(product.featured_image, width: 630, height: 630).to_json.html_safe %>
+    ],
+    <% end %>
+
+    <% if product.description.present? %>
+    "description": <%= strip_tags(product.description).to_json.html_safe %>,
+    <% end %>
+
+    <% if !product.has_variants? %>
+      <% if first_or_default_variant.sku.present? %>
+        "sku": <%= first_or_default_variant.sku.to_json.html_safe %>,
+      <% end %>
+    <% elsif selected_variant %>
+      <% if selected_variant.sku.present? %>
+        "sku": <%= selected_variant.sku.to_json.html_safe %>,
+      <% end %>
+    <% end %>
+
+    <% if product.brand %>
+    "brand": {
+      "@type": "Brand",
+      "name": <%= product.brand_name.to_json.html_safe %>
+    },
+    <% end %>
+
+    <%# --- Inject Aggregate Rating & Reviews if available --- %>
+    <% if approved_reviews.any? %>
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": <%= approved_reviews.average(:rating).to_f.round(1) %>,
+      "reviewCount": <%= approved_reviews.count %>
+    },
+    "review": <%= raw(
+      approved_reviews.limit(5).map do |review|
+        {
+          "@type": "Review",
+          author: {
+            "@type": "Person",
+            name: review.user&.email&.split('@')&.first || "Anonymous"
+          },
+          reviewRating: {
+            "@type": "Rating",
+            ratingValue: review.rating,
+            bestRating: 5
+          },
+          reviewBody: review.review,
+          datePublished: review.created_at.strftime("%Y-%m-%d")
+        }
+      end.to_json
+    ) %>,
+    <% end %>
+
+    <% if product.has_variants? %>
+    "offers": {
+      "@type": "AggregateOffer",
+      "lowPrice": <%= product.variants.map(&:price).min.to_f.round(2) %>,
+      "highPrice": <%= product.variants.map(&:price).max.to_f.round(2) %>,
+      "offerCount": <%= product.variants.count %>,
+      "priceCurrency": <%= current_currency.to_json.html_safe %>,
+      "offers": [
+        <%= raw(
+          product.variants.map { |variant|
+            render(
+              partial: "spree/products/json_ld_variant",
+              locals: { product: product, variant: variant }
+            ).strip
+          }.join(",")
+        ) %>
+      ]
+    }
+    <% else %>
+    "offers": {
+      "@type": "Offer",
+      "price": <%= first_or_default_variant.price.to_f.round(2) %>,
+      "priceCurrency": <%= current_currency.to_json.html_safe %>,
+      "availability": "https://schema.org/<%= first_or_default_variant.in_stock? ? 'InStock' : 'OutOfStock' %>",
+      "url": <%= spree.product_url(product, host: current_store.url_or_custom_domain).to_json.html_safe %>
+    }
+    <% end %>
+  }
+</script>
+
+<script type="application/ld+json">
+  <%= product_json_ld_breadcrumbs(product).to_json.html_safe %>
+</script>
