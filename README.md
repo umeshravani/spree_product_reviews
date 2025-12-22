@@ -45,6 +45,26 @@ Easy Reviews &amp; Ratings integration for Latest Spree Commerce 5.2
     ```ruby
     docker compose up -d
     ```
+    <br>
+
+    ## Render Widget in Product Details:
+
+1. Find your Partial file Example: 
+    ```
+    'app/views/themes/default/spree/page_sections/_product_details.html.erb'
+    ```
+    Note: If you dont find this file inside your spree's directory, You can [Download](https://github.com/spree/spree/blob/df400d3557c244ec3829f175a27f3990cdeb2452/storefront/app/views/themes/default/spree/page_sections/_product_details.html.erb#L4) this directly from Spree's Github and place it exactly inside your Spree's directory
+
+2. Place this Rendering Code:
+   ```
+    <% when 'Spree::PageBlocks::Products::Reviews' %>
+    <%= block.render(self, product: product) %>
+   ```
+   Exactly below this part:
+   ```
+   <% when 'Spree::PageBlocks::Products::Description' %>
+   ```
+
 ## Admin & Storefront Previews
 
 1. Admin Page Sections (Storefront Theme Editor):<br>
