@@ -1,15 +1,88 @@
 <% content_for :page_title do %>
-  <%= page_header_back_button spree.admin_product_path(@product) %>
-  <span><%= Spree.t(:product_reviews) %></span>
+  <%= Spree.t(:product_reviews) %>
 <% end %>
 
-<% content_for :page_actions do %>
-<% end %>
+<% if @product_reviews.any? %>
+  <div class="table-responsive">
+    <table class="table" id="listing_product_reviews">
+      <thead>
+        <tr>
+          <th><%= Spree.t(:product) %></th>
+          <th><%= Spree.t(:status) %></th>
+          <th><%= Spree.t(:user) %></th>
+          <th><%= Spree.t(:review) %></th>
+          <th><%= Spree.t(:stars) %></th>
+          <th><%= Spree.t(:date) %></th>
+          <th data-hook="admin_product_reviews_index_header_actions" class="actions"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @product_reviews.each do |product_review| %>
+          <tr id="<%= dom_id product_review %>">
+            
+            <%# PRODUCT IMAGE & NAME %>
+            <td>
+              <% if product_review.product %>
+                <div class="d-flex align-items-center">
+                  <div class="mr-3" style="flex-shrink: 0;">
+                    <% if product_review.product.images.any? %>
+                       <%= spree_image_tag product_review.product.images.first, width: 40, height: 40 %>
+                    <% end %>
+                  </div>
+                  <%= link_to product_review.product.name, edit_admin_product_path(product_review.product), class: "text-dark font-weight-bold", style: "white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.3;" %>
+                </div>
+              <% end %>
+            </td>
 
-<div class="card p-0">
-  <div class="card-body p-0">
-    <div class="table-responsive" id="<%= dom_id(@product, :product_reviews) %>">
-      <%= render "spree/admin/product_reviews/table" %>
-    </div>
+            <%# STATUS BADGE %>
+            <td class="w-10 cursor-pointer">
+              <% if product_review.respond_to?(:spam?) && product_review.spam? %>
+                <%# ORANGE BADGE FOR SPAM %>
+                <span class="badge badge-warning text-white" style="background-color: #fd7e14;">
+                  <i class="ti ti-alert-triangle mr-1"></i> Spam
+                </span>
+              <% elsif product_review.approved? %>
+                <span class="badge badge-success">
+                  <i class="ti ti-check mr-1"></i> Approved
+                </span>
+              <% else %>
+                <span class="badge badge-danger">
+                  <i class="ti ti-x mr-1"></i> Disapproved
+                </span>
+              <% end %>
+            </td>
+
+            <td><%= product_review.user&.email || Spree.t(:anonymous) %></td>
+            
+            <td title="<%= product_review.review %>">
+              <%= truncate(product_review.review, length: 100) %>
+            </td>
+            
+            <td>
+              <div class="text-warning">
+                <%= "★" * product_review.rating.to_i %>
+              </div>
+            </td>
+            
+            <td><%= l product_review.created_at.to_date, format: :short_date %></td>
+
+            <td class="actions" data-hook="admin_product_reviews_index_row_actions">
+              <% unless product_review.approved %>
+                <%= link_to_with_icon 'check', Spree.t(:approve), approve_admin_product_product_review_path(product_review.product, product_review), no_text: true, class: 'btn btn-light btn-sm mr-1' %>
+              <% else %>
+                 <%= link_to_with_icon 'x', Spree.t(:disapprove), disapprove_admin_product_product_review_path(product_review.product, product_review), no_text: true, class: 'btn btn-light btn-sm mr-1' %>
+              <% end %>
+              
+              <%= link_to_edit product_review, url: edit_admin_product_product_review_path(product_review.product, product_review, return_to: request.fullpath), no_text: true, class: 'edit' %>
+              <%= link_to_delete product_review, url: admin_product_product_review_path(product_review.product, product_review), no_text: true %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
   </div>
-</div>
+<% else %>
+  <div class="alert alert-info no-objects-found">
+    <%= Spree.t(:no_resource_found, resource: Spree.t(:reviews)) %>
+  </div>
+<% end %>
