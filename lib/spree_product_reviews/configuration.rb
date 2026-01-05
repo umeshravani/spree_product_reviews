@@ -1,13 +1,8 @@
 module SpreeProductReviews
   class Configuration < Spree::Preferences::Configuration
-
-   # Some example preferences are shown below, for more information visit:
-   # https://docs.spreecommerce.org/developer/contributing/creating-an-extension
-
-   # preference :enabled, :boolean, default: true
-   # preference :dark_chocolate, :boolean, default: true
-   # preference :color, :string, default: 'Red'
-   # preference :favorite_number, :integer
-   # preference :supported_locales, :array, default: [:en]
+    preference :review_status_default, :string, default: 'pending'
+    preference :block_spam_reviews, :boolean, default: false
+    preference :disable_review_links, :boolean, default: false
+    preference :disable_review_emails, :boolean, default: false
   end
 end
