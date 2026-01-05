@@ -5,11 +5,15 @@ Spree::Core::Engine.add_routes do
         member do
           get :approve
           get :disapprove
-          post :attach_image          # Attach images to review
-          delete :purge_images        # Delete selected images
+          post :attach_image
+          delete :purge_images
         end
       end
     end
+
+    resources :reviews, only: [:index]
+
+    resource :review_settings, only: [:edit, :update]
   end
 
   resources :products, only: [] do
