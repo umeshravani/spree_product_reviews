@@ -1,0 +1,14 @@
+<% content_for :page_title do %>
+    <%= Spree.t(:product_reviews) %>
+  <% end %>
+  
+  <div class="card p-0">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <%= render "spree/admin/product_reviews/table" %>
+      </div>
+      <div class="p-3">
+        <%= paginate @product_reviews %>
+      </div>
+    </div>
+  </div>
