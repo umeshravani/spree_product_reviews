@@ -6,7 +6,7 @@ module Spree
       before_action :find_product_review, only: [:approve, :edit, :update, :destroy, :attach_image, :purge_images]
 
       def index
-        # optionally add filtering/sorting
+        # optionally add filtering/sorting here
       end
 
       def update
@@ -33,7 +33,6 @@ module Spree
         redirect_to admin_product_product_reviews_path(@product_review.product)
       end
 
-      # --- Attach a single image ---
       def attach_image
         if params[:file].present?
           @product_review.images.attach(params[:file])
@@ -41,7 +40,6 @@ module Spree
         head :ok
       end
 
-      # DELETE /admin/products/:product_id/product_reviews/:id/purge_images
       def purge_images
         ids = params[:ids] || []
         @product_review.images.where(id: ids).each(&:purge_later)
@@ -52,14 +50,24 @@ module Spree
         end
       end
 
+      protected
+
+      def location_after_destroy
+        if request.referer.to_s.include?('/admin/reviews')
+          admin_reviews_path
+        else
+          admin_product_product_reviews_path(@product)
+        end
+      end
+
       private
 
       def permitted_resource_params
         params.require(:product_review).permit(
-        :title,
-        :rating,
-        :review,
-        images: []
+          :title,
+          :rating,
+          :review,
+          images: []
         )
       end
 
