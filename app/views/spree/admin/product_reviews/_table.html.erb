@@ -1,8 +1,13 @@
-<% colspan = 6 %> <!-- Fix: define colspan -->
+<%# Check if we are in the context of a specific product or the global list %>
+<% global_view = @product.nil? %>
+<% colspan = global_view ? 7 : 6 %>
 
 <table class="table">
   <thead>
     <tr>
+      <% if global_view %>
+        <th><%= Spree.t(:product) %></th>
+      <% end %>
       <th><%= Spree.t(:status) %></th>
       <th><%= Spree.t(:email) %></th>
       <th><%= Spree.t(:review_title) %></th>
@@ -16,6 +21,7 @@
   <tbody>
     <%= render partial: "spree/admin/product_reviews/product_review",
                collection: @product_reviews,
+               locals: { global_view: global_view },
                cached: spree_base_cache_scope %>
 
     <% if @product_reviews.empty? %>
