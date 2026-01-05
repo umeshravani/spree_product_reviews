@@ -24,16 +24,53 @@ module Spree
         flash[:error] = "You have already reviewed this product."
         redirect_to spree.product_path(@product) and return
       end
+      
+      default_status = (current_store.preferred_review_status_default rescue 'pending')
+      should_approve = (default_status == 'approved')
+      spam_detected = false
+
+      if (current_store.preferred_disable_review_links rescue false) && @product_review.review.present?
+        if @product_review.review.match?(%r{https?://|www\.|[a-zA-Z0-9]+\.(com|net|org|info|biz)})
+          should_approve = false
+          spam_detected = true
+        end
+      end
+
+      if (current_store.preferred_disable_review_emails rescue false) && @product_review.review.present?
+        if @product_review.review.match?(%r{[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}})
+          should_approve = false
+          spam_detected = true
+        end
+      end
+
+      if (current_store.preferred_block_spam_reviews rescue false) && @product_review.review.present?
+        custom_words = (current_store.preferred_spam_words || "").split(',').map(&:strip).reject(&:empty?)
+        custom_words = %w[casino viagra crypto bitcoin lottery loan investment] if custom_words.empty?
+        
+        full_text = "#{@product_review.title} #{@product_review.review}".downcase
+        
+        if custom_words.any? { |word| full_text.include?(word.downcase) }
+          should_approve = false
+          spam_detected = true
+        end
+      end
+
+      @product_review.approved = should_approve
+      @product_review.spam = spam_detected
 
       if @product_review.save
-        flash[:success] = Spree.t("product_review.flash_messages.create.success")
+        if @product_review.approved?
+          flash[:success] = Spree.t("product_review.flash_messages.create.approved")
+        else
+          flash[:success] = Spree.t("product_review.flash_messages.create.success")
+        end
         redirect_to spree.product_path(@product)
       else
         flash[:error] = Spree.t("product_review.flash_messages.create.failure")
         render :new
       end
     end
-
+    
     def index
       @product_reviews = @product.product_reviews.approved.order(created_at: :desc)
     end
@@ -41,7 +78,6 @@ module Spree
     def destroy
       @product_review = Spree::ProductReview.find(params[:id])
       @product_review.destroy
-      # Force CanCanCan to reload abilities for the current user
       session[:_csrf_token] = nil
       redirect_to spree.product_path(@product), notice: Spree.t(:review_deleted)
     end
@@ -54,17 +90,12 @@ module Spree
 
     def product_review_params
       params.require(:product_review).permit(
-        :rating,
-        :review,
-        :show_identifier,
-        :title,
-        images: []
+        :rating, :review, :show_identifier, :title, images: []
       )
     end
 
     def authenticate_user!
       return if spree_current_user
-
       session[:spree_user_return_to] = request.fullpath
       redirect_to spree.login_path, alert: Spree.t(:please_log_in)
     end
