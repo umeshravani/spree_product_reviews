@@ -37,6 +37,10 @@
       <% end %>
     </div>
 
-    <% if show_numbers %><div class="ml-2 text-gray-600 text-sm">(<%= reviews.count %> <%= "review".pluralize(reviews.count) %>)</div><% end %>
+    <% if show_numbers %>
+      <a href="#customer-reviews" class="ml-2 text-gray-600 text-sm hover:underline cursor-pointer">
+        (<%= reviews.count %> <%= "review".pluralize(reviews.count) %>)
+      </a>
+    <% end %>
   </div>
 </div>
