@@ -33,31 +33,42 @@
           <% end %>
         </div>
       </div>
+
       <% if @product_review.images.attached? %>
         <div class="card mb-4">
           <div class="card-header d-flex justify-content-between align-items-center">
-            <strong>Images</strong>
+            <strong>Attachments</strong>
             <button type="button" class="btn btn-sm btn-danger" data-review-delete data-url="<%= purge_images_admin_product_product_review_path(@product, @product_review) %>">
               <i class="ti ti-trash"></i> Delete Selected
             </button>
           </div>
           <div class="card-body d-flex flex-wrap gap-3">
-            <% @product_review.images.each do |img| %>
-              <% thumb = img.variant(resize_to_limit: [120, 120], saver: { quality: 70 }) %>
-              <div class="position-relative review-image-thumb" id="review_image_<%= img.id %>">
-                <div class="form-check position-absolute top-0 start-0 m-1">
-                  <input type="checkbox" class="form-check-input" value="<%= img.id %>">
+            <% @product_review.images.each do |attachment| %>
+              <div class="position-relative review-image-thumb" id="review_image_<%= attachment.id %>" style="width: 140px; height: 140px;">
+                <div class="form-check position-absolute top-0 start-0 m-1" style="z-index: 10;">
+                  <input type="checkbox" class="form-check-input" value="<%= attachment.id %>">
                 </div>
-                <%= image_tag(
-                      main_app.rails_representation_path(thumb, only_path: true),
-                      class: "rounded border",
-                      loading: "lazy"
-                    ) %>
+                
+                <div class="border rounded bg-light d-flex align-items-center justify-content-center h-100 w-100 overflow-hidden">
+                  <% if attachment.content_type.start_with?('video') %>
+                    <video src="<%= main_app.url_for(attachment) %>" class="w-100 h-100" style="object-fit: cover;" controls></video>
+                  <% elsif attachment.variable? %>
+                    <% thumb = attachment.variant(resize_to_limit: [140, 140], saver: { quality: 70 }) %>
+                    <%= image_tag(main_app.rails_representation_path(thumb, only_path: true), class: "w-100 h-100", style: "object-fit: cover;", loading: "lazy") %>
+                  <% else %>
+                    <span class="text-muted"><%= attachment.filename.extension %></span>
+                  <% end %>
+                </div>
               </div>
             <% end %>
           </div>
         </div>
       <% end %>
+
+      <div class="form-actions mt-3">
+        <%= f.submit Spree.t(:update), class: "btn btn-primary" %>
+      </div>
+
     <% end %>
   </div>
 </div>
@@ -84,7 +95,7 @@ document.addEventListener("click", async function(event) {
   const checked = form.querySelectorAll(".review-image-thumb input[type='checkbox']:checked")
   const ids = Array.from(checked).map(cb => cb.value)
   if (ids.length === 0) { button.dataset.processing = "false"; return }
-  if (!confirm("Delete selected images?")) { button.dataset.processing = "false"; return }
+  if (!confirm("Delete selected items?")) { button.dataset.processing = "false"; return }
   try {
     const token = document.querySelector("meta[name='csrf-token']").content
     const response = await fetch(button.dataset.url, {
@@ -95,7 +106,7 @@ document.addEventListener("click", async function(event) {
     if (!response.ok) throw new Error("Delete failed")
     ids.forEach(id => form.querySelector(`#review_image_${id}`)?.remove())
   } catch(e) {
-    alert("Failed to delete images")
+    alert("Failed to delete items")
   } finally {
     button.dataset.processing = "false"
   }
