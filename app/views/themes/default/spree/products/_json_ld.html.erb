@@ -1,6 +1,13 @@
 <script type="application/ld+json" data-test-id="product-json-ld">
   <% first_or_default_variant = product.first_or_default_variant(current_currency) %>
   <% approved_reviews = product.product_reviews.where(approved: true) %>
+  
+  <% if product.has_variants? %>
+    <%# Map valid prices in current currency only %>
+    <% prices = product.variants.map { |v| v.price_in(current_currency).amount }.compact %>
+    <% low_price = prices.min %>
+    <% high_price = prices.max %>
+  <% end %>
 
   {
     "@context": "https://schema.org/",
@@ -22,7 +29,7 @@
       <% if first_or_default_variant.sku.present? %>
         "sku": <%= first_or_default_variant.sku.to_json.html_safe %>,
       <% end %>
-    <% elsif selected_variant %>
+    <% elsif defined?(selected_variant) && selected_variant %>
       <% if selected_variant.sku.present? %>
         "sku": <%= selected_variant.sku.to_json.html_safe %>,
       <% end %>
@@ -31,11 +38,10 @@
     <% if product.brand %>
     "brand": {
       "@type": "Brand",
-      "name": <%= product.brand_name.to_json.html_safe %>
+      "name": <%= product.brand.name.to_json.html_safe %>
     },
     <% end %>
 
-    <%# --- Inject Aggregate Rating & Reviews if available --- %>
     <% if approved_reviews.any? %>
     "aggregateRating": {
       "@type": "AggregateRating",
@@ -48,7 +54,7 @@
           "@type": "Review",
           author: {
             "@type": "Person",
-            name: review.user&.email&.split('@')&.first || "Anonymous"
+            name: review.user&.email&.split('@')&.first || review.name || "Anonymous"
           },
           reviewRating: {
             "@type": "Rating",
@@ -62,11 +68,11 @@
     ) %>,
     <% end %>
 
-    <% if product.has_variants? %>
+    <% if product.has_variants? && low_price && high_price %>
     "offers": {
       "@type": "AggregateOffer",
-      "lowPrice": <%= product.variants.map(&:price).min.to_f.round(2) %>,
-      "highPrice": <%= product.variants.map(&:price).max.to_f.round(2) %>,
+      "lowPrice": <%= low_price.to_f.round(2) %>,
+      "highPrice": <%= high_price.to_f.round(2) %>,
       "offerCount": <%= product.variants.count %>,
       "priceCurrency": <%= current_currency.to_json.html_safe %>,
       "offers": [
