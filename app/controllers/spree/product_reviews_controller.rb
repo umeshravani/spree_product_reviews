@@ -4,6 +4,21 @@ module Spree
     before_action :load_product, only: %i[index new create destroy]
     before_action :authenticate_user!, only: %i[new create]
 
+    Spree::ProductReview.class_eval do
+      has_many_attached :images
+      _validators.delete(:images)
+      validate :validate_media_content_type
+
+      def validate_media_content_type
+        return unless images.attached?
+        images.each do |file|
+          unless file.content_type.in?(%w[image/jpeg image/png image/webp image/gif video/mp4 video/quicktime video/webm])
+            errors.add(:images, "Invalid format")
+          end
+        end
+      end
+    end
+
     def new
       @product_review = Spree::ProductReview.new(product: @product)
       authorize! :create, @product_review
@@ -12,11 +27,13 @@ module Spree
     def create
       @product_review = Spree::ProductReview.new(product_review_params)
       @product_review.product = @product
-      @product_review.purchase_date = spree_current_user.recent_purchase_date_for @product
       @product_review.user = spree_current_user
+      
+      @product_review.product_name = @product.name
+      
+      @product_review.purchase_date = spree_current_user.recent_purchase_date_for(@product)
       @product_review.ip_address = request.remote_ip
       @product_review.locale = I18n.locale.to_s
-      @product_review.product_name = @product.name
 
       authorize! :create, @product_review
 
@@ -60,12 +77,16 @@ module Spree
 
       if @product_review.save
         if @product_review.approved?
+          puts "SAVE ERROR: #{@product_review.errors.full_messages.join(', ')}"
           flash[:success] = Spree.t("product_review.flash_messages.create.approved")
         else
+          puts "SAVE ERROR: #{@product_review.errors.full_messages.join(', ')}"
           flash[:success] = Spree.t("product_review.flash_messages.create.success")
         end
         redirect_to spree.product_path(@product)
       else
+        puts "REVIEW SAVE FAILED: #{@product_review.errors.full_messages}"
+        puts "SAVE ERROR: #{@product_review.errors.full_messages.join(', ')}"
         flash[:error] = Spree.t("product_review.flash_messages.create.failure")
         render :new
       end
@@ -89,9 +110,15 @@ module Spree
     end
 
     def product_review_params
-      params.require(:product_review).permit(
+      p = params.require(:product_review).permit(
         :rating, :review, :show_identifier, :title, images: []
       )
+      
+      if p[:images].is_a?(Array)
+        p[:images].reject!(&:blank?)
+      end
+      
+      p
     end
 
     def authenticate_user!
