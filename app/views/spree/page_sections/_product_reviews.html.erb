@@ -9,7 +9,7 @@
   <% product_reviews = product.product_reviews.where(approved: true).order(created_at: :desc) %>
 <% end %>
 
-<div class="page-container mx-auto py-8 pb-6">
+<div id="customer-reviews" class="page-container mx-auto py-8 pb-6">
   <h1 class="text-2xl font-bold mb-6 text-center"><%= Spree.t('customer_reviews') %></h1>
 
   <% if product_reviews.any? %>
