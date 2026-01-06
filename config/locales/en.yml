@@ -1,13 +1,15 @@
-# Sample localization file for English. Add more files in this directory for other locales.
-# See https://github.com/svenfuchs/rails-i18n/tree/master/rails%2Flocale for starting points.
-
 en:
+  date:
+    formats:
+      short_date: "%b %d, %Y"
+
   spree:
     # General
     product_reviews: "Product Reviews"
     reviews: "Reviews"
     customer_reviews: "Customer Reviews"
     review_settings: "Review Settings"
+    general_settings: "General Settings"
     
     # Action Buttons
     approve: "Approve"
@@ -21,6 +23,8 @@ en:
     status: "Status"
     product: "Product"
     email: "Email"
+    user: "User"
+    stars: "Stars"
     
     # Form / Frontend
     new_product_review: "Leave a new product review"
@@ -66,6 +70,7 @@ en:
       product_reviews:
         reviewed_by: "Reviewed by:"
         pending_product_review_instructions: "Thanks for your review! It is currently pending approval."
+        add_a_review: "Add a Review"
     
     # Admin UI Descriptions
     admin:
