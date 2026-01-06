@@ -86,6 +86,7 @@
                   id: "seo-product-select" %>
           </div>
   
+          <%# --- GOOGLE PREVIEW BOX --- %>
           <div id="seo-preview-container" class="mt-4 p-3 bg-white border rounded hidden" style="font-family: Arial, sans-serif; max-width: 600px;">
             
             <%# Header: Favicon + Breadcrumb %>
@@ -189,19 +190,24 @@
           .then(data => {
             const p = data.data.attributes;
             
+            // 1. Text Data
             elTitle.textContent = p.name;
             
-            // Decode HTML Entities (e.g. &ldquo; -> “) using DOMParser
+            // FIX: Decode HTML Entities (e.g. &ldquo; -> “) using DOMParser
             let rawDesc = p.description || "No description available.";
+            // Step A: Strip Tags
             let noTags = rawDesc.replace(/<[^>]*>?/gm, ''); 
+            // Step B: Decode Entities
             const parser = new DOMParser();
             const decodedDesc = parser.parseFromString(`<!doctype html><body>${noTags}`, 'text/html').body.textContent;
   
+            // Step C: Truncate
             elDesc.textContent = decodedDesc.substring(0, 155) + (decodedDesc.length > 155 ? "..." : "");
             
             elPrice.textContent = p.display_price;
             elUrl.textContent = `${storeUrl} › products › ${p.slug}`;
   
+            // 2. Mock Ratings (Randomized for preview)
             const rating = (Math.random() * (5.0 - 4.0) + 4.0).toFixed(1);
             const count = Math.floor(Math.random() * 50) + 1;
             elRating.textContent = rating;
@@ -209,18 +215,21 @@
             elStock.textContent = p.purchasable ? "In stock" : "Out of stock";
             elStock.style.color = p.purchasable ? "#188038" : "#d93025";
   
+            // 3. Image Logic
             elImageWrapper.classList.add("hidden");
             let foundImage = null;
   
             if (data.included) {
-
+              // Find first Image object
               const imgData = data.included.find(x => x.type === 'image');
               
               if (imgData && imgData.attributes) {
+                // Priority 1: Check for styles (Standard Spree API response)
                 if (imgData.attributes.styles) {
                    const small = imgData.attributes.styles.find(s => s.width == 240 || s.width == 100);
                    foundImage = small ? small.url : imgData.attributes.original_url;
                 } else {
+                   // Priority 2: Fallback to original
                    foundImage = imgData.attributes.original_url;
                 }
               }
