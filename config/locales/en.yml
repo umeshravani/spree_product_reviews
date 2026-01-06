@@ -17,7 +17,7 @@ en:
     
     # Model Attributes & Columns
     review_title: "Review Title"
-    review_images: "Review Images"
+    review_images: "Review Media"
     product_review_rating: "Rating"
     date: "Date"
     status: "Status"
