@@ -2,19 +2,34 @@
   section ||= local_assigns[:section]
   max_images = section&.preferred_max_images_upload || 5
   thumb_size = section&.preferred_thumbnail_size || 72
-  images = review.images.select(&:blob).first(max_images)
-  return if images.empty?
-  many_images = images.size > 4
+  attachments = review.images.select(&:blob).first(max_images)
+  return if attachments.empty?
+  
   cols =
-    images.size == 1 ? 'grid-cols-1' :
-    images.size == 2 ? 'grid-cols-2' :
-    images.size == 3 ? 'grid-cols-3' :
-                       'grid-cols-3 sm:grid-cols-4'
+    attachments.size == 1 ? 'grid-cols-1' :
+    attachments.size == 2 ? 'grid-cols-2' :
+    attachments.size == 3 ? 'grid-cols-3' :
+                            'grid-cols-3 sm:grid-cols-4'
 %>
+<style>
+  @keyframes sp-pulse {
+    0%, 100% { background-color: #f3f4f6; }
+    50% { background-color: #e5e7eb; }
+  }
+  .sp-skeleton-loader {
+    animation: sp-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    background-color: #f3f4f6; 
+  }
+  .sp-img-loading {
+    opacity: 0;
+    transition: opacity 0.4s ease-in-out;
+  }
+  .sp-img-loaded {
+    opacity: 1;
+  }
+</style>
 
 <div class="mt-2 w-full">
-
-  <%# --- Swiper slider for medium+ screens --- %>
   <div
     class="hidden md:block"
     data-controller="swiper lightbox"
@@ -22,28 +37,53 @@
   >
     <div class="swiper h-[70px] w-full overflow-hidden cursor-grab active:cursor-grabbing">
       <div class="swiper-wrapper flex gap-1 pr-6">
-        <% images.each do |image| %>
-          <% full_w = image.blob.metadata[:width]  || 2000 %>
-          <% full_h = image.blob.metadata[:height] || 2000 %>
-          <% thumb = image.variant(
-            resize_to_fill: [thumb_size, thumb_size],
-            saver: { quality: 70 }
-          ) %>
+        <% attachments.each do |attachment| %>
+          <% is_video = attachment.content_type.start_with?('video') %>
+          
+          <% if is_video %>
+             <% full_w = 1280; full_h = 720 %>
+             <% thumb_url = attachment.previewable? ? main_app.url_for(attachment.preview(resize_to_fill: [thumb_size, thumb_size], saver: { quality: 70 })) : nil %>
+          <% else %>
+             <% full_w = attachment.metadata['width'] || 1200 %>
+             <% full_h = attachment.metadata['height'] || 1200 %>
+             <% thumb_url = attachment.variable? ? main_app.url_for(attachment.variant(resize_to_fill: [thumb_size, thumb_size], saver: { quality: 70 })) : nil %>
+          <% end %>
 
-          <div class="swiper-slide !h-[<%= thumb_size %>px]" style="width:<%= thumb_size %>px; border-radius:10%; overflow:hidden;">
+          <div class="swiper-slide !h-[<%= thumb_size %>px]" style="width:<%= thumb_size %>px; height:<%= thumb_size %>px; border-radius:10%; overflow:hidden;">
             <%= link_to(
-              main_app.rails_blob_path(image, only_path: true),
-              data: { pswp_width: full_w, pswp_height: full_h },
-              class: "block w-full h-full overflow-hidden rounded-xl border border-gray-200"
+              main_app.rails_blob_path(attachment, only_path: true),
+              data: { 
+                pswp_width: full_w, 
+                pswp_height: full_h,
+                pswp_type: (is_video ? 'video' : nil)
+              },
+              class: "relative block w-full h-full overflow-hidden rounded-xl border border-gray-200 sp-skeleton-loader"
             ) do %>
-              <%= image_tag(
-                main_app.rails_representation_path(thumb, only_path: true),
-                width: thumb_size,
-                height: thumb_size,
-                loading: "lazy",
-                decoding: "async",
-                class: "w-full h-full object-cover rounded-xl"
-              ) %>
+              <% if thumb_url %>
+                <%= image_tag(thumb_url, 
+                      width: thumb_size, 
+                      height: thumb_size, 
+                      loading: "lazy", 
+                      class: "w-full h-full object-cover rounded-xl sp-img-loading",
+                      onload: "this.classList.add('sp-img-loaded'); this.parentElement.classList.remove('sp-skeleton-loader');" 
+                    ) %>
+              <% else %>
+                <div class="w-full h-full bg-gray-100 flex items-center justify-center absolute inset-0" 
+                     onload="this.parentElement.classList.remove('sp-skeleton-loader');">
+                   <% if is_video %>
+                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 icon icon-tabler icons-tabler-outline icon-tabler-player-play"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 4v16l13 -8l-13 -8" /></svg>
+                   <% else %>
+                     <span class="text-xs text-gray-400">FILE</span>
+                   <% end %>
+                </div>
+                <script>document.currentScript.parentElement.classList.remove('sp-skeleton-loader')</script>
+              <% end %>
+              
+              <% if is_video %>
+                <div class="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="text-black drop-shadow-sm opacity-90 icon icon-tabler icons-tabler-filled icon-tabler-player-play"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6 4v16a1 1 0 0 0 1.524 .852l13 -8a1 1 0 0 0 0 -1.704l-13 -8a1 1 0 0 0 -1.524 .852z" /></svg>
+                </div>
+              <% end %>
             <% end %>
           </div>
         <% end %>
@@ -51,30 +91,121 @@
     </div>
   </div>
 
-  <%# --- Grid for mobile / small screens --- %>
+  <%# --- Grid for mobile --- %>
   <div class="md:hidden grid gap-1 <%= cols %>" data-controller="lightbox">
-    <% images.each do |image| %>
-      <% full_w = image.blob.metadata[:width]  || 2000 %>
-      <% full_h = image.blob.metadata[:height] || 2000 %>
-      <% thumb = image.variant(
-        resize_to_fill: [thumb_size, thumb_size],
-        saver: { quality: 70 }
-      ) %>
+    <% attachments.each do |attachment| %>
+      <% is_video = attachment.content_type.start_with?('video') %>
+      
+      <% if is_video %>
+         <% full_w = 1280; full_h = 720 %>
+         <% thumb_url = attachment.previewable? ? main_app.url_for(attachment.preview(resize_to_fill: [thumb_size, thumb_size])) : nil %>
+      <% else %>
+         <% full_w = attachment.metadata['width'] || 1200 %>
+         <% full_h = attachment.metadata['height'] || 1200 %>
+         <% thumb_url = attachment.variable? ? main_app.url_for(attachment.variant(resize_to_fill: [thumb_size, thumb_size])) : nil %>
+      <% end %>
 
       <%= link_to(
-        main_app.rails_blob_path(image, only_path: true),
-        data: { pswp_width: full_w, pswp_height: full_h },
-        class: "aspect-square block overflow-hidden rounded-xl border border-gray-200",
+        main_app.rails_blob_path(attachment, only_path: true),
+        data: { 
+          pswp_width: full_w, 
+          pswp_height: full_h,
+          pswp_type: (is_video ? 'video' : nil)
+        },
+        class: "relative aspect-square block overflow-hidden rounded-xl border border-gray-200 sp-skeleton-loader",
         style: "border-radius: 10px;"
       ) do %>
-        <%= image_tag(
-          main_app.rails_representation_path(thumb, only_path: true),
-          loading: "lazy",
-          decoding: "async",
-          class: "w-full h-full object-cover rounded-xl"
-        ) %>
+        <% if thumb_url %>
+          <%= image_tag(thumb_url, 
+                loading: "lazy", 
+                class: "w-full h-full object-cover rounded-xl sp-img-loading",
+                onload: "this.classList.add('sp-img-loaded'); this.parentElement.classList.remove('sp-skeleton-loader');" 
+              ) %>
+        <% else %>
+          <div class="w-full h-full bg-gray-100 flex items-center justify-center absolute inset-0">
+             <% if is_video %>
+               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400 icon icon-tabler icons-tabler-outline icon-tabler-player-play"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 4v16l13 -8l-13 -8" /></svg>
+             <% else %>
+               <span class="text-xs text-gray-400">FILE</span>
+             <% end %>
+          </div>
+          <script>document.currentScript.parentElement.classList.remove('sp-skeleton-loader')</script>
+        <% end %>
+        
+        <% if is_video %>
+          <div class="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="text-black drop-shadow-sm opacity-90 icon icon-tabler icons-tabler-filled icon-tabler-player-play"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6 4v16a1 1 0 0 0 1.524 .852l13 -8a1 1 0 0 0 0 -1.704l-13 -8a1 1 0 0 0 -1.524 .852z" /></svg>
+          </div>
+        <% end %>
       <% end %>
     <% end %>
   </div>
 
 </div>
+<script type="module">
+  import PhotoSwipeLightbox from 'https://unpkg.com/photoswipe/dist/photoswipe-lightbox.esm.js';
+  import PhotoSwipe from 'https://unpkg.com/photoswipe/dist/photoswipe.esm.js';
+
+  function initVideoHandler(galleryElement) {
+    if (galleryElement.dataset.videoHandled) return;
+    galleryElement.dataset.videoHandled = "true";
+
+    const lightbox = new PhotoSwipeLightbox({
+      gallery: galleryElement, children: 'a', pswpModule: PhotoSwipe, bgOpacity: 0.9,
+    });
+
+    lightbox.addFilter('itemData', (itemData) => {
+      if (itemData.element && itemData.element.dataset.pswpType === 'video') itemData.type = 'video';
+      return itemData;
+    });
+
+    lightbox.on('contentLoad', (e) => {
+      const { content } = e;
+      if (content.type === 'video') {
+        e.preventDefault();
+        const wrapper = document.createElement('div');
+        wrapper.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;pointer-events:none;';
+        
+        const video = document.createElement('video');
+        video.src = content.data.src;
+        video.controls = true;
+        video.playsInline = true; 
+        video.style.cssText = 'max-width:90%;max-height:90%;width:auto;height:auto;box-shadow:0 4px 20px rgba(0,0,0,0.5);pointer-events:auto;z-index:10000;';
+        
+        wrapper.appendChild(video);
+        content.element = wrapper;
+      }
+    });
+
+    lightbox.on('change', () => {
+      document.querySelectorAll('.pswp video').forEach(v => v.pause());
+      const currSlide = lightbox.currSlide;
+      if (currSlide && currSlide.content.element) {
+        const video = currSlide.content.element.querySelector('video');
+        if (video) video.play().catch(() => {});
+      }
+    });
+
+    lightbox.on('close', () => {
+      document.querySelectorAll('.pswp video').forEach(v => v.pause());
+    });
+
+    lightbox.init();
+  }
+
+  const setupGalleries = () => document.querySelectorAll('[data-controller="swiper lightbox"], [data-controller="lightbox"]').forEach(initVideoHandler);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setupGalleries);
+  else setupGalleries();
+  document.addEventListener('turbo:load', setupGalleries);
+</script>
+
+<style>
+  /* Fix right arrow rotation */
+  .pswp__button--arrow--next .pswp__icn {
+    transform: rotate(180deg) !important;
+  }
+  .pswp__button--arrow .pswp__icn {
+    left: 14px; 
+  }
+</style>
+<link rel="stylesheet" href="https://unpkg.com/photoswipe/dist/photoswipe.css">
