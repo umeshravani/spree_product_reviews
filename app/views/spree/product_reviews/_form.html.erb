@@ -2,8 +2,10 @@
 
 <script>
   const MAX_FILES = <%= section&.preferred_max_images_upload || 5 %>;
-  const MAX_FILE_SIZE = (<%= section&.preferred_max_image_size_mb || 5 %>) * 1024 * 1024;
-  const THUMB_SIZE = <%= section&.preferred_thumbnail_size || 72 %>;
+  // Base limit from settings (usually for images)
+  const PREF_SIZE_MB = <%= section&.preferred_max_image_size_mb || 5 %>;
+  const MAX_FILE_SIZE_IMAGE = PREF_SIZE_MB * 1024 * 1024;
+  const MAX_FILE_SIZE_VIDEO = 50 * 1024 * 1024; 
 </script>
 
 <div class="review-form-container mb-8 p-4 border border-gray-200 rounded-md shadow-sm bg-white">
@@ -63,7 +65,7 @@
 <div class="form-group mb-4">
   <%= f.label :rating, Spree.t("product_review_rating"), class: "block mb-2 font-medium text-gray-700" %>
   <div class="rating-group">
-    <%# Hidden input to ensure no default selection - user must choose a rating %>
+    <%# Hidden input to ensure no default selection %>
     <input class="rating__input rating__input--none" disabled checked name="<%= f.object_name %>[rating]" id="<%= f.object_name %>_rating_none" value="0" type="radio">
     
     <% (1..5).each do |i| %>
@@ -86,11 +88,11 @@
     </div>
 
     <div class="form-group mb-4">
-  <%= f.label :images, "Upload images (optional)", class: "block mb-2 font-medium text-gray-700" %>
+  <%= f.label :images, "Upload media (optional)", class: "block mb-2 font-medium text-gray-700" %>
 
   <%= f.file_field :images,
         multiple: true,
-        accept: "image/*",
+        accept: "image/*,video/mp4,video/quicktime,video/webm",
         direct_upload: true,
         class: "hidden",
         id: "review-image-upload" %>
@@ -103,7 +105,6 @@
                hover:bg-gray-50 hover:text-gray-900
                transition select-none">
       
-        <!-- Upload icon -->
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 16 16"
@@ -114,33 +115,29 @@
           <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708z"/>
         </svg>
       
-        <!-- Text -->
-        <span>Upload images</span>
+        <span>Upload images or video</span>
       </label>
       
   <p class="mt-1 text-xs text-gray-400">
-    Max <%= section&.preferred_max_images_upload || 5 %> images · JPG / PNG / GIF · Max <%= section&.preferred_max_image_size_mb || 5 %>MB each
+    Max <%= section&.preferred_max_images_upload || 5 %> files · Images (<%= section&.preferred_max_image_size_mb || 5 %>MB) or Video (50MB)
   </p>
 
-  <!-- Validation errors -->
   <div id="review-image-errors"
        class="hidden mt-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
   </div>
 
-  <!-- Preview grid -->
   <div id="review-image-preview"
        class="mt-3 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
   </div>
 
-  <!-- Upload progress -->
   <div id="review-upload-progress" class="hidden mt-3">
     <div class="h-1.5 w-full bg-gray-200 rounded">
       <div id="review-upload-bar"
-           class="h-1.5 bg-primary-600 rounded transition-all"
+           class="h-1.5 bg-primary-600 rounded-full transition-all"
            style="width:0%">
       </div>
     </div>
-    <p class="text-xs text-gray-500 mt-1">Uploading images…</p>
+    <p class="text-xs text-gray-500 mt-1">Uploading media…</p>
   </div>
 </div>
 
@@ -156,10 +153,12 @@
     <%= f.submit block.preferred_button_text, class: "#{button_class} py-2 px-6 rounded-md text-white font-medium" %>
   <% end %>
 </div>
+
 <script>
 (() => {
   const MAX_FILES = <%= section&.preferred_max_images_upload || 5 %>
-  const MAX_FILE_SIZE = (<%= section&.preferred_max_image_size_mb || 5 %>) * 1024 * 1024
+  const MAX_FILE_SIZE_IMAGE = (<%= section&.preferred_max_image_size_mb || 5 %>) * 1024 * 1024
+  const MAX_FILE_SIZE_VIDEO = 50 * 1024 * 1024 // 50MB
 
   const input = document.getElementById("review-image-upload")
   const preview = document.getElementById("review-image-preview")
@@ -188,45 +187,56 @@
   }
 
   function renderPreviews() {
-  preview.innerHTML = ""
+    preview.innerHTML = ""
 
-  filesStore.forEach((file, index) => {
-    const wrapper = document.createElement("div")
-    wrapper.className =
-      "relative group overflow-hidden h-24 " +
-      "flex items-center justify-center rounded border bg-gray-100"
+    filesStore.forEach((file, index) => {
+      const wrapper = document.createElement("div")
+      wrapper.className =
+        "relative group overflow-hidden h-24 " +
+        "flex items-center justify-center rounded border bg-gray-100"
 
-    const img = document.createElement("img")
-    img.src = URL.createObjectURL(file)
-    img.className =
-       "w-full h-full object-cover"
-    img.loading = "lazy"
+      let mediaEl;
 
-    const removeBtn = document.createElement("button")
-removeBtn.type = "button"
-removeBtn.innerHTML = "&times;"
+      if (file.type.startsWith('video/')) {
+        mediaEl = document.createElement("video")
+        mediaEl.src = URL.createObjectURL(file)
+        mediaEl.className = "w-full h-full object-cover"
+        mediaEl.muted = true
+        mediaEl.playsInline = true
+        const icon = document.createElement("div")
+        icon.className = "absolute bottom-1 left-1 pointer-events-none"
+        icon.innerHTML = `<svg class="w-4 h-4 text-white drop-shadow-md" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" /></svg>`
+        wrapper.appendChild(icon)
+      } else {
+        mediaEl = document.createElement("img")
+        mediaEl.src = URL.createObjectURL(file)
+        mediaEl.className = "w-full h-full object-cover"
+        mediaEl.loading = "lazy"
+      }
 
-removeBtn.className =
-  "absolute top-1 right-1 z-50 pointer-events-auto " +
-  "w-8 h-8 flex items-center justify-center " +
-  "rounded-full text-gray-900 shadow-md " +
-  "hover:bg-white transition"
+      wrapper.appendChild(mediaEl)
 
-removeBtn.style.background = "rgba(255,255,255,0.45)"
-removeBtn.style.backdropFilter = "blur(8px)"
-removeBtn.style.webkitBackdropFilter = "blur(8px)"
+      const removeBtn = document.createElement("button")
+      removeBtn.type = "button"
+      removeBtn.innerHTML = "&times;"
+      removeBtn.className =
+        "absolute top-1 right-1 z-50 pointer-events-auto " +
+        "w-6 h-6 flex items-center justify-center " +
+        "rounded-full text-gray-900 shadow-md " +
+        "hover:bg-white transition text-lg leading-none"
+      removeBtn.style.background = "rgba(255,255,255,0.6)"
+      removeBtn.style.backdropFilter = "blur(4px)"
 
-    removeBtn.addEventListener("click", () => {
-      filesStore.splice(index, 1)
-      syncInputFiles()
-      renderPreviews()
+      removeBtn.addEventListener("click", () => {
+        filesStore.splice(index, 1)
+        syncInputFiles()
+        renderPreviews()
+      })
+
+      wrapper.appendChild(removeBtn)
+      preview.appendChild(wrapper)
     })
-
-    wrapper.appendChild(img)
-    wrapper.appendChild(removeBtn)
-    preview.appendChild(wrapper)
-  })
-}
+  }
 
   input.addEventListener("change", () => {
     clearError()
@@ -234,14 +244,22 @@ removeBtn.style.webkitBackdropFilter = "blur(8px)"
     const newFiles = Array.from(input.files)
 
     if (filesStore.length + newFiles.length > MAX_FILES) {
-      showError(`You can upload a maximum of ${MAX_FILES} images.`)
+      showError(`You can upload a maximum of ${MAX_FILES} files.`)
       input.value = ""
       return
     }
 
     for (const file of newFiles) {
-      if (file.size > MAX_FILE_SIZE) {
-        showError(`"${file.name}" exceeds 5MB.`)
+      let limit = MAX_FILE_SIZE_IMAGE;
+      let limitLabel = "<%= section&.preferred_max_image_size_mb || 5 %>MB";
+      
+      if (file.type.startsWith('video/')) {
+        limit = MAX_FILE_SIZE_VIDEO;
+        limitLabel = "50MB";
+      }
+
+      if (file.size > limit) {
+        showError(`"${file.name}" exceeds ${limitLabel}.`)
         input.value = ""
         return
       }
@@ -252,7 +270,6 @@ removeBtn.style.webkitBackdropFilter = "blur(8px)"
     renderPreviews()
   })
 
-  /* ActiveStorage progress */
   document.addEventListener("direct-upload:initialize", () => {
     progressWrapper.classList.remove("hidden")
     progressBar.style.width = "0%"
