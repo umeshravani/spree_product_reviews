@@ -4,11 +4,10 @@
   <% if global_view %>
     <td>
       <div class="d-flex align-items-center">
-        <%# IMAGE CONTAINER: Prevent shrinking %>
+        <%# IMAGE CONTAINER %>
         <div class="mr-3" style="flex-shrink: 0;">
           <%= render 'spree/admin/shared/product_image', object: product_review.product, width: 40, height: 40 %>
         </div>
-        
         <%= link_to product_review.product.name, 
               spree.edit_admin_product_path(product_review.product), 
               class: "text-dark font-weight-bold",
@@ -16,7 +15,6 @@
       </div>
     </td>
   <% end %>
-
   <td class="w-10 cursor-pointer">
     <% if product_review.approved? %>
       <span class="badge badge-success">
@@ -41,13 +39,30 @@
     </div>
   </td>
   <td><%= l(product_review.created_at.to_date, format: :short) %></td>
-
   <td>
-    <% if product_review.images.attached? %>
-       <%= icon('photo', class: 'text-primary') %> <%= product_review.images.count %>
-    <% else %>
-       <span class="text-muted">-</span>
-    <% end %>
+    <% 
+       all_media = product_review.images
+       video_count = all_media.select { |m| m.content_type.to_s.start_with?('video') }.count
+       image_count = all_media.count - video_count 
+    %>
+    
+    <div class="d-flex align-items-center" style="gap: 10px;">
+      <% if image_count > 0 %>
+         <div class="text-primary d-flex align-items-center">
+           <%= icon('photo', class: 'mr-1') %> <%= image_count %>
+         </div>
+      <% end %>
+
+      <% if video_count > 0 %>
+         <div class="text-primary d-flex align-items-center">
+           <%= icon('movie', class: 'mr-1') %> <%= video_count %>
+         </div>
+      <% end %>
+
+      <% if image_count == 0 && video_count == 0 %>
+         <span class="text-muted">-</span>
+      <% end %>
+    </div>
   </td>
 
   <td class="actions">
