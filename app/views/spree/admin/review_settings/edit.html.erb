@@ -24,12 +24,12 @@
   
             <hr>
   
-            <h6 class="mb-3 font-weight-bold">Content Moderation</h6>
+            <h6 class="mb-3 mt-3 font-weight-bold">Content Moderation</h6>
   
             <div class="form-group mb-2">
-            <div class="custom-control custom-switch">
+            <div class="custom-control custom-switch" style="padding-left: 15px;">
               <%= check_box_tag :block_spam_reviews, '1', current_store.preferred_block_spam_reviews, class: 'custom-control-input', id: 'block_spam_reviews', data: { action: "click->toggle-visibility#toggle" } %>
-              <label class="custom-control-label" for="block_spam_reviews">
+              <label class="custom-control-label" for="block_spam_reviews" style="padding-left: 50px;">
                 Block Spam Reviews
               </label>
             </div>
@@ -42,18 +42,18 @@
           </div>
   
             <div class="form-group mb-2">
-              <div class="custom-control custom-switch">
+              <div class="custom-control custom-switch" style="padding-left: 15px;">
                 <%= check_box_tag :disable_review_links, '1', current_store.preferred_disable_review_links, class: 'custom-control-input', id: 'disable_review_links' %>
-                <label class="custom-control-label" for="disable_review_links">
+                <label class="custom-control-label" for="disable_review_links" style="padding-left: 50px;">
                   Auto-Disapprove Reviews containing Links (URLs)
                 </label>
               </div>
             </div>
   
             <div class="form-group mb-4">
-              <div class="custom-control custom-switch">
+              <div class="custom-control custom-switch" style="padding-left: 15px;">
                 <%= check_box_tag :disable_review_emails, '1', current_store.preferred_disable_review_emails, class: 'custom-control-input', id: 'disable_review_emails' %>
-                <label class="custom-control-label" for="disable_review_emails">
+                <label class="custom-control-label" for="disable_review_emails" style="padding-left: 50px;">
                   Auto-Disapprove Reviews containing Email Addresses
                 </label>
               </div>
