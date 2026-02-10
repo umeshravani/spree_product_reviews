@@ -1,0 +1,59 @@
+<div data-hook="admin_review_form_fields">
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="card-title mb-0"><%= Spree.t(:details) %></h5>
+    </div>
+    <div class="card-body">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700"><%= Spree.t(:product) %></label>
+          <div class="mt-1 text-sm text-gray-900">
+            <% if @product_review.product %>
+              <%= link_to @product_review.product.name, spree.edit_admin_product_path(@product_review.product), class: "text-primary hover:underline" %>
+            <% else %>
+              <%= Spree.t(:product_deleted) %>
+            <% end %>
+          </div>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700"><%= Spree.t(:user) %></label>
+          <div class="mt-1 text-sm text-gray-900">
+            <%= @product_review.user&.email || @product_review.name || Spree.t(:anonymous) %>
+          </div>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700"><%= Spree.t(:ip_address) %></label>
+          <div class="mt-1 text-sm text-gray-900"><%= @product_review.ip_address %></div>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700"><%= Spree.t(:date) %></label>
+          <div class="mt-1 text-sm text-gray-900"><%= l @product_review.created_at.to_date %></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <%= f.label :title, Spree.t(:title) %>
+    <%= f.text_field :title, class: 'form-control' %>
+  </div>
+
+  <div class="form-group">
+    <%= f.label :rating, Spree.t(:rating) %>
+    <%= f.number_field :rating, in: 1..5, class: 'form-control' %>
+  </div>
+
+  <div class="form-group">
+    <%= f.label :review, Spree.t(:review) %>
+    <%= f.text_area :review, rows: 6, class: 'form-control' %>
+  </div>
+
+  <div class="form-check mt-4">
+    <%= f.check_box :approved, class: 'form-check-input' %>
+    <%= f.label :approved, Spree.t(:approved), class: 'form-check-label' %>
+  </div>
+
+</div>
