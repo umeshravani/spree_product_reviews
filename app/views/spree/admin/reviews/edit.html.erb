@@ -1,0 +1,227 @@
+<% content_for :page_title do %>
+    <%= link_to Spree.t(:reviews), spree.admin_reviews_path, class: "text-gray-500 hover:text-gray-700" %>
+    <span class="text-gray-400 mx-2">/</span>
+    <%= Spree.t(:edit_review) %>
+  <% end %>
+  
+  <% content_for :page_actions do %>
+    <%= link_to params[:return_to].presence || spree.admin_reviews_path, class: "btn btn-secondary" do %>
+      <span class="icon icon-chevron-left mr-2"></span>
+      <%= Spree.t(:back) %>
+    <% end %>
+  <% end %>
+  
+  <%= render 'spree/admin/shared/error_messages', target: @product_review %>
+  
+  <%= form_with(model: [:admin, @product_review], url: spree.admin_review_path(@product_review), id: dom_id(@product_review, :edit), data: { turbo: true }) do |f| %>
+    
+    <div class="row">
+      <%# --- Left Column: Main Content --- %>
+      <div class="col-12 col-lg-8">
+        
+        <%# --- Review Details Card --- %>
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="card-title mb-0"><%= Spree.t(:review_details) %></h5>
+          </div>
+          <div class="card-body">
+            
+            <%# Title %>
+            <div class="form-group mb-4">
+              <%= f.label :title, Spree.t(:review_title), class: "form-label font-bold text-gray-700" %>
+              <%= f.text_field :title, class: "form-control" %>
+            </div>
+  
+            <%# Review Body %>
+            <div class="form-group mb-4">
+              <%= f.label :review, Spree.t(:review), class: "form-label font-bold text-gray-700" %>
+              <%= f.text_area :review, rows: 6, class: "form-control" %>
+            </div>
+  
+            <%# Rating %>
+            <div class="form-group mb-0">
+              <%= f.label :rating, Spree.t(:rating), class: "form-label font-bold text-gray-700" %>
+              
+              <div class="flex flex-wrap gap-2" data-rating-group>
+                <% (1..5).each do |i| %>
+                  <% is_active = @product_review.rating == i %>
+                  <label 
+                    class="cursor-pointer relative flex items-center justify-center rounded-lg border px-4 py-3 text-sm font-bold uppercase transition-all duration-200 ease-in-out shadow-sm
+                    <%= is_active ? 'btn-primary text-white border-primary ring-2 ring-primary ring-offset-1' : 'bg-white text-gray-800 border-gray-300 hover:bg-gray-50' %>"
+                    style="min-width: 60px; height: 50px;"
+                    data-rating-button
+                  >
+                    <%= f.radio_button :rating, i, checked: is_active, class: "sr-only" %>
+                    <span class="text-lg"><%= i %></span>
+                  </label>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        </div>
+  
+        <%# --- Attachments Card --- %>
+        <% if @product_review.images.attached? %>
+          <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center bg-gray-50">
+              <h5 class="card-title mb-0"><%= Spree.t(:attachments) %></h5>
+              
+              <button 
+                type="button" 
+                class="btn btn-danger btn-sm flex items-center gap-2" 
+                data-review-delete 
+                <%# FIX: Use global purge path %>
+                data-url="<%= spree.purge_images_admin_review_path(@product_review) %>"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                </svg>
+                <%= Spree.t(:delete_selected) %>
+              </button>
+            </div>
+            
+            <div class="card-body p-4">
+              <div class="grid grid-cols-3 gap-4">
+                <% @product_review.images.each do |attachment| %>
+                  <div class="relative group rounded-lg border border-gray-200 bg-gray-100 overflow-hidden shadow-sm" id="review_image_<%= attachment.id %>" style="height: 150px;">
+                    
+                    <div class="absolute top-2 left-2 z-10 shadow-sm p-1">
+                      <input type="checkbox" value="<%= attachment.id %>" class="form-checkbox text-success rounded border-gray-300 focus:ring-success">
+                    </div>
+  
+                    <div class="w-full h-full">
+                      <% if attachment.content_type.start_with?('video') %>
+                        <video src="<%= main_app.url_for(attachment) %>" class="w-full h-full object-cover" controls></video>
+                      <% elsif attachment.variable? %>
+                        <% thumb = attachment.variant(resize_to_limit: [300, 300], saver: { quality: 70 }) %>
+                        <%= image_tag(main_app.rails_representation_path(thumb, only_path: true), class: "w-full h-full object-cover hover:opacity-90 transition-opacity", loading: "lazy") %>
+                      <% else %>
+                        <div class="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100">
+                          <span class="text-xs font-bold uppercase"><%= attachment.filename.extension %></span>
+                        </div>
+                      <% end %>
+                    </div>
+                  </div>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+  
+      <%# --- Right Column: Status & Meta --- %>
+      <div class="col-12 col-lg-4">
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="card-title mb-0"><%= Spree.t(:status) %></h5>
+          </div>
+          <div class="card-body">
+            <div class="form-group mb-4">
+              <label class="form-label text-gray-500 text-xs uppercase font-bold"><%= Spree.t(:created_at) %></label>
+              <div class="text-sm font-medium"><%= l @product_review.created_at.to_date, format: :long %></div>
+            </div>
+            
+            <%# Added Product Link since this is the global view %>
+            <div class="form-group mb-4">
+              <label class="form-label text-gray-500 text-xs uppercase font-bold"><%= Spree.t(:product) %></label>
+              <div class="text-sm font-medium truncate">
+                <% if @product_review.product %>
+                  <%= link_to @product_review.product.name, spree.edit_admin_product_path(@product_review.product), class: "text-primary hover:underline" %>
+                <% else %>
+                  <span class="text-muted"><%= Spree.t(:product_deleted) %></span>
+                <% end %>
+              </div>
+            </div>
+  
+            <div class="form-group mb-4">
+              <label class="form-label text-gray-500 text-xs uppercase font-bold"><%= Spree.t(:user) %></label>
+              <div class="text-sm font-medium text-gray-900 truncate" title="<%= @product_review.user&.email %>">
+                <%= @product_review.user&.email || @product_review.name || Spree.t(:anonymous) %>
+              </div>
+            </div>
+  
+            <div class="form-group mb-0 pt-2 border-t border-gray-100">
+               <label class="flex items-center gap-3 cursor-pointer p-2 rounded transition-colors">
+                <%= f.check_box :approved, class: "form-checkbox text-success rounded border-gray-300 focus:ring-success" %>
+                <span class="text-sm font-bold text-gray-900 select-none"><%= Spree.t(:approved) %></span>
+              </label>
+            </div>
+          </div>
+        </div>
+  
+        <div class="flex flex-row gap-3">
+          <%= f.submit Spree.t(:update), class: "btn btn-primary flex-1 justify-center w-full" %>
+          <%= link_to Spree.t(:cancel), spree.admin_reviews_path, class: "btn btn-light flex-1 justify-center w-full border border-gray-300" %>
+        </div>
+      </div>
+    </div>
+  
+  <% end %>
+  
+  <script>
+  document.addEventListener("click", async function(event) {
+    // --- Rating Button Logic ---
+    const ratingBtn = event.target.closest("[data-rating-button]")
+    if (ratingBtn) {
+      const group = ratingBtn.closest("[data-rating-group]")
+      
+      // Reset all buttons to Inactive Style
+      group.querySelectorAll("[data-rating-button]").forEach(btn => {
+        btn.className = "cursor-pointer relative flex items-center justify-center rounded-lg border px-4 py-3 text-sm font-bold uppercase transition-all duration-200 ease-in-out shadow-sm bg-white text-gray-800 border-gray-300 hover:bg-gray-50"
+        btn.querySelector("input").checked = false
+      })
+  
+      // Set Active Style
+      ratingBtn.className = "cursor-pointer relative flex items-center justify-center rounded-lg border px-4 py-3 text-sm font-bold uppercase transition-all duration-200 ease-in-out shadow-sm btn-primary text-white border-primary ring-2 ring-primary ring-offset-1"
+      ratingBtn.querySelector("input").checked = true
+      return
+    }
+  
+    // --- Delete Image Logic ---
+    const button = event.target.closest("[data-review-delete]")
+    if (!button) return
+    event.preventDefault()
+    
+    const checked = document.querySelectorAll("input[type='checkbox']:checked")
+    const imageIds = Array.from(checked)
+                          .filter(cb => cb.closest('.group')) 
+                          .map(cb => cb.value)
+  
+    if (imageIds.length === 0) {
+      alert("Please select at least one image to delete.")
+      return
+    }
+  
+    if (!confirm("Are you sure you want to delete the selected images?")) return
+  
+    const originalText = button.innerHTML
+    button.disabled = true
+    button.innerHTML = "Deleting..."
+  
+    try {
+      const token = document.querySelector("meta[name='csrf-token']").content
+      const response = await fetch(button.dataset.url, {
+        method: "DELETE",
+        headers: { "X-CSRF-Token": token, "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: imageIds })
+      })
+  
+      if (!response.ok) throw new Error("Failed")
+      
+      imageIds.forEach(id => {
+        const el = document.getElementById(`review_image_${id}`)
+        if(el) {
+          el.style.opacity = '0'
+          setTimeout(() => el.remove(), 300)
+        }
+      })
+      
+      button.innerHTML = originalText
+      button.disabled = false
+    } catch(e) {
+      alert("Error deleting images")
+      button.disabled = false
+      button.innerHTML = originalText
+    }
+  })
+  </script>
