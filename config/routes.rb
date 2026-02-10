@@ -1,5 +1,16 @@
 Spree::Core::Engine.add_routes do
   namespace :admin do
+    # GLOBAL REVIEWS (For the "Reviews" tab)
+    resources :reviews do
+      member do
+        get :approve
+        get :disapprove
+        post :attach_image 
+        delete :purge_images
+      end
+    end
+
+    # NESTED REVIEWS (For the "Products" tab -> "Reviews")
     resources :products do
       resources :product_reviews, only: %i[index destroy edit update] do
         member do
@@ -11,11 +22,11 @@ Spree::Core::Engine.add_routes do
       end
     end
 
-    resources :reviews, only: [:index]
-
+    # Review Settings
     resource :review_settings, only: [:edit, :update]
   end
 
+  # Frontend routes
   resources :products, only: [] do
     resources :product_reviews, only: %i[index new create]
   end
