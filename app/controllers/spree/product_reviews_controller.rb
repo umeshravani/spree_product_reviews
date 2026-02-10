@@ -1,6 +1,9 @@
 module Spree
   class ProductReviewsController < Spree::StoreController
     helper Spree::BaseHelper
+
+    include Pagy::Backend if defined?(Pagy::Backend)
+
     before_action :load_product, only: %i[index new create destroy]
     before_action :authenticate_user!, only: %i[new create]
 
@@ -28,8 +31,8 @@ module Spree
       @product_review = Spree::ProductReview.new(product_review_params)
       @product_review.product = @product
       @product_review.user = spree_current_user
-      
-      @product_review.product_name = @product.name
+
+      @product_review.product_name = @product.name if @product_review.respond_to?(:product_name=)
       
       @product_review.purchase_date = spree_current_user.recent_purchase_date_for(@product)
       @product_review.ip_address = request.remote_ip
@@ -62,10 +65,9 @@ module Spree
 
       if (current_store.preferred_block_spam_reviews rescue false) && @product_review.review.present?
         custom_words = (current_store.preferred_spam_words || "").split(',').map(&:strip).reject(&:empty?)
-        custom_words = %w[casino viagra crypto bitcoin lottery loan investment] if custom_words.empty?
+        custom_words = %w[casino crypto bitcoin lottery loan investment] if custom_words.empty?
         
         full_text = "#{@product_review.title} #{@product_review.review}".downcase
-        
         if custom_words.any? { |word| full_text.include?(word.downcase) }
           should_approve = false
           spam_detected = true
@@ -77,23 +79,27 @@ module Spree
 
       if @product_review.save
         if @product_review.approved?
-          puts "SAVE ERROR: #{@product_review.errors.full_messages.join(', ')}"
           flash[:success] = Spree.t("product_review.flash_messages.create.approved")
         else
-          puts "SAVE ERROR: #{@product_review.errors.full_messages.join(', ')}"
           flash[:success] = Spree.t("product_review.flash_messages.create.success")
         end
         redirect_to spree.product_path(@product)
       else
-        puts "REVIEW SAVE FAILED: #{@product_review.errors.full_messages}"
-        puts "SAVE ERROR: #{@product_review.errors.full_messages.join(', ')}"
-        flash[:error] = Spree.t("product_review.flash_messages.create.failure")
+        flash[:error] = @product_review.errors.full_messages.join(', ')
         render :new
       end
     end
     
     def index
-      @product_reviews = @product.product_reviews.approved.order(created_at: :desc)
+      scope = @product.product_reviews.approved.order(created_at: :desc)
+
+      if defined?(Pagy) && respond_to?(:pagy)
+        @pagy, @product_reviews = pagy(scope)
+      elsif scope.respond_to?(:page)
+        @product_reviews = scope.page(params[:page]).per(Spree::Config[:reviews_per_page] || 10)
+      else
+        @product_reviews = scope
+      end
     end
 
     def destroy
