@@ -2,136 +2,158 @@
   <%= Spree.t(:reviews) %>
 <% end %>
 
-<% content_for :table_filter do %>
-  <div data-hook="admin_reviews_index_search">
-    <%= search_form_for [:admin, @search], url: spree.admin_reviews_path do |f| %>
-      <div class="row">
-        <div class="col-12 col-lg-6">
-          <div class="form-group">
-            <%= f.label :name_cont, Spree.t(:user) %>
-            <%= f.text_field :name_cont, class: "form-control js-quick-search-target" %>
-          </div>
+<% content_for :page_actions do %>
+  <%= link_to_with_icon 'settings', Spree.t(:review_settings), edit_admin_review_settings_path, class: 'btn btn-light' %>
+<% end %>
+
+<turbo-frame data-turbo-action="advance" id="reviews">
+  <div class="card-lg">
+    
+    <div class="p-3 border-b border-gray-200">
+      <div class="flex flex-col lg:flex-row gap-3 items-start lg:items-center justify-between">
+        
+        <div class="flex gap-2 items-center flex-wrap">
+          <%= search_form_for [:admin, @search], url: spree.admin_reviews_path, data: { turbo_frame: "reviews", turbo_action: "advance", controller: "auto-submit search-clear", auto_submit_delay_value: "300" } do |f| %>
+            <div class="form-input flex items-center py-0 pr-1 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-blue-500 lg:w-[300px] mr-auto h-[2.125rem] transition-all duration-100 ease-in-out">
+              <i class="ti ti-search mr-4 text-gray-600 shrink-0"></i>
+              <%= f.search_field :product_name_or_title_or_review_cont, 
+                  class: "outline-none border-0 h-full focus:border-0 focus:ring-0 p-0 text-base w-full",
+                  placeholder: Spree.t(:search_reviews, default: "Search Reviews, Products"),
+                  data: { "turbo-permanent": true, action: "input->auto-submit#submit input->search-clear#toggleClearButton search->auto-submit#submit", search_clear_target: "input" } 
+              %>
+              <button type="button" class="hidden p-1 text-gray-400 hover:text-gray-600 shrink-0" data-search-clear-target="clear" data-action="search-clear#clear">
+                <i class="ti ti-x w-4 h-4"></i>
+              </button>
+            </div>
+          <% end %>
         </div>
-        <div class="col-12 col-lg-6">
-          <div class="form-group">
-            <%= f.label :title_cont, Spree.t(:title) %>
-            <%= f.text_field :title_cont, class: "form-control" %>
-          </div>
-        </div>
-        <div class="col-12 col-lg-6">
-          <div class="form-group">
-            <%= f.label :review_cont, Spree.t(:review) %>
-            <%= f.text_field :review_cont, class: "form-control" %>
-          </div>
-        </div>
-        <div class="col-12 col-lg-6">
-          <div class="form-group">
-            <%= f.label :approved_eq, Spree.t(:status) %>
-            <%= f.select :approved_eq, [[Spree.t(:approved), true], [Spree.t(:unapproved), false]], { include_blank: Spree.t(:all) }, class: "select2-clear" %>
-          </div>
+
+        <div class="flex gap-2 items-center">
+          <button type="button" class="btn btn-light btn-sm h-[2.125rem]" disabled>
+            <i class="ti ti-filter"></i>
+            <span>Filters</span>
+          </button>
         </div>
       </div>
-      <div class="form-actions" data-hook="admin_reviews_index_search_buttons">
-        <%= button Spree.t(:search), 'search' %>
+    </div>
+
+    <% if @product_reviews.any? %>
+      <div class="table-responsive">
+        <table class="table" id="listing_reviews">
+          <thead>
+            <tr>
+              <th scope="col" class="pr-0 w-5 rounded-none">
+                 <div class="custom-control form-checkbox ml-1">
+                   <input type="checkbox" id="checkAllReviews" class="custom-control-input">
+                   <label class="custom-control-label" for="checkAllReviews"><span></span></label>
+                 </div>
+              </th>
+              <th class="rounded-none"><%= sort_link @search, :created_at, Spree.t(:date) %></th>
+              <th class="rounded-none"><%= Spree.t(:product) %></th>
+              <th class="rounded-none"><%= sort_link @search, :title, Spree.t(:title) %></th>
+              <th class="rounded-none"><%= sort_link @search, :rating, Spree.t(:rating) %></th>
+              <th class="rounded-none"><%= Spree.t(:media, default: 'Media') %></th>
+              <th class="rounded-none"><%= Spree.t(:user) %></th>
+              <th class="rounded-none"><%= sort_link @search, :approved, Spree.t(:status) %></th>
+              <th class="rounded-none w-10"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @product_reviews.each do |review| %>
+              <tr id="<%= dom_id review %>" class="group hover:bg-gray-50">
+                
+                <%# Checkbox %>
+                <td class="pr-0 w-5">
+                  <div class="custom-control form-checkbox ml-1">
+                    <input type="checkbox" name="review_ids[]" value="<%= review.id %>" class="custom-control-input">
+                    <label class="custom-control-label"><span></span></label>
+                  </div>
+                </td>
+
+                <td class="text-sm text-gray-500 whitespace-nowrap"><%= l review.created_at.to_date %></td>
+                
+                <td>
+                  <% if review.product %>
+                    <a class="block w-fit" href="<%= edit_admin_product_path(review.product) %>" data-turbo-frame="_top" title="<%= review.product.name %>">
+                      <div class="overflow-hidden rounded-md border border-gray-300 bg-white flex items-center justify-center shrink-0" style="width: 50px; height: 50px;">
+                        <% display_image = review.product.images.first || review.product.variant_images.first %>
+                        <% if display_image && display_image.attachment.attached? %>
+                          <%= image_tag main_app.url_for(display_image.attachment.variant(resize_to_limit: [100, 100])), class: "object-cover transition-transform duration-300 ease-out hover:scale-120", width: 50, height: 50, loading: "lazy" %>
+                        <% else %>
+                           <div class="rounded-md bg-gray-25 text-gray-600 flex items-center justify-center w-full h-full"><i class="ti ti-camera-off text-gray-600 opacity-50"></i></div>
+                        <% end %>
+                      </div>
+                    </a>
+                  <% else %>
+                    <span class="text-gray-400 italic"><%= Spree.t(:product_deleted) %></span>
+                  <% end %>
+                </td>
+
+                <td class="align-middle">
+                   <div class="max-w-[200px]">
+                     <div class="text-sm font-bold text-gray-900 truncate" title="<%= review.title %>">
+                       <%= review.title.presence || Spree.t(:no_title) %>
+                     </div>
+                     <div class="text-xs text-gray-500 truncate mt-0.5" title="<%= review.review %>">
+                       <%= review.review %>
+                     </div>
+                   </div>
+                </td>
+                
+                <td>
+                  <div class="flex text-yellow-400 text-sm whitespace-nowrap">
+                    <%= "★" * review.rating.to_i %><span class="text-gray-200"><%= "★" * (5 - review.rating.to_i) %></span>
+                  </div>
+                </td>
+
+                <td>
+                  <% 
+                     all_media = review.images
+                     video_count = all_media.select { |m| m.content_type.to_s.start_with?('video') }.count
+                     image_count = all_media.count - video_count 
+                  %>
+                  <div class="flex items-center gap-2">
+                    <% if image_count > 0 %>
+                      <span class="inline-flex items-center rounded border border-gray-200 bg-white px-2 py-1 text-xs font-bold text-gray-700 shadow-sm" title="Photos"><i class="ti ti-photo mr-1 text-blue-500"></i><%= image_count %></span>
+                    <% end %>
+                    <% if video_count > 0 %>
+                      <span class="inline-flex items-center rounded border border-gray-200 bg-white px-2 py-1 text-xs font-bold text-gray-700 shadow-sm" title="Videos"><i class="ti ti-movie mr-1 text-red-500"></i><%= video_count %></span>
+                    <% end %>
+                    <% if image_count == 0 && video_count == 0 %>
+                      <span class="text-gray-300 text-xs">-</span>
+                    <% end %>
+                  </div>
+                </td>
+
+                <td><span class="text-sm text-gray-700 block truncate max-w-[150px]" title="<%= review.user&.email || review.name %>"><%= review.user&.email || review.name || Spree.t(:anonymous) %></span></td>
+                
+                <td>
+                  <% if review.approved? %>
+                    <span class="badge badge-active whitespace-nowrap"><i class="ti ti-check"></i> <%= Spree.t(:approved) %></span>
+                  <% else %>
+                    <span class="badge badge-danger whitespace-nowrap"><i class="ti ti-circle"></i> <%= Spree.t(:unapproved) %></span>
+                  <% end %>
+                </td>
+
+                <td class="text-right whitespace-nowrap">
+                  <div class="flex items-center justify-end gap-1">
+                    <% if review.approved? %>
+                      <%= link_to_with_icon 'x', nil, spree.disapprove_admin_review_path(review), no_text: true, class: 'btn btn-light btn-sm', title: Spree.t(:disapprove) %>
+                    <% else %>
+                      <%= link_to_with_icon 'check', nil, spree.approve_admin_review_path(review), no_text: true, class: 'btn btn-light btn-sm', title: Spree.t(:approve) %>
+                    <% end %>
+                    <%= link_to_edit review, url: spree.edit_admin_review_path(review), no_text: true, class: 'btn btn-light btn-sm', data: { turbo_frame: :_top } %>
+                    <%= link_to_delete review, url: spree.admin_review_path(review), no_text: true, class: 'btn btn-light btn-sm text-red-600 hover:bg-red-50' %>
+                  </div>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
       </div>
+      <%= render 'spree/admin/shared/index_table_options', collection: @product_reviews %>
+    <% else %>
+      <div class="p-4 text-center"><div class="text-gray-500 mb-2">No reviews found.</div></div>
     <% end %>
   </div>
-<% end %>
-
-<% if @product_reviews.any? %>
-  <div class="table-responsive">
-    <table class="table" id="listing_reviews" data-hook>
-      <thead>
-        <tr data-hook="admin_reviews_index_headers">
-          <th><%= sort_link @search, :created_at, Spree.t(:date) %></th>
-          <th><%= Spree.t(:product) %></th>
-          <th><%= sort_link @search, :rating, Spree.t(:rating) %></th>
-          <th><%= Spree.t(:media, default: 'Media') %></th> <%# NEW COLUMN %>
-          <th><%= Spree.t(:user) %></th>
-          <th><%= sort_link @search, :approved, Spree.t(:status) %></th>
-          <th data-hook="admin_reviews_index_header_actions" class="actions"></th>
-        </tr>
-      </thead>
-      <tbody>
-        <% @product_reviews.each do |review| %>
-          <tr data-hook="admin_reviews_index_rows" class="<%= cycle('odd', 'even') %>" id="<%= dom_id review %>">
-            
-            <td><%= l review.created_at.to_date %></td>
-            
-            <td>
-              <% if review.product %>
-                <%= link_to review.product.name, edit_admin_product_path(review.product), class: "text-blue-600 font-medium hover:underline" %>
-              <% else %>
-                <span class="text-gray-400"><%= Spree.t(:product_deleted) %></span>
-              <% end %>
-            </td>
-            
-            <td>
-              <div class="flex text-yellow-400 text-lg">
-                <%= "★" * review.rating.to_i %>
-              </div>
-            </td>
-
-            <%# --- FIXED MEDIA BADGES --- %>
-            <td>
-              <% 
-                 all_media = review.images
-                 video_count = all_media.select { |m| m.content_type.to_s.start_with?('video') }.count
-                 image_count = all_media.count - video_count 
-              %>
-              
-              <div class="flex items-center gap-2">
-                <% if image_count > 0 %>
-                  <span class="inline-flex items-center rounded border border-gray-200 bg-white px-2 py-1 text-xs font-bold text-gray-700 shadow-sm" title="Photos">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3 h-3 mr-1 text-blue-500">
-                      <path fill-rule="evenodd" d="M1 5.25A2.25 2.25 0 0 1 3.25 3h13.5A2.25 2.25 0 0 1 19 5.25v9.5A2.25 2.25 0 0 1 16.75 17H3.25A2.25 2.25 0 0 1 1 14.75v-9.5Zm1.5 5.81v3.69c0 .414.336.75.75.75h13.5a.75.75 0 0 0 .75-.75v-2.69l-2.22-2.219a.75.75 0 0 0-1.06 0l-1.91 1.909.47.47a.75.75 0 1 1-1.06 1.06L6.53 8.091a.75.75 0 0 0-1.06 0l-2.97 2.97ZM12 7a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z" clip-rule="evenodd" />
-                    </svg>
-                    <%= image_count %>
-                  </span>
-                <% end %>
-                
-                <% if video_count > 0 %>
-                  <span class="inline-flex items-center rounded border border-gray-200 bg-white px-2 py-1 text-xs font-bold text-gray-700 shadow-sm" title="Videos">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3 h-3 mr-1 text-red-500">
-                      <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
-                    </svg>
-                    <%= video_count %>
-                  </span>
-                <% end %>
-                
-                <% if image_count == 0 && video_count == 0 %>
-                  <span class="text-gray-300">-</span>
-                <% end %>
-              </div>
-            </td>
-
-            <td><span class="text-sm text-gray-700"><%= review.user&.email || review.name || Spree.t(:anonymous) %></span></td>
-            
-            <td>
-              <% if review.approved? %>
-                <span class="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20"><%= Spree.t(:approved) %></span>
-              <% else %>
-                <span class="inline-flex items-center rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10"><%= Spree.t(:unapproved) %></span>
-              <% end %>
-            </td>
-
-            <td data-hook="admin_reviews_index_row_actions" class="actions">
-              <% if review.approved? %>
-                <%= link_to_with_icon 'x', Spree.t(:unapprove), spree.disapprove_admin_review_path(review), no_text: true, class: 'btn btn-light btn-sm' %>
-              <% else %>
-                <%= link_to_with_icon 'check', Spree.t(:approve), spree.approve_admin_review_path(review), no_text: true, class: 'btn btn-light btn-sm' %>
-              <% end %>
-              <%= link_to_edit review, url: spree.edit_admin_review_path(review), no_text: true, class: 'edit' %>
-              <%= link_to_delete review, url: spree.admin_review_path(review), no_text: true %>
-            </td>
-          </tr>
-        <% end %>
-      </tbody>
-    </table>
-  </div>
-  <%= render 'spree/admin/shared/index_table_options', collection: @product_reviews %>
-<% else %>
-  <div class="alert alert-info no-objects-found">
-    <%= Spree.t(:no_resource_found, resource: Spree.t(:reviews)) %>
-  </div>
-<% end %>
+</turbo-frame>
