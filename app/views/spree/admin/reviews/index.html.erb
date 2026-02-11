@@ -7,7 +7,8 @@
 <% end %>
 
 <turbo-frame data-turbo-action="advance" id="reviews">
-  <div class="card-lg">
+  
+  <div class="card-lg" data-controller="bulk-operation bulk-dialog" data-action="keydown.esc->bulk-operation#cancel" tabindex="0">
     
     <div class="p-3 border-b border-gray-200">
       <div class="flex flex-col lg:flex-row gap-3 items-start lg:items-center justify-between">
@@ -38,119 +39,150 @@
     </div>
 
     <% if @product_reviews.any? %>
-      <div class="table-responsive">
-        <table class="table" id="listing_reviews">
-          <thead>
-            <tr>
-              <th scope="col" class="pr-0 w-5 rounded-none">
-                 <div class="custom-control form-checkbox ml-1">
-                   <input type="checkbox" id="checkAllReviews" class="custom-control-input">
-                   <label class="custom-control-label" for="checkAllReviews"><span></span></label>
-                 </div>
-              </th>
-              <th class="rounded-none"><%= sort_link @search, :created_at, Spree.t(:date) %></th>
-              <th class="rounded-none"><%= Spree.t(:product) %></th>
-              <th class="rounded-none"><%= sort_link @search, :title, Spree.t(:title) %></th>
-              <th class="rounded-none"><%= sort_link @search, :rating, Spree.t(:rating) %></th>
-              <th class="rounded-none"><%= Spree.t(:media, default: 'Media') %></th>
-              <th class="rounded-none"><%= Spree.t(:user) %></th>
-              <th class="rounded-none"><%= sort_link @search, :approved, Spree.t(:status) %></th>
-              <th class="rounded-none w-10"></th>
-            </tr>
-          </thead>
-          <tbody>
-            <% @product_reviews.each do |review| %>
-              <tr id="<%= dom_id review %>" class="group hover:bg-gray-50">
-                
-                <%# Checkbox %>
-                <td class="pr-0 w-5">
-                  <div class="custom-control form-checkbox ml-1">
-                    <input type="checkbox" name="review_ids[]" value="<%= review.id %>" class="custom-control-input">
-                    <label class="custom-control-label"><span></span></label>
-                  </div>
-                </td>
+      
+      <%= form_tag url_for(action: :index), method: :put, data: { 'bulk-operation-target': 'form' } do %>
+        
+        <%= render 'spree/admin/shared/bulk_modal' %>
 
-                <td class="text-sm text-gray-500 whitespace-nowrap"><%= l review.created_at.to_date %></td>
-                
-                <td>
-                  <% if review.product %>
-                    <a class="block w-fit" href="<%= edit_admin_product_path(review.product) %>" data-turbo-frame="_top" title="<%= review.product.name %>">
-                      <div class="overflow-hidden rounded-md border border-gray-300 bg-white flex items-center justify-center shrink-0" style="width: 50px; height: 50px;">
-                        <% display_image = review.product.images.first || review.product.variant_images.first %>
-                        <% if display_image && display_image.attachment.attached? %>
-                          <%= image_tag main_app.url_for(display_image.attachment.variant(resize_to_limit: [100, 100])), class: "object-cover transition-transform duration-300 ease-out hover:scale-120", width: 50, height: 50, loading: "lazy" %>
-                        <% else %>
-                           <div class="rounded-md bg-gray-25 text-gray-600 flex items-center justify-center w-full h-full"><i class="ti ti-camera-off text-gray-600 opacity-50"></i></div>
-                        <% end %>
-                      </div>
-                    </a>
-                  <% else %>
-                    <span class="text-gray-400 italic"><%= Spree.t(:product_deleted) %></span>
-                  <% end %>
-                </td>
+        <div id="bulk-panel" class="hidden animate-fade-out-down" data-bulk-operation-target="panel">
+          <div class="bulk-panel-container">
+            <div class="bulk-operations-counter">
+              <span class="bulk-operations-counter-label">
+                <strong data-bulk-operation-target="counter">0</strong> <%= Spree.t(:selected) %>
+              </span>
+            </div>
 
-                <td class="align-middle">
-                   <div class="max-w-[200px]">
-                     <div class="text-sm font-bold text-gray-900 truncate" title="<%= review.title %>">
-                       <%= review.title.presence || Spree.t(:no_title) %>
-                     </div>
-                     <div class="text-xs text-gray-500 truncate mt-0.5" title="<%= review.review %>">
-                       <%= review.review %>
-                     </div>
-                   </div>
-                </td>
-                
-                <td>
-                  <div class="flex text-yellow-400 text-sm whitespace-nowrap">
-                    <%= "★" * review.rating.to_i %><span class="text-gray-200"><%= "★" * (5 - review.rating.to_i) %></span>
-                  </div>
-                </td>
-
-                <td>
-                  <% 
-                     all_media = review.images
-                     video_count = all_media.select { |m| m.content_type.to_s.start_with?('video') }.count
-                     image_count = all_media.count - video_count 
-                  %>
-                  <div class="flex items-center gap-2">
-                    <% if image_count > 0 %>
-                      <span class="inline-flex items-center rounded border border-gray-200 bg-white px-2 py-1 text-xs font-bold text-gray-700 shadow-sm" title="Photos"><i class="ti ti-photo mr-1 text-blue-500"></i><%= image_count %></span>
-                    <% end %>
-                    <% if video_count > 0 %>
-                      <span class="inline-flex items-center rounded border border-gray-200 bg-white px-2 py-1 text-xs font-bold text-gray-700 shadow-sm" title="Videos"><i class="ti ti-movie mr-1 text-red-500"></i><%= video_count %></span>
-                    <% end %>
-                    <% if image_count == 0 && video_count == 0 %>
-                      <span class="text-gray-300 text-xs">-</span>
-                    <% end %>
-                  </div>
-                </td>
-
-                <td><span class="text-sm text-gray-700 block truncate max-w-[150px]" title="<%= review.user&.email || review.name %>"><%= review.user&.email || review.name || Spree.t(:anonymous) %></span></td>
-                
-                <td>
-                  <% if review.approved? %>
-                    <span class="badge badge-active whitespace-nowrap"><i class="ti ti-check"></i> <%= Spree.t(:approved) %></span>
-                  <% else %>
-                    <span class="badge badge-danger whitespace-nowrap"><i class="ti ti-circle"></i> <%= Spree.t(:unapproved) %></span>
-                  <% end %>
-                </td>
-
-                <td class="text-right whitespace-nowrap">
-                  <div class="flex items-center justify-end gap-1">
-                    <% if review.approved? %>
-                      <%= link_to_with_icon 'x', nil, spree.disapprove_admin_review_path(review), no_text: true, class: 'btn btn-light btn-sm', title: Spree.t(:disapprove) %>
-                    <% else %>
-                      <%= link_to_with_icon 'check', nil, spree.approve_admin_review_path(review), no_text: true, class: 'btn btn-light btn-sm', title: Spree.t(:approve) %>
-                    <% end %>
-                    <%= link_to_edit review, url: spree.edit_admin_review_path(review), no_text: true, class: 'btn btn-light btn-sm', data: { turbo_frame: :_top } %>
-                    <%= link_to_delete review, url: spree.admin_review_path(review), no_text: true, class: 'btn btn-light btn-sm text-red-600 hover:bg-red-50' %>
-                  </div>
-                </td>
-              </tr>
+            <%= button_tag(type: 'submit', class: 'btn', data: { action: "click->bulk-operation#setBulkAction click->bulk-dialog#open", url: bulk_approve_admin_reviews_path, method: :put, turbo_frame: "_top" }) do %>
+              <i class="ti ti-check"></i> <%= Spree.t(:approve) %>
             <% end %>
-          </tbody>
-        </table>
-      </div>
+
+            <%= button_tag(type: 'submit', class: 'btn', data: { action: "click->bulk-operation#setBulkAction click->bulk-dialog#open", url: bulk_disapprove_admin_reviews_path, method: :put, turbo_frame: "_top" }) do %>
+              <i class="ti ti-ban"></i> <%= Spree.t(:disapprove) %>
+            <% end %>
+
+            <%= button_tag(type: 'submit', class: 'btn btn-danger', data: { action: "click->bulk-operation#setBulkAction click->bulk-dialog#open", url: bulk_destroy_admin_reviews_path, method: :delete, turbo_frame: "_top", confirm: Spree.t(:are_you_sure) }) do %>
+              <i class="ti ti-trash"></i> <%= Spree.t(:delete) %>
+            <% end %>
+
+            <button name="button" type="button" class="btn-close mr-1" data-action="bulk-operation#cancel" aria-label="Close"></button>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table" id="listing_reviews">
+            <thead>
+              <tr>
+                <th scope="col" class="pr-0 w-5 rounded-none">
+                   <div class="custom-control form-checkbox ml-1">
+                     <input type="checkbox" id="checkAllReviews" class="custom-control-input" data-bulk-operation-target="checkboxAll">
+                     <label class="custom-control-label" for="checkAllReviews"><span></span></label>
+                   </div>
+                </th>
+                <th class="rounded-none"><%= sort_link @search, :created_at, Spree.t(:date) %></th>
+                <th class="rounded-none"><%= Spree.t(:product) %></th>
+                <th class="rounded-none"><%= sort_link @search, :title, Spree.t(:title) %></th>
+                <th class="rounded-none"><%= sort_link @search, :rating, Spree.t(:rating) %></th>
+                <th class="rounded-none"><%= Spree.t(:media, default: 'Media') %></th>
+                <th class="rounded-none"><%= Spree.t(:user) %></th>
+                <th class="rounded-none"><%= sort_link @search, :approved, Spree.t(:status) %></th>
+                <th class="rounded-none w-10"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% @product_reviews.each do |review| %>
+                <tr id="<%= dom_id review %>" class="group hover:bg-gray-50">
+                  
+                  <td class="pr-0 w-5">
+                    <div class="custom-control form-checkbox ml-1">
+                      <input type="checkbox" name="ids[]" value="<%= review.id %>" id="review_<%= review.id %>" class="custom-control-input" data-bulk-operation-target="checkbox">
+                      <label class="custom-control-label" for="review_<%= review.id %>"><span></span></label>
+                    </div>
+                  </td>
+
+                  <td class="text-sm text-gray-500 whitespace-nowrap"><%= l review.created_at.to_date %></td>
+                  
+                  <td>
+                    <% if review.product %>
+                      <a class="block w-fit" href="<%= edit_admin_product_path(review.product) %>" data-turbo-frame="_top" title="<%= review.product.name %>">
+                        <div class="overflow-hidden rounded-md border border-gray-300 bg-white flex items-center justify-center shrink-0" style="width: 50px; height: 50px;">
+                          <% display_image = review.product.images.first || review.product.variant_images.first %>
+                          <% if display_image && display_image.attachment.attached? %>
+                            <%= image_tag main_app.url_for(display_image.attachment.variant(resize_to_limit: [100, 100])), class: "object-cover transition-transform duration-300 ease-out hover:scale-120", width: 50, height: 50, loading: "lazy" %>
+                          <% else %>
+                             <div class="rounded-md bg-gray-25 text-gray-600 flex items-center justify-center w-full h-full"><i class="ti ti-camera-off text-gray-600 opacity-50"></i></div>
+                          <% end %>
+                        </div>
+                      </a>
+                    <% else %>
+                      <span class="text-gray-400 italic"><%= Spree.t(:product_deleted) %></span>
+                    <% end %>
+                  </td>
+
+                  <td class="align-middle">
+                     <div class="max-w-[200px]">
+                       <div class="text-sm font-bold text-gray-900 truncate" title="<%= review.title %>">
+                         <%= review.title.presence || Spree.t(:no_title) %>
+                       </div>
+                       <div class="text-xs text-gray-500 truncate mt-0.5" title="<%= review.review %>">
+                         <%= review.review %>
+                       </div>
+                     </div>
+                  </td>
+                  
+                  <td>
+                    <div class="flex text-sm whitespace-nowrap">
+                      <span class="text-yellow-400"><%= "★" * review.rating.to_i %></span>
+                      <span class="text-gray-300"><%= "★" * (5 - review.rating.to_i) %></span>
+                    </div>
+                  </td>
+
+                  <td>
+                    <% 
+                       all_media = review.images
+                       video_count = all_media.select { |m| m.content_type.to_s.start_with?('video') }.count
+                       image_count = all_media.count - video_count 
+                    %>
+                    <div class="flex items-center gap-2">
+                      <% if image_count > 0 %>
+                        <span class="inline-flex items-center rounded border border-gray-200 bg-white px-2 py-1 text-xs font-bold text-gray-700 shadow-sm" title="Photos"><i class="ti ti-photo mr-1 text-blue-500"></i><%= image_count %></span>
+                      <% end %>
+                      <% if video_count > 0 %>
+                        <span class="inline-flex items-center rounded border border-gray-200 bg-white px-2 py-1 text-xs font-bold text-gray-700 shadow-sm" title="Videos"><i class="ti ti-movie mr-1 text-red-500"></i><%= video_count %></span>
+                      <% end %>
+                      <% if image_count == 0 && video_count == 0 %>
+                        <span class="text-gray-300 text-xs">-</span>
+                      <% end %>
+                    </div>
+                  </td>
+
+                  <td><span class="text-sm text-gray-700 block truncate max-w-[150px]" title="<%= review.user&.email || review.name %>"><%= review.user&.email || review.name || Spree.t(:anonymous) %></span></td>
+                  
+                  <td>
+                    <% if review.approved? %>
+                      <span class="badge badge-active whitespace-nowrap"><i class="ti ti-check"></i> <%= Spree.t(:approved) %></span>
+                    <% else %>
+                      <span class="badge badge-danger whitespace-nowrap"><i class="ti ti-circle"></i> <%= Spree.t(:unapproved) %></span>
+                    <% end %>
+                  </td>
+
+                  <td class="text-right whitespace-nowrap">
+                    <div class="flex items-center justify-end gap-1">
+                      <% if review.approved? %>
+                        <%= link_to_with_icon 'x', nil, spree.disapprove_admin_review_path(review), no_text: true, class: 'btn btn-light btn-sm', title: Spree.t(:disapprove) %>
+                      <% else %>
+                        <%= link_to_with_icon 'check', nil, spree.approve_admin_review_path(review), no_text: true, class: 'btn btn-light btn-sm', title: Spree.t(:approve) %>
+                      <% end %>
+                      <%= link_to_edit review, url: spree.edit_admin_review_path(review), no_text: true, class: 'btn btn-light btn-sm', data: { turbo_frame: :_top } %>
+                      <%= link_to_delete review, url: spree.admin_review_path(review), no_text: true, class: 'btn btn-light btn-sm text-red-600 hover:bg-red-50' %>
+                    </div>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% end %>
+      
       <%= render 'spree/admin/shared/index_table_options', collection: @product_reviews %>
     <% else %>
       <div class="p-4 text-center"><div class="text-gray-500 mb-2">No reviews found.</div></div>
