@@ -40,11 +40,16 @@ en:
     auto_approve_help_text: "Determine if new reviews should be published immediately or require admin approval."
     
     # Flash Messages
+    info_approve_review: "Review approved successfully"
+    info_disapprove_review: "Review disapproved successfully"
     review_approved: "Review approved successfully."
     review_disapproved: "Review disapproved."
     review_deleted: "Review deleted."
     please_log_in: "Please log in to write a review."
     successfully_updated: "%{resource} updated successfully"
+
+    # --- FIX: Added Missing Search Translation ---
+    search_reviews: "Search Reviews" 
     
     product_review:
       flash_messages:
