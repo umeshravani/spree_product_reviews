@@ -1,7 +1,7 @@
 module Spree
   module Admin
     class ReviewsController < ResourceController
-      # Include Pagy for Spree 5.3+
+      # Compatibility: Include Pagy for Spree 5.3+
       include Pagy::Backend if defined?(Pagy::Backend)
 
       def model_class
@@ -40,16 +40,40 @@ module Spree
         @product_review = Spree::ProductReview.find(params[:id])
         @product_review.update_attribute(:approved, true)
         flash[:success] = Spree.t(:info_approve_review)
-        redirect_to admin_reviews_path
+        redirect_back(fallback_location: admin_reviews_path)
       end
 
       def disapprove
         @product_review = Spree::ProductReview.find(params[:id])
         @product_review.update_attribute(:approved, false)
         flash[:success] = Spree.t(:info_disapprove_review)
-        redirect_to admin_reviews_path
+        redirect_back(fallback_location: admin_reviews_path)
+      end
+      
+      def bulk_approve
+        if params[:ids].present?
+          Spree::ProductReview.where(id: params[:ids]).update_all(approved: true)
+          flash[:success] = Spree.t(:review_approved)
+        end
+        redirect_back(fallback_location: admin_reviews_path)
       end
 
+      def bulk_disapprove
+        if params[:ids].present?
+          Spree::ProductReview.where(id: params[:ids]).update_all(approved: false)
+          flash[:success] = Spree.t(:review_disapproved)
+        end
+        redirect_back(fallback_location: admin_reviews_path)
+      end
+
+      def bulk_destroy
+        if params[:ids].present?
+          Spree::ProductReview.where(id: params[:ids]).destroy_all
+          flash[:success] = Spree.t(:review_deleted)
+        end
+        redirect_back(fallback_location: admin_reviews_path)
+      end
+      
       private
 
       # Allow specific fields to be updated
@@ -57,7 +81,7 @@ module Spree
         params.require(:product_review).permit(:title, :review, :rating, :approved)
       end
 
-      # URL OVERRIDES (Fixes "No route matches" errors)
+      # URL OVERRIDES (This Fixes the "No route matches" errors)
       protected
 
       def collection_url(options = {})
