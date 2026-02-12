@@ -27,9 +27,9 @@ module Spree
           @pagy, @collection = pagy(scope)
         elsif scope.respond_to?(:page)
           # Older Spree (Kaminari)
-          @collection = scope.page(params[:page]).per(params[:per_page] || Spree::Config[:admin_products_per_page])
+          per_page = params[:per_page] || 10
+          @collection = scope.page(params[:page]).per(per_page)
         else
-          # Fallback
           @collection = scope
         end
         
@@ -73,15 +73,14 @@ module Spree
         end
         redirect_back(fallback_location: admin_reviews_path)
       end
-      
+
       private
 
-      # Allow specific fields to be updated
       def permitted_resource_params
         params.require(:product_review).permit(:title, :review, :rating, :approved)
       end
 
-      # URL OVERRIDES (This Fixes the "No route matches" errors)
+      # URL OVERRIDES (To Fix"No route matches" errors)
       protected
 
       def collection_url(options = {})
