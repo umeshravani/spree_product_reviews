@@ -19,17 +19,23 @@ module Spree
 
           def serialize_single(review)
             {
-              # V3 uses human-readable prefixed IDs natively, but we'll fall back to standard IDs for custom models
-              id: review.id.to_s, 
+              id: review.id.to_s,
               title: review.title,
               review: review.review,
               rating: review.rating,
               approved: review.approved,
-              reviewer_name: review.reviewer_name,
+              # Use our new formatter method here
+              reviewer_name: format_reviewer_name(review), 
               is_verified_purchase: review.purchase_date.present?,
               created_at: review.created_at.iso8601,
               images: serialize_images(review)
             }
+          end
+
+          def format_reviewer_name(review)
+            return "Anonymous" unless review.show_identifier && review.user
+            
+            review.user.try(:name).presence || review.user.email.split('@').first
           end
 
           def serialize_images(review)
