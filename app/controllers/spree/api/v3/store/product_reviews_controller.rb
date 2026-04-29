@@ -25,6 +25,7 @@ module Spree
           end
 
           def create
+
             user = fallback_user
             return render json: { error: 'You must be logged in to leave a review.' }, status: :unauthorized unless user
 
@@ -73,11 +74,9 @@ module Spree
           def fallback_user
             return current_user if current_user
 
+            # 1. Grab token from custom header or standard Authorization header
             token = request.headers['HTTP_X_SPREE_TOKEN'] || request.headers['X-Spree-Token']
-            
-            if token.blank? && request.headers['Authorization'].present?
-              token = request.headers['Authorization'].split(' ').last
-            end
+            token ||= request.headers['Authorization']&.split(' ')&.last
 
             if token.blank?
               Rails.logger.error "--- [REVIEWS API] No Auth Token provided by Next.js ---"
@@ -85,27 +84,28 @@ module Spree
             end
 
             require 'cgi'
-
-            clean_token = CGI.unescape(token).strip.delete('"').delete("'")
+            require 'digest'
             
-            Rails.logger.info "--- [REVIEWS API] Checking Token: #{clean_token[0..15]}... ---"
+            # 2. Clean the token and create a SHA-256 hash counterpart
+            clean_token = CGI.unescape(token).strip.delete('"').delete("'")
+            hashed_token = Digest::SHA256.hexdigest(clean_token)
+
+            Rails.logger.info "--- [REVIEWS API] Checking Token: #{clean_token[0..10]}... ---"
 
             begin
               access_token = nil
               
-              if Spree::OauthAccessToken.respond_to?(:by_token)
-                access_token = Spree::OauthAccessToken.by_token(clean_token)
-              else
-                access_token = Spree::OauthAccessToken.find_by(token: clean_token)
-              end
+              # Native Doorkeeper Methods
+              access_token = Spree::OauthAccessToken.by_token(clean_token) if Spree::OauthAccessToken.respond_to?(:by_token)
+              access_token ||= Spree::OauthAccessToken.by_refresh_token(clean_token) if Spree::OauthAccessToken.respond_to?(:by_refresh_token)
 
-              unless access_token
-                if Spree::OauthAccessToken.respond_to?(:by_refresh_token)
-                  access_token = Spree::OauthAccessToken.by_refresh_token(clean_token)
-                else
-                  access_token = Spree::OauthAccessToken.find_by(refresh_token: clean_token)
-                end
-              end
+              # Plaintext Fallback (For older Spree setups)
+              access_token ||= Spree::OauthAccessToken.find_by(token: clean_token)
+              access_token ||= Spree::OauthAccessToken.find_by(refresh_token: clean_token)
+
+              # SHA-256 Hash Brute Force (For Spree 5.4+ Default Configuration)
+              access_token ||= Spree::OauthAccessToken.find_by(token: hashed_token)
+              access_token ||= Spree::OauthAccessToken.find_by(refresh_token: hashed_token)
 
               if access_token
                 user = Spree.user_class.find_by(id: access_token.resource_owner_id)
@@ -113,6 +113,12 @@ module Spree
                 return user
               else
                 Rails.logger.error "--- [REVIEWS API] FAILED! Token not found in Database ---"
+
+                latest = Spree::OauthAccessToken.last
+                if latest
+                  Rails.logger.error "--- [DEBUG] DB Latest Token: #{latest.token} | Refresh: #{latest.refresh_token} ---"
+                end
+                
                 return nil
               end
             rescue => e
