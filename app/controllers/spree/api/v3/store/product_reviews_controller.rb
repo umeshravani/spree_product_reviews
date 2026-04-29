@@ -6,11 +6,15 @@ module Spree
           before_action :load_product
 
           def index
-            # Fetch approved reviews or user's own pending reviews
+            # Fetch approved reviews
             scope = @product.product_reviews.approved
             
-            if current_user # V3 uses current_user provided by the SDK Bearer token
-              user_scope = @product.product_reviews.where(user: current_user)
+            # FIX: Check for cookie user (Next.js proxy) OR token user (SDK)
+            user = spree_current_user || current_user
+            
+            # If user is logged in, also show their own pending reviews
+            if user
+              user_scope = @product.product_reviews.where(user: user)
               scope = scope.or(user_scope)
             end
 
@@ -24,13 +28,15 @@ module Spree
           end
 
           def create
-            return render json: { error: 'Unauthorized' }, status: :unauthorized unless current_user
+            # FIX: Require cookie user OR token user
+            user = spree_current_user || current_user
+            return render json: { error: 'You must be logged in to leave a review.' }, status: :unauthorized unless user
 
             @review = @product.product_reviews.build(review_params)
-            @review.user = current_user
+            @review.user = user
             @review.locale = I18n.locale.to_s
             @review.ip_address = request.remote_ip
-            @review.purchase_date = current_user.recent_purchase_date_for(@product)
+            @review.purchase_date = user.recent_purchase_date_for(@product)
 
             # Spam Detection Logic
             default_status = (current_store.preferred_review_status_default rescue 'pending')
