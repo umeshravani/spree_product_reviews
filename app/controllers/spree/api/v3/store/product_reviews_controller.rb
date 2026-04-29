@@ -8,8 +8,6 @@ module Spree
           def index
             user = fallback_user
             
-            # THE FIX: We avoid ActiveRecord's fragile .or() method entirely
-            # and use a direct SQL string to fetch approved OR user's own reviews.
             if user
               reviews = @product.product_reviews
                                 .where("approved = ? OR user_id = ?", true, user.id)
@@ -27,6 +25,7 @@ module Spree
           end
 
           def create
+            # Use our new authentication fallback
             user = fallback_user
             return render json: { error: 'You must be logged in to leave a review.' }, status: :unauthorized unless user
 
@@ -72,28 +71,31 @@ module Spree
             params.require(:product_review).permit(:rating, :title, :review, :show_identifier, images: [])
           end
 
-          # THE FIX: Wrapped in a begin/rescue block to prevent 500 errors
           def fallback_user
             begin
-              # 1. Try standard Spree auth methods first
-              return spree_current_user if respond_to?(:spree_current_user) && spree_current_user
-              return current_user if respond_to?(:current_user) && current_user
+              return current_user if current_user
 
-              # 2. Extract from Proxy Cookie
-              cookie_header = request.headers['Cookie']
-              return nil unless cookie_header
+              # 1. Grab our injected custom header from Next.js
+              token = request.headers['X-Spree-Token']
+              return nil if token.blank?
 
-              match = cookie_header.match(/_spree_refresh_token=([^;]+)/)
-              if match
-                require 'cgi'
-                token = CGI.unescape(match[1])
-                access_token = Doorkeeper::AccessToken.find_by(refresh_token: token)
-                return Spree.user_class.find_by(id: access_token.resource_owner_id) if access_token
+              # 2. Decode it just in case Next.js URL-encoded it
+              require 'cgi'
+              clean_token = CGI.unescape(token)
+
+              # 3. Query Doorkeeper (Safely handles hashed tokens in Spree 5.4+)
+              access_token = nil
+              if Doorkeeper::AccessToken.respond_to?(:by_refresh_token)
+                access_token = Doorkeeper::AccessToken.by_refresh_token(clean_token) || Doorkeeper::AccessToken.by_token(clean_token)
+              else
+                access_token = Doorkeeper::AccessToken.find_by(refresh_token: clean_token) || Doorkeeper::AccessToken.find_by(token: clean_token)
               end
+
+              # 4. Return the actual user!
+              return Spree.user_class.find_by(id: access_token.resource_owner_id) if access_token
 
               nil
             rescue => e
-              # If something goes wrong parsing the token, log it securely but do not crash the app!
               Rails.logger.error "--- ProductReviews Auth Error: #{e.message} ---"
               nil
             end
