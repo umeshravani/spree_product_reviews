@@ -25,7 +25,7 @@ module Spree
           end
 
           def create
-            # Use our new authentication fallback
+
             user = fallback_user
             return render json: { error: 'You must be logged in to leave a review.' }, status: :unauthorized unless user
 
@@ -84,24 +84,35 @@ module Spree
             clean_token = CGI.unescape(token).strip
             Rails.logger.info "--- [REVIEWS API] Checking Token: #{clean_token[0..15]}... ---"
 
-            # 1. Search for an Access Token (Plain or Hashed)
-            access_token = Doorkeeper::AccessToken.find_by(token: clean_token)
-            access_token ||= Doorkeeper::AccessToken.by_token(clean_token) if Doorkeeper::AccessToken.respond_to?(:by_token)
+            begin
+              
+              access_token = nil
+              
+              if Spree::OauthAccessToken.respond_to?(:by_token)
+                access_token = Spree::OauthAccessToken.by_token(clean_token)
+              else
+                access_token = Spree::OauthAccessToken.find_by(token: clean_token)
+              end
 
-            # 2. Search for a Refresh Token (Plain or Hashed)
-            unless access_token
-              access_token = Doorkeeper::AccessToken.find_by(refresh_token: clean_token)
-              access_token ||= Doorkeeper::AccessToken.by_refresh_token(clean_token) if Doorkeeper::AccessToken.respond_to?(:by_refresh_token)
-            end
+              unless access_token
+                if Spree::OauthAccessToken.respond_to?(:by_refresh_token)
+                  access_token = Spree::OauthAccessToken.by_refresh_token(clean_token)
+                else
+                  access_token = Spree::OauthAccessToken.find_by(refresh_token: clean_token)
+                end
+              end
 
-            # 3. Authenticate!
-            if access_token
-              user = Spree.user_class.find_by(id: access_token.resource_owner_id)
-              Rails.logger.info "--- [REVIEWS API] SUCCESS! Logged in as User ID: #{user&.id} ---"
-              return user
-            else
-              Rails.logger.error "--- [REVIEWS API] FAILED! Token not found in Database ---"
-              return nil
+              if access_token
+                user = Spree.user_class.find_by(id: access_token.resource_owner_id)
+                Rails.logger.info "--- [REVIEWS API] SUCCESS! Logged in as User ID: #{user&.id} ---"
+                return user
+              else
+                Rails.logger.error "--- [REVIEWS API] FAILED! Token not found in Database ---"
+                return nil
+              end
+            rescue => e
+              Rails.logger.error "--- ProductReviews Auth Error: #{e.message} ---"
+              nil
             end
           end
         end
