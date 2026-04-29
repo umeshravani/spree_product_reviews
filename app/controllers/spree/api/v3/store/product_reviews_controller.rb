@@ -6,17 +6,19 @@ module Spree
           before_action :load_product
 
           def index
-            scope = @product.product_reviews.approved
-            
-            # Use our new authentication fallback
             user = fallback_user
             
+            # THE FIX: We avoid ActiveRecord's fragile .or() method entirely
+            # and use a direct SQL string to fetch approved OR user's own reviews.
             if user
-              user_scope = @product.product_reviews.where(user: user)
-              scope = scope.or(user_scope)
+              reviews = @product.product_reviews
+                                .where("approved = ? OR user_id = ?", true, user.id)
+                                .order(created_at: :desc)
+            else
+              reviews = @product.product_reviews
+                                .approved
+                                .order(created_at: :desc)
             end
-
-            reviews = scope.order(created_at: :desc)
             
             render json: {
               data: ProductReviewSerializer.new(reviews).serializable_hash,
@@ -25,7 +27,6 @@ module Spree
           end
 
           def create
-            # Use our new authentication fallback
             user = fallback_user
             return render json: { error: 'You must be logged in to leave a review.' }, status: :unauthorized unless user
 
@@ -71,27 +72,31 @@ module Spree
             params.require(:product_review).permit(:rating, :title, :review, :show_identifier, images: [])
           end
 
-          # --- THE MAGIC FIX ---
+          # THE FIX: Wrapped in a begin/rescue block to prevent 500 errors
           def fallback_user
-            # 1. Try standard API Bearer token first
-            return current_user if current_user
+            begin
+              # 1. Try standard Spree auth methods first
+              return spree_current_user if respond_to?(:spree_current_user) && spree_current_user
+              return current_user if respond_to?(:current_user) && current_user
 
-            # 2. Extract the raw cookie string directly from headers
-            cookie_header = request.headers['Cookie']
-            return nil unless cookie_header
+              # 2. Extract from Proxy Cookie
+              cookie_header = request.headers['Cookie']
+              return nil unless cookie_header
 
-            # 3. Find the _spree_refresh_token
-            match = cookie_header.match(/_spree_refresh_token=([^;]+)/)
-            return nil unless match
+              match = cookie_header.match(/_spree_refresh_token=([^;]+)/)
+              if match
+                require 'cgi'
+                token = CGI.unescape(match[1])
+                access_token = Doorkeeper::AccessToken.find_by(refresh_token: token)
+                return Spree.user_class.find_by(id: access_token.resource_owner_id) if access_token
+              end
 
-            # 4. Unescape it and find the OAuth token
-            require 'cgi'
-            token = CGI.unescape(match[1])
-            access_token = Doorkeeper::AccessToken.find_by(refresh_token: token)
-            return nil unless access_token
-
-            # 5. Return the authenticated user
-            Spree.user_class.find_by(id: access_token.resource_owner_id)
+              nil
+            rescue => e
+              # If something goes wrong parsing the token, log it securely but do not crash the app!
+              Rails.logger.error "--- ProductReviews Auth Error: #{e.message} ---"
+              nil
+            end
           end
         end
       end
