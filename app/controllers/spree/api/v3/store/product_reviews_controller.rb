@@ -6,13 +6,11 @@ module Spree
           before_action :load_product
 
           def index
-            # Fetch approved reviews
             scope = @product.product_reviews.approved
             
-            # FIX: Check for cookie user (Next.js proxy) OR token user (SDK)
-            user = spree_current_user || current_user
+            # Use our new authentication fallback
+            user = fallback_user
             
-            # If user is logged in, also show their own pending reviews
             if user
               user_scope = @product.product_reviews.where(user: user)
               scope = scope.or(user_scope)
@@ -20,7 +18,6 @@ module Spree
 
             reviews = scope.order(created_at: :desc)
             
-            # V3 standard: { data: [...], meta: {...} }
             render json: {
               data: ProductReviewSerializer.new(reviews).serializable_hash,
               meta: { total_count: reviews.count }
@@ -28,8 +25,8 @@ module Spree
           end
 
           def create
-            # FIX: Require cookie user OR token user
-            user = spree_current_user || current_user
+            # Use our new authentication fallback
+            user = fallback_user
             return render json: { error: 'You must be logged in to leave a review.' }, status: :unauthorized unless user
 
             @review = @product.product_reviews.build(review_params)
@@ -38,7 +35,6 @@ module Spree
             @review.ip_address = request.remote_ip
             @review.purchase_date = user.recent_purchase_date_for(@product)
 
-            # Spam Detection Logic
             default_status = (current_store.preferred_review_status_default rescue 'pending')
             should_approve = (default_status == 'approved')
             spam_detected = false
@@ -59,7 +55,6 @@ module Spree
             @review.spam = spam_detected
 
             if @review.save
-              # V3 standard response for singular creation
               render json: ProductReviewSerializer.new(@review).serializable_hash, status: :created
             else
               render json: { error: @review.errors.full_messages.join(', ') }, status: :unprocessable_entity
@@ -69,12 +64,34 @@ module Spree
           private
 
           def load_product
-            # Support both integer IDs and Slugs
             @product = Spree::Product.friendly.find(params[:product_id])
           end
 
           def review_params
             params.require(:product_review).permit(:rating, :title, :review, :show_identifier, images: [])
+          end
+
+          # --- THE MAGIC FIX ---
+          def fallback_user
+            # 1. Try standard API Bearer token first
+            return current_user if current_user
+
+            # 2. Extract the raw cookie string directly from headers
+            cookie_header = request.headers['Cookie']
+            return nil unless cookie_header
+
+            # 3. Find the _spree_refresh_token
+            match = cookie_header.match(/_spree_refresh_token=([^;]+)/)
+            return nil unless match
+
+            # 4. Unescape it and find the OAuth token
+            require 'cgi'
+            token = CGI.unescape(match[1])
+            access_token = Doorkeeper::AccessToken.find_by(refresh_token: token)
+            return nil unless access_token
+
+            # 5. Return the authenticated user
+            Spree.user_class.find_by(id: access_token.resource_owner_id)
           end
         end
       end
