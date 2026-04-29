@@ -24,7 +24,6 @@ module Spree
               review: review.review,
               rating: review.rating,
               approved: review.approved,
-              # Use our new formatter method here
               reviewer_name: format_reviewer_name(review), 
               is_verified_purchase: review.purchase_date.present?,
               created_at: review.created_at.iso8601,
