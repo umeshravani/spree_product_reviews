@@ -72,32 +72,36 @@ module Spree
           end
 
           def fallback_user
-            begin
-              return current_user if current_user
+            return current_user if current_user
 
-              # 1. Grab our injected custom header from Next.js (Rack reformats headers to HTTP_*)
-              token = request.headers['HTTP_X_SPREE_TOKEN'] || request.headers['X-Spree-Token']
-              return nil if token.blank?
+            token = request.headers['HTTP_X_SPREE_TOKEN'] || request.headers['X-Spree-Token']
+            if token.blank?
+              Rails.logger.error "--- [REVIEWS API] No Auth Token provided by Next.js ---"
+              return nil
+            end
 
-              # 2. Decode it just in case Next.js URL-encoded it
-              require 'cgi'
-              clean_token = CGI.unescape(token)
+            require 'cgi'
+            clean_token = CGI.unescape(token).strip
+            Rails.logger.info "--- [REVIEWS API] Checking Token: #{clean_token[0..15]}... ---"
 
-              # 3. Query Doorkeeper (Safely handles hashed tokens in Spree 5.4+)
-              access_token = nil
-              if Doorkeeper::AccessToken.respond_to?(:by_refresh_token)
-                access_token = Doorkeeper::AccessToken.by_refresh_token(clean_token) || Doorkeeper::AccessToken.by_token(clean_token)
-              else
-                access_token = Doorkeeper::AccessToken.find_by(refresh_token: clean_token) || Doorkeeper::AccessToken.find_by(token: clean_token)
-              end
+            # 1. Search for an Access Token (Plain or Hashed)
+            access_token = Doorkeeper::AccessToken.find_by(token: clean_token)
+            access_token ||= Doorkeeper::AccessToken.by_token(clean_token) if Doorkeeper::AccessToken.respond_to?(:by_token)
 
-              # 4. Return the actual user!
-              return Spree.user_class.find_by(id: access_token.resource_owner_id) if access_token
+            # 2. Search for a Refresh Token (Plain or Hashed)
+            unless access_token
+              access_token = Doorkeeper::AccessToken.find_by(refresh_token: clean_token)
+              access_token ||= Doorkeeper::AccessToken.by_refresh_token(clean_token) if Doorkeeper::AccessToken.respond_to?(:by_refresh_token)
+            end
 
-              nil
-            rescue => e
-              Rails.logger.error "--- ProductReviews Auth Error: #{e.message} ---"
-              nil
+            # 3. Authenticate!
+            if access_token
+              user = Spree.user_class.find_by(id: access_token.resource_owner_id)
+              Rails.logger.info "--- [REVIEWS API] SUCCESS! Logged in as User ID: #{user&.id} ---"
+              return user
+            else
+              Rails.logger.error "--- [REVIEWS API] FAILED! Token not found in Database ---"
+              return nil
             end
           end
         end
