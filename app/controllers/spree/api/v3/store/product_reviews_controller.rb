@@ -25,7 +25,6 @@ module Spree
           end
 
           def create
-
             user = fallback_user
             return render json: { error: 'You must be logged in to leave a review.' }, status: :unauthorized unless user
 
@@ -75,17 +74,23 @@ module Spree
             return current_user if current_user
 
             token = request.headers['HTTP_X_SPREE_TOKEN'] || request.headers['X-Spree-Token']
+            
+            if token.blank? && request.headers['Authorization'].present?
+              token = request.headers['Authorization'].split(' ').last
+            end
+
             if token.blank?
               Rails.logger.error "--- [REVIEWS API] No Auth Token provided by Next.js ---"
               return nil
             end
 
             require 'cgi'
-            clean_token = CGI.unescape(token).strip
+
+            clean_token = CGI.unescape(token).strip.delete('"').delete("'")
+            
             Rails.logger.info "--- [REVIEWS API] Checking Token: #{clean_token[0..15]}... ---"
 
             begin
-              
               access_token = nil
               
               if Spree::OauthAccessToken.respond_to?(:by_token)
