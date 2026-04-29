@@ -8,6 +8,7 @@ module Spree
           def index
             user = fallback_user
             
+            # Direct SQL to avoid the ActiveRecord .or() 500 crash
             if user
               reviews = @product.product_reviews
                                 .where("approved = ? OR user_id = ?", true, user.id)
@@ -25,7 +26,6 @@ module Spree
           end
 
           def create
-
             user = fallback_user
             return render json: { error: 'You must be logged in to leave a review.' }, status: :unauthorized unless user
 
@@ -71,60 +71,72 @@ module Spree
             params.require(:product_review).permit(:rating, :title, :review, :show_identifier, images: [])
           end
 
-def fallback_user
-  return current_user if current_user
+          # --- THE UNBREAKABLE AUTH BRIDGE ---
+          def fallback_user
+            return current_user if current_user
 
-  token = request.headers['HTTP_X_SPREE_TOKEN'] || request.headers['X-Spree-Token'] || request.headers['Authorization']&.split(' ')&.last
-  if token.blank?
-    Rails.logger.error "--- [REVIEWS API] No Auth Token provided by Next.js ---"
-    return nil
-  end
+            # 1. Grab token from custom header or standard Authorization header
+            token = request.headers['HTTP_X_SPREE_TOKEN'] || request.headers['X-Spree-Token']
+            token ||= request.headers['Authorization']&.split(' ')&.last
 
-  require 'cgi'
-  require 'digest'
-  
-  clean_token = CGI.unescape(token).strip.delete('"').delete("'")
-  hashed_token = Digest::SHA256.hexdigest(clean_token)
+            if token.blank?
+              Rails.logger.error "--- [REVIEWS API] No Auth Token provided by Next.js ---"
+              return nil
+            end
 
-  Rails.logger.info "--- [REVIEWS API] Checking Token: #{clean_token[0..15]}... ---"
+            require 'cgi'
+            require 'digest'
+            
+            # 2. Clean the token and create a SHA-256 hash counterpart
+            clean_token = CGI.unescape(token).strip.delete('"').delete("'")
+            hashed_token = Digest::SHA256.hexdigest(clean_token)
 
-  begin
-    access_token = nil
-    
-    # Strategy A: Native Doorkeeper Methods (Spree 5.4)
-    access_token = Spree::OauthAccessToken.by_token(clean_token) if Spree::OauthAccessToken.respond_to?(:by_token)
-    access_token ||= Spree::OauthAccessToken.by_refresh_token(clean_token) if Spree::OauthAccessToken.respond_to?(:by_refresh_token)
+            Rails.logger.info "--- [REVIEWS API] Checking Token: #{clean_token[0..15]}... ---"
 
-    # Strategy B: Hashed Lookups
-    access_token ||= Spree::OauthAccessToken.find_by(token: hashed_token)
-    access_token ||= Spree::OauthAccessToken.find_by(refresh_token: hashed_token)
+            begin
+              access_token = nil
+              
+              # Strategy A: Native Doorkeeper Methods (Spree 5.4)
+              access_token = Spree::OauthAccessToken.by_token(clean_token) if Spree::OauthAccessToken.respond_to?(:by_token)
+              access_token ||= Spree::OauthAccessToken.by_refresh_token(clean_token) if Spree::OauthAccessToken.respond_to?(:by_refresh_token)
 
-    # Strategy C: Plaintext Lookups
-    access_token ||= Spree::OauthAccessToken.find_by(token: clean_token)
-    access_token ||= Spree::OauthAccessToken.find_by(refresh_token: clean_token)
+              # Strategy B: Hashed Lookups
+              access_token ||= Spree::OauthAccessToken.find_by(token: hashed_token)
+              access_token ||= Spree::OauthAccessToken.find_by(refresh_token: hashed_token)
 
-    # Evaluate OAuth Token
-    if access_token
-      user = Spree.user_class.find_by(id: access_token.resource_owner_id)
-      Rails.logger.info "--- [REVIEWS API] SUCCESS via OAuth! Logged in as User ID: #{user&.id} ---"
-      return user
-    end
+              # Strategy C: Plaintext Lookups
+              access_token ||= Spree::OauthAccessToken.find_by(token: clean_token)
+              access_token ||= Spree::OauthAccessToken.find_by(refresh_token: clean_token)
 
-    # Strategy D: Guest/Order Cart Fallback
-    # If Next.js sent an active Cart Token instead of an OAuth token, we find the user who owns the cart!
-    order = Spree::Order.find_by(token: clean_token) || Spree::Order.find_by(number: clean_token)
-    if order && order.user
-      Rails.logger.info "--- [REVIEWS API] SUCCESS via Order Cart! Logged in as User ID: #{order.user.id} ---"
-      return order.user
-    end
+              # Evaluate OAuth Token
+              if access_token
+                user = Spree.user_class.find_by(id: access_token.resource_owner_id)
+                Rails.logger.info "--- [REVIEWS API] SUCCESS via OAuth! Logged in as User ID: #{user&.id} ---"
+                return user
+              end
 
-    Rails.logger.error "--- [REVIEWS API] FAILED! Token not found in Database or Active Orders ---"
-    return nil
-  rescue => e
-    Rails.logger.error "--- ProductReviews Auth Error: #{e.message} ---"
-    nil
-  end
-end
+              # Strategy D: Guest/Order Cart Fallback
+              # If Next.js sent an active Cart Token instead of an OAuth token, we find the user who owns the cart!
+              order = Spree::Order.find_by(token: clean_token) || Spree::Order.find_by(number: clean_token)
+              if order && order.user
+                Rails.logger.info "--- [REVIEWS API] SUCCESS via Order Cart! Logged in as User ID: #{order.user.id} ---"
+                return order.user
+              end
+
+              Rails.logger.error "--- [REVIEWS API] FAILED! Token not found in Database or Active Orders ---"
+              
+              # Failsafe Debugging: Print exactly what format the database is storing
+              latest = Spree::OauthAccessToken.last
+              if latest
+                Rails.logger.error "--- [DEBUG] DB Latest Token: #{latest.token} | Refresh: #{latest.refresh_token} ---"
+              end
+              
+              return nil
+            rescue => e
+              Rails.logger.error "--- ProductReviews Auth Error: #{e.message} ---"
+              nil
+            end
+          end
         end
       end
     end
