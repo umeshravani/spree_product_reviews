@@ -75,8 +75,8 @@ module Spree
             begin
               return current_user if current_user
 
-              # 1. Grab our injected custom header from Next.js
-              token = request.headers['X-Spree-Token']
+              # 1. Grab our injected custom header from Next.js (Rack reformats headers to HTTP_*)
+              token = request.headers['HTTP_X_SPREE_TOKEN'] || request.headers['X-Spree-Token']
               return nil if token.blank?
 
               # 2. Decode it just in case Next.js URL-encoded it
