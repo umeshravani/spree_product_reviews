@@ -33,7 +33,6 @@ module Spree
 
           def format_reviewer_name(review)
             return "Anonymous" unless review.show_identifier && review.user
-            
             review.user.try(:name).presence || review.user.email.split('@').first
           end
 
@@ -41,9 +40,14 @@ module Spree
             return [] unless review.images.attached?
             
             review.images.map do |image|
+              
+              raw_host = Spree::Store.default&.url || "thewallx.com"
+              clean_host = raw_host.sub(/^https?:\/\//, '')
+              protocol = clean_host.include?("localhost") ? "http://" : "https://"
+
               {
                 id: image.id.to_s,
-                url: Rails.application.routes.url_helpers.rails_blob_url(image, only_path: true),
+                url: Rails.application.routes.url_helpers.rails_blob_url(image, host: "#{protocol}#{clean_host}"),
                 content_type: image.content_type,
                 filename: image.filename.to_s
               }
