@@ -1,6 +1,5 @@
 Spree::Core::Engine.add_routes do
   namespace :admin do
-    # GLOBAL REVIEWS
     resources :reviews do
       member do
         get :approve
@@ -15,7 +14,6 @@ Spree::Core::Engine.add_routes do
       end
     end
 
-    # NESTED REVIEWS
     resources :products do
       resources :product_reviews, only: %i[index destroy edit update] do
         member do
@@ -35,6 +33,11 @@ Spree::Core::Engine.add_routes do
     resource :review_settings, only: [:edit, :update]
   end
 
+  # Maps directly to our controller but completely dodges the strict /api/v3/ payload middleware!
+  post '/api/custom_reviews/:product_id', to: 'api/v3/store/product_reviews#create', defaults: { format: 'json' }
+  get '/api/custom_reviews/:product_id', to: 'api/v3/store/product_reviews#index', defaults: { format: 'json' }
+
+  # Store API V3 Routes
   namespace :api, defaults: { format: 'json' } do
     namespace :v3 do
       namespace :store do
