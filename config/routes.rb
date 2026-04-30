@@ -1,16 +1,13 @@
 Spree::Core::Engine.add_routes do
   namespace :admin do
-    # GLOBAL REVIEWS (For the "Reviews" tab)
+    # GLOBAL REVIEWS
     resources :reviews do
-      # Single Item Actions
       member do
         get :approve
         get :disapprove
         post :attach_image 
         delete :purge_images
       end
-
-      # Bulk Actions (Multi-select)
       collection do
         put :bulk_approve
         put :bulk_disapprove
@@ -18,18 +15,15 @@ Spree::Core::Engine.add_routes do
       end
     end
 
-    # NESTED REVIEWS (For the "Products" tab -> "Reviews")
+    # NESTED REVIEWS
     resources :products do
       resources :product_reviews, only: %i[index destroy edit update] do
-        # Single Item Actions
         member do
           get :approve
           get :disapprove
           post :attach_image
           delete :purge_images
         end
-
-        # Bulk Actions (Multi-select)
         collection do
           put :bulk_approve
           put :bulk_disapprove
@@ -38,11 +32,20 @@ Spree::Core::Engine.add_routes do
       end
     end
 
-    # Review Settings
     resource :review_settings, only: [:edit, :update]
   end
 
-  # Frontend routes
+  namespace :api, defaults: { format: 'json' } do
+    namespace :v3 do
+      namespace :store do
+        resources :products, only: [] do
+          resources :product_reviews, only: [:index, :create]
+        end
+      end
+    end
+  end
+
+  # Frontend routes (Classic Rails)
   resources :products, only: [] do
     resources :product_reviews, only: %i[index new create]
   end
