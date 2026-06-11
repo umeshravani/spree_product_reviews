@@ -1,7 +1,7 @@
-if defined?(Spree::PageBlock)
-  module Spree
-    module PageBlocks
-      class ProductReviewForm < Spree::PageBlock
+module Spree
+  module PageBlocks
+    class ProductReviewForm < (defined?(Spree::PageBlock) ? Spree::PageBlock : Object)
+      if defined?(Spree::PageBlock)
         preference :button_text, :string, default: Spree.t("page_blocks.product_review_form.button_text_default")
         preference :placeholder, :string, default: Spree.t("page_blocks.product_review_form.placeholder_default")
         preference :button_style, :string, default: "primary"
