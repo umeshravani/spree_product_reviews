@@ -1,8 +1,8 @@
-if defined?(Spree::PageBlock)
-  module Spree
-    module PageBlocks
-      module Products
-        class Reviews < Spree::PageBlock
+module Spree
+  module PageBlocks
+    module Products
+      class Reviews < (defined?(Spree::PageBlock) ? Spree::PageBlock : Object)
+        if defined?(Spree::PageBlock)
           preference :star_color, :string, default: '#FFA500'
           preference :display_numbers, :boolean, default: true
           preference :star_font_size, :integer, default: 16
