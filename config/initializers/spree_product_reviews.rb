@@ -1,9 +1,17 @@
 Rails.application.config.after_initialize do
   if Rails.application.config.respond_to?(:spree)
-    Rails.application.config.spree.page_sections << Spree::PageSections::AddAReview
-    Rails.application.config.spree.page_blocks << Spree::PageBlocks::ProductReviewForm
+    # Safely add Page Sections ONLY if the array exists
+    if Rails.application.config.spree.respond_to?(:page_sections) && Rails.application.config.spree.page_sections
+      Rails.application.config.spree.page_sections << Spree::PageSections::AddAReview
+    end
+
+    # Safely add Page Blocks ONLY if the array exists
+    if Rails.application.config.spree.respond_to?(:page_blocks) && Rails.application.config.spree.page_blocks
+      Rails.application.config.spree.page_blocks << Spree::PageBlocks::ProductReviewForm
+    end
   end
 
+  # Admin Sidebar safely scoped
   if Spree.respond_to?(:admin) && Spree.admin.respond_to?(:navigation)
     sidebar = Spree.admin.navigation.sidebar
     
@@ -13,5 +21,9 @@ Rails.application.config.after_initialize do
   end
   
   Spree::Ability.register_ability(Spree::ProductReviewsAbility)
-  Rails.application.config.spree_admin.product_dropdown_partials << "spree_product_reviews/admin/product_reviews_dropdown"
+  
+  # Safely append to admin dropdowns
+  if Rails.application.config.respond_to?(:spree_admin) && Rails.application.config.spree_admin.respond_to?(:product_dropdown_partials) && Rails.application.config.spree_admin.product_dropdown_partials
+    Rails.application.config.spree_admin.product_dropdown_partials << "spree_product_reviews/admin/product_reviews_dropdown"
+  end
 end
