@@ -29,9 +29,10 @@ Rails.application.config.after_initialize do
       Spree::Ability.prepend(Module.new do
         def initialize(*args, **kwargs)
           super
-          # Guard clause prevents recursive loading inside the subclasses
+          # Guard clause prevents recursive sub-class looping
           if self.class == Spree::Ability
-            merge(Spree::ProductReviewsAbility.new(*args, **kwargs))
+            user = args.first # Extract only the user object safely
+            merge(Spree::ProductReviewsAbility.new(user))
           end
         end
       end)
