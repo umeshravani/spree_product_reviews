@@ -22,15 +22,17 @@ Rails.application.config.after_initialize do
   
   if defined?(Spree::Ability) && defined?(Spree::ProductReviewsAbility)
     if Spree::Ability.respond_to?(:register_ability)
-      # Target: Spree 5.4 (Uses legacy collection-based registration)
+      # Target: Spree 5.4
       Spree::Ability.register_ability(Spree::ProductReviewsAbility)
     else
-      # Target: Spree 5.5+ (register_ability removed; safely intercepts variable arguments)
+      # Target: Spree 5.5+
       Spree::Ability.prepend(Module.new do
         def initialize(*args, **kwargs)
           super
-          user = args.first
-          merge(Spree::ProductReviewsAbility.new(user))
+          # Guard clause prevents recursive loading inside the subclasses
+          if self.class == Spree::Ability
+            merge(Spree::ProductReviewsAbility.new(*args, **kwargs))
+          end
         end
       end)
     end
