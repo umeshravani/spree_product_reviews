@@ -20,7 +20,18 @@ Rails.application.config.after_initialize do
     sidebar.add :review_settings, parent: :reviews, label: :review_settings, url: :edit_admin_review_settings_path, active: -> { controller_name == 'review_settings' }
   end
   
-  Spree::Ability.register_ability(Spree::ProductReviewsAbility)
+  if Spree::Ability.respond_to?(:register_ability)
+    # Target: Spree 5.4 (Uses legacy collection-based registration)
+    Spree::Ability.register_ability(Spree::ProductReviewsAbility)
+  else
+    # Target: Spree 5.5+ (register_ability removed; directly merges rules)
+    Spree::Ability.prepend(Module.new do
+      def initialize(user)
+        super
+        merge(Spree::ProductReviewsAbility.new(user))
+      end
+    end)
+  end
   
   # Safely append to admin dropdowns
   if Rails.application.config.respond_to?(:spree_admin) && Rails.application.config.spree_admin.respond_to?(:product_dropdown_partials) && Rails.application.config.spree_admin.product_dropdown_partials
