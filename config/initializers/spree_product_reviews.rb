@@ -1,17 +1,22 @@
-# 1. Handle Class Reloading Safely for Abilities (Spree 5.5+ Compatible)
+# 1. Handle Class Reloading Safely for Abilities (Spree 5.5+ Production-Proof)
 Rails.application.config.to_prepare do
-  if defined?(Spree::Ability)
-    if Spree::Ability.respond_to?(:register_ability)
-      # Pre-Spree 5.5 Legacy Registration
-      Spree::Ability.register_ability(Spree::ProductReviewsAbility)
-    else
-      # Spree 5.5+ Module Prepend Registration
-      Spree::Ability.prepend(Module.new do
-        def abilities_to_register
-          base_abilities = defined?(super) ? super : []
-          base_abilities | [Spree::ProductReviewsAbility]
-        end
-      end)
+  if defined?(Spree)
+    # safe_constantize forces Zeitwerk to load the class safely during production boot
+    ability_class = "Spree::Ability".safe_constantize
+
+    if ability_class
+      if ability_class.respond_to?(:register_ability)
+        # Pre-Spree 5.5 Legacy Registration
+        ability_class.register_ability(Spree::ProductReviewsAbility)
+      else
+        # Spree 5.5+ Native Extension Registry
+        ability_class.prepend(Module.new do
+          def abilities_to_register
+            base_abilities = defined?(super) ? super : []
+            base_abilities | [Spree::ProductReviewsAbility]
+          end
+        end)
+      end
     end
   end
 end
