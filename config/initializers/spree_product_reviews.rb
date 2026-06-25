@@ -1,5 +1,7 @@
+# 1. Handle Class Reloading Safely for Abilities (Spree 5.4 & 5.5+ Production-Proof)
 Rails.application.config.to_prepare do
   if defined?(Spree)
+    # safe_constantize forces Zeitwerk to load the class safely during production boot
     ability_class = "Spree::Ability".safe_constantize
 
     if ability_class
@@ -7,17 +9,11 @@ Rails.application.config.to_prepare do
         # Pre-Spree 5.5 Legacy Registration
         ability_class.register_ability(Spree::ProductReviewsAbility)
       else
-        # Spree 5.5+ Safe Initialization Merge
+        # Spree 5.5+ Native Extension Registry
         ability_class.prepend(Module.new do
-          def initialize(*args, **kwargs)
-            # 1. Let Spree 5.5 load ALL core Admin Permission Sets first
-            super
-            # 2. Prevent recursive subclass loading
-            if self.class == Spree::Ability
-              # 3. Extract the single user argument the legacy extension expects
-              user = args.first 
-              merge(Spree::ProductReviewsAbility.new(user))
-            end
+          def abilities_to_register
+            base_abilities = defined?(super) ? super : []
+            base_abilities | [Spree::ProductReviewsAbility]
           end
         end)
       end
@@ -25,17 +21,21 @@ Rails.application.config.to_prepare do
   end
 end
 
+# 2. Handle Boot-time UI Configurations
 Rails.application.config.after_initialize do
   if Rails.application.config.respond_to?(:spree)
+    # Safely add Page Sections ONLY if the array exists
     if Rails.application.config.spree.respond_to?(:page_sections) && Rails.application.config.spree.page_sections
       Rails.application.config.spree.page_sections << Spree::PageSections::AddAReview
     end
 
+    # Safely add Page Blocks ONLY if the array exists
     if Rails.application.config.spree.respond_to?(:page_blocks) && Rails.application.config.spree.page_blocks
       Rails.application.config.spree.page_blocks << Spree::PageBlocks::ProductReviewForm
     end
   end
 
+  # Admin Sidebar safely scoped
   if Spree.respond_to?(:admin) && Spree.admin.respond_to?(:navigation)
     sidebar = Spree.admin.navigation.sidebar
     
@@ -44,6 +44,7 @@ Rails.application.config.after_initialize do
     sidebar.add :review_settings, parent: :reviews, label: :review_settings, url: :edit_admin_review_settings_path, active: -> { controller_name == 'review_settings' }
   end
   
+  # Safely append to admin dropdowns
   if Rails.application.config.respond_to?(:spree_admin) && Rails.application.config.spree_admin.respond_to?(:product_dropdown_partials) && Rails.application.config.spree_admin.product_dropdown_partials
     Rails.application.config.spree_admin.product_dropdown_partials << "spree_product_reviews/admin/product_reviews_dropdown"
   end
