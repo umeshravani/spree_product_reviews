@@ -20,23 +20,24 @@ module SpreeProductReviews
       end
 
       def add_reviews_page_block
-        say_status :spree_product_reviews, "Adding Reviews block to Product Details sections", :green
-
+        say_status :spree_product_reviews, "Checking for CMS Product Details section to append Reviews block...", :green
         require Rails.root.join("config/environment")
 
-        ::Spree::PageSection
-          .where(type: "Spree::PageSections::ProductDetails")
-          .find_each do |section|
+        if Object.const_defined?("Spree::PageSection") && Spree::PageSection.respond_to?(:where)
+          ::Spree::PageSection
+            .where(type: "Spree::PageSections::ProductDetails")
+            .find_each do |section|
+              next if section.blocks.exists?(type: "Spree::PageBlocks::Products::Reviews")
 
-            next if section.blocks.exists?(
-              type: "Spree::PageBlocks::Products::Reviews"
-            )
-
-            section.blocks.create!(
-              type: "Spree::PageBlocks::Products::Reviews",
-              position: section.blocks.maximum(:position).to_i + 1
-            )
-          end
+              section.blocks.create!(
+                type: "Spree::PageBlocks::Products::Reviews",
+                position: section.blocks.maximum(:position).to_i + 1
+              )
+              say_status :created, "Added Reviews block to section: #{section.name}", :green
+            end
+        else
+          say_status :skipping, "CMS Layout core engines not active in this app context. Skipping Reviews block injection.", :blue
+        end
       end
     end
   end
