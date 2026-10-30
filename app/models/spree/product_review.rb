@@ -37,9 +37,14 @@ module Spree
     scope :lowest_rating, -> { order(rating: :asc, created_at: :desc) }
     scope :most_helpful, -> { order(helpful_count: :desc, created_at: :desc) }
 
+    before_validation :set_default_product_name, on: :create
     before_create :evaluate_verified_purchaser
     after_save :recalculate_product_rating, if: -> { saved_change_to_approved? || saved_change_to_spam? || saved_change_to_rating? }
     after_destroy :recalculate_product_rating
+
+    def set_default_product_name
+      self.product_name ||= product&.name
+    end
 
     def pending?
       !approved? && !spam?
