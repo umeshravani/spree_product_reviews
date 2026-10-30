@@ -1,24 +1,26 @@
+# frozen_string_literal: true
+
 module Spree
   class ProductReviewsAbility
-    include CanCan::Ability
+    if defined?(CanCan::Ability)
+      include CanCan::Ability
 
-    def initialize(user)
-      user ||= Spree.user_class.new
-      Rails.logger.info "[ProductReviewsAbility] user=#{user.inspect}, roles=#{user.spree_roles.map(&:name).inspect}"
-      if user.has_spree_role? "admin"
-        can :manage, Spree::ProductReview
-      elsif user.persisted?
-        can :create, Spree::ProductReview
-        can :update, Spree::ProductReview do |review|
-          review.user_id == user.id
+      def initialize(user)
+        return unless user
+
+        if user.respond_to?(:has_spree_role?) && user.has_spree_role?('admin')
+          can :manage, Spree::ProductReview
+          can :manage, Spree::ReviewVote
+        elsif user.persisted?
+          can :create, Spree::ProductReview
+          can [:update, :destroy], Spree::ProductReview do |review|
+            (review.respond_to?(:customer_id) && review.customer_id == user.id) ||
+              (review.respond_to?(:user_id) && review.user_id == user.id)
+          end
+          can :create, Spree::ReviewVote
+        else
+          can :read, Spree::ProductReview, approved: true, spam: false
         end
-        can :destroy, Spree::ProductReview do |review|
-          review.user_id == user.id
-        end
-      else
-        can :read, Spree::ProductReview, approved: true
-        cannot :create, Spree::ProductReview
-        cannot %i[update destroy], Spree::ProductReview
       end
     end
   end

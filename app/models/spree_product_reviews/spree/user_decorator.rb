@@ -1,22 +1,22 @@
+# frozen_string_literal: true
+
 module SpreeProductReviews
   module Spree
     module UserDecorator
       def self.prepended(base)
-        base.has_many :product_reviews, class_name: "Spree::ProductReview", dependent: :destroy, foreign_key: :user_id
+        base.has_many :product_reviews, class_name: 'Spree::ProductReview', dependent: :destroy, foreign_key: :user_id unless base.reflect_on_association(:product_reviews)
       end
 
       def product_review_for(product)
-        product_reviews.find_by(product_id: product.id, user_id: id)
-      end
-
-      def recent_purchase_date_for(product)
-        orders.joins(:line_items, :variants).where(
-          spree_variants: { product_id: product.id }
-        ).order("spree_orders.completed_at DESC").first&.completed_at
+        product_reviews.find_by(product_id: product.id)
       end
     end
   end
 end
 
-Spree.user_class.prepend SpreeProductReviews::Spree::UserDecorator
-
+if defined?(Spree.user_class) && Spree.user_class.present?
+  klass = Spree.user_class.to_s.safe_constantize
+  if klass && !klass.ancestors.include?(SpreeProductReviews::Spree::UserDecorator)
+    klass.prepend(SpreeProductReviews::Spree::UserDecorator)
+  end
+end

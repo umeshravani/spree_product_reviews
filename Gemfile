@@ -1,29 +1,9 @@
-source "https://rubygems.org"
+# frozen_string_literal: true
 
-git_source(:github) do |repo_name|
-  repo_name = "#{repo_name}/#{repo_name}" unless repo_name.include?("/")
-  "https://github.com/#{repo_name}.git"
-end
-
-gem "rails-controller-testing"
-
-spree_opts = { github: "spree/spree", branch: "main" }
-gem "spree", spree_opts
-gem "spree_admin", spree_opts
-gem "spree_emails", spree_opts
-gem "spree_storefront", spree_opts
-
-gem "mysql2" if ENV["DB"] == "mysql" || ENV["CI"]
-gem "pg" if ENV["DB"] == "postgres" || ENV["CI"]
-
-gem "sqlite3", ">= 2.0"
-
-group :development, :test do
-  gem "rubocop-rails"
-  gem "rubocop-rspec"
-  gem "rubocop-rspec_rails"
-  gem "spree_dev_tools"
-end
+source 'https://rubygems.org'
 
 gemspec
 
+group :test do
+  gem 'rspec', '~> 3.13'
+end

@@ -1,53 +1,20 @@
-lib = File.expand_path('lib', __dir__)
-$LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
+# encoding: UTF-8
 
-require 'spree_product_reviews/version'
+Gem::Specification.new do |s|
+  s.platform    = Gem::Platform::RUBY
+  s.name        = 'spree_product_reviews'
+  s.version     = '6.0.0'
+  s.authors     = ['Umesh Ravani']
+  s.email       = 'umeshravani98@gmail.com'
+  s.summary     = 'Product Reviews and Ratings Extension for Spree Commerce 6'
+  s.description = 'Standalone, production-grade product reviews, ratings, verified buyer checks, and moderation for Spree 6.'
+  s.homepage    = 'https://github.com/umeshravani/spree_product_reviews'
+  s.license     = 'MIT'
 
-Gem::Specification.new do |spec|
-  spec.name          = 'spree_product_reviews'
-  spec.version       = SpreeProductReviews::VERSION
-  spec.platform      = Gem::Platform::RUBY
-  spec.summary       = 'Spree Commerce Product Reviews Extension'
-  spec.description   = 'Product reviews and ratings system for Spree Commerce 5.x stores.'
-  spec.required_ruby_version = '>= 3.2'
+  s.required_ruby_version = '>= 3.2'
 
-  # Author info
-  spec.authors       = ['Umesh Ravani']
-  spec.email         = ['umeshravani98@gmail.com']
-  spec.homepage      = 'https://github.com/umeshravani/spree_product_reviews'
-  spec.license       = 'AGPL-3.0-or-later'
+  s.files        = Dir['{app,config,db,lib,vendor}/**/*', 'Rakefile', 'LICENSE', 'README.md'].reject { |f| f.match(/^spec/) && !f.match(/^spec\/fixtures/) }
+  s.require_path = 'lib'
 
-  # Automatically include most important files (Cleaner syntax)
-  spec.files = Dir.glob([
-    'lib/**/*',
-    'app/**/*',
-    'config/**/*',
-    'db/**/*',
-    'public/**/*',
-    'README.md',
-    'LICENSE.md'
-  ])
-
-  spec.require_paths = ['lib']
-
-  # CHANGE: Depend on spree_core, just like the Razorpay gem.
-  # This ensures compatibility with Spree 5.2 without locking to specific frontends.
-  spec.add_dependency 'spree_core', '>= 5.2'
-  
-  # Kept without version lock (as discussed previously) to allow the main Gemfile to handle the git branch
-  spec.add_dependency 'spree_auth_devise'
-  
-  spec.add_dependency 'spree_extension'
-
-  # Development dependencies
-  spec.add_development_dependency 'spree_dev_tools'
-  # specific dev dependencies for this gem can be kept if needed (faker/pg), 
-  # but often dev_tools handles the basics.
-  spec.add_development_dependency 'faker' 
-
-  # RubyGems.org metadata
-  spec.metadata = {
-    'source_code_uri' => spec.homepage,
-    'changelog_uri'   => "#{spec.homepage}/blob/main/CHANGELOG.md"
-  }
+  s.add_dependency 'spree_core', '>= 6.0.0'
 end

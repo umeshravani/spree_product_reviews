@@ -4,18 +4,15 @@ en:
       short_date: "%b %d, %Y"
 
   spree:
-    # General
     product_reviews: "Product Reviews"
     reviews: "Reviews"
     customer_reviews: "Customer Reviews"
     review_settings: "Review Settings"
     general_settings: "General Settings"
     
-    # Action Buttons
     approve: "Approve"
     disapprove: "Disapprove"
     
-    # Model Attributes & Columns
     review_title: "Review Title"
     review_images: "Review Media"
     product_review_rating: "Rating"
@@ -24,22 +21,20 @@ en:
     product: "Product"
     email: "Email"
     user: "User"
+    customer: "Customer"
     stars: "Stars"
     
-    # Form / Frontend
     new_product_review: "Leave a new product review"
     add_a_review_heading: "Leave a Review"
     thanks_for_review_heading: "Thank you for your review! Your Review is Approved!"
     thanks_for_review_heading_pending: "Thank you for your review! Your Review is waiting for Approval!"
     add_a_review_text: "We value your feedback! Please leave a review for this product."
     
-    # Settings Page
     auto_approve_reviews: "Auto Approve Reviews"
     default_unapprove: "Default (Unapproved/Pending)"
     approve_automatically: "Approve Automatically"
     auto_approve_help_text: "Determine if new reviews should be published immediately or require admin approval."
     
-    # Flash Messages
     info_approve_review: "Review approved successfully"
     info_disapprove_review: "Review disapproved successfully"
     review_approved: "Review approved successfully."
@@ -47,8 +42,6 @@ en:
     review_deleted: "Review deleted."
     please_log_in: "Please log in to write a review."
     successfully_updated: "%{resource} updated successfully"
-
-    # --- FIX: Added Missing Search Translation ---
     search_reviews: "Search Reviews" 
     
     product_review:
@@ -62,40 +55,8 @@ en:
           success: "Your review has been updated."
           error: "There was an error updating your review. Please try again."
           failure: "There was an error updating your review. Please try again."
-    
-    # Page Builder Blocks
-    page_blocks:
-      reviews_summary: "Reviews"
-      product_review_form:
-        button_text_default: "Add your review"
-        placeholder_default: "Write your review here..."
-        
-    # Page Builder Sections
-    page_sections:
-      product_reviews:
-        reviewed_by: "Reviewed by:"
-        pending_product_review_instructions: "Thanks for your review! It is currently pending approval."
-        add_a_review: "Add a Review"
-    
-    # Admin UI Descriptions
-    admin:
-      page_sections:
+
+    permissions_catalog:
+      resources:
         product_reviews:
-          display_description: "If a user is not logged in, this section will not be displayed."
-          display_style:
-            label: "Display style"
-            inline: "Inline"
-            stacked: "Stacked"
-            heading_options: "Heading layout options"
-          heading_labels:
-            heading: "Heading labels"
-            no_review_yet: "Customer needs to review"
-            review_pending: "Customer's review is pending"
-            review_approved: "Customer's review was approved"
-          control_preferences:
-            label: "Control preferences"
-            allow_unverified_reviews: "Allow reviews for unverified purchase"
-            allow_unverified_reviews_enabled_description: "Enable to post reviews from any customer, without the verified badge."
-            allow_unverified_reviews_disabled_description: "Disable to limit reviews strictly to only verified buyers."
-          review_settings: "Review Settings"
-          upload_preferences: "Upload Settings"
+          label: "Product Reviews"
