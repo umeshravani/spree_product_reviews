@@ -164,12 +164,22 @@ module Spree
           end
 
           def apply_moderation_rules(review)
-            require_approval = SpreeProductReviews.config.require_approval rescue true
+            require_approval = begin
+                                 SpreeProductReviews.config.require_approval
+                               rescue StandardError
+                                 true
+                               end
             should_approve = !require_approval
             is_spam = false
 
             # Spam link detection
-            if SpreeProductReviews.config.disable_review_links rescue true
+            disable_links = begin
+                              SpreeProductReviews.config.disable_review_links
+                            rescue StandardError
+                              true
+                            end
+
+            if disable_links
               if review.review.to_s.match?(%r{https?://|www\.|[a-zA-Z0-9-]+\.(com|net|org|io|xyz|biz)}i)
                 should_approve = false
                 is_spam = true
@@ -177,7 +187,11 @@ module Spree
             end
 
             # Spam words detection
-            spam_words_str = SpreeProductReviews.config.spam_words rescue ''
+            spam_words_str = begin
+                               SpreeProductReviews.config.spam_words
+                             rescue StandardError
+                               ''
+                             end
             if spam_words_str.present?
               words = spam_words_str.split(',').map(&:strip).reject(&:empty?)
               full_text = "#{review.title} #{review.review}".downcase
