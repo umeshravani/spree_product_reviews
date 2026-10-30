@@ -158,12 +158,12 @@ module Spree
     end
 
     def vote!(helpful:, customer_id: nil, user_id: nil, ip_address: nil)
-      vote = votes.find_or_initialize_by(
+      vote = votes.build(
         customer_id: customer_id,
         user_id: user_id,
-        ip_address: (customer_id || user_id) ? nil : ip_address
+        ip_address: (customer_id || user_id) ? nil : ip_address,
+        helpful: helpful
       )
-      vote.helpful = helpful
       vote.save!
     end
 
