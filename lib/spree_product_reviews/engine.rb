@@ -22,6 +22,10 @@ module SpreeProductReviews
       Dir.glob(File.join(File.dirname(__FILE__), '../../app/models/**/*_decorator*.rb')) do |c|
         load(c)
       end
+
+      if Spree.respond_to?(:permissions) && Spree.permissions.respond_to?(:register_scope)
+        Spree.permissions.register_scope(:product_reviews, group: :catalog, resources: -> { [Spree::ProductReview] })
+      end
     end
 
     config.after_initialize do
