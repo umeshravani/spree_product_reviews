@@ -108,7 +108,17 @@ module Spree
       return false unless target_product
 
       variant_ids = target_product.variants_including_master.select(:id)
-      completed_orders = Spree::Order.where(state: 'complete')
+
+      # Adapt query to Spree 6 (completed_at / status) vs Spree 5 (state)
+      completed_orders = if Spree::Order.column_names.include?('completed_at')
+                           Spree::Order.where.not(completed_at: nil)
+                         elsif Spree::Order.column_names.include?('status')
+                           Spree::Order.where(status: %w[placed complete])
+                         elsif Spree::Order.column_names.include?('state')
+                           Spree::Order.where(state: 'complete')
+                         else
+                           Spree::Order.all
+                         end
 
       if customer_id.present? && Spree::Order.column_names.include?('customer_id')
         return true if completed_orders.where(customer_id: customer_id)
