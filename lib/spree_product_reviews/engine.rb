@@ -34,13 +34,6 @@ module SpreeProductReviews
           Spree::Product.additional_permitted_attributes << :reviews_allowed
         end
       end
-
-      if defined?(Spree.customer_class) && Spree.customer_class.present?
-        customer_klass = Spree.customer_class.to_s.safe_constantize
-        if customer_klass && !customer_klass.reflect_on_association(:product_reviews)
-          customer_klass.has_many :product_reviews, class_name: 'Spree::ProductReview', foreign_key: :customer_id, dependent: :nullify
-        end
-      end
     end
   end
 end

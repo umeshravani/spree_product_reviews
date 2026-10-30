@@ -131,7 +131,12 @@ module Spree
           private
 
           def load_product
-            @product = Spree::Product.friendly.find(params[:product_id])
+            scope = if respond_to?(:current_store) && current_store
+                      current_store.products
+                    else
+                      Spree::Product
+                    end
+            @product = scope.friendly.find(params[:product_id])
           end
 
           def load_review

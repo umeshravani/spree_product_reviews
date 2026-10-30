@@ -13,18 +13,10 @@ require_relative '../../../lib/spree_product_reviews/configuration'
 require_relative '../../../lib/spree_product_reviews/version'
 
 RSpec.describe 'SpreeProductReviews Review Logic & Lifecycle' do
-  describe 'Reviewer Name Masking & Privacy' do
+  describe 'Reviewer Name Privacy & Masking' do
     let(:mask_method) do
       Class.new do
-        def self.mask_email(email)
-          parts = email.split('@')
-          name = parts.first
-          domain = parts.last
-          masked_name = name.length > 2 ? "#{name[0]}***#{name[-1]}" : "#{name[0]}***"
-          "#{masked_name}@#{domain}"
-        end
-
-        def self.reviewer_name(name: nil, show_identifier: true, customer: nil, user: nil)
+        def self.reviewer_name(name: nil, show_identifier: true, customer: nil, user: nil, verified_purchaser: false)
           return name if name.present?
 
           if show_identifier
@@ -32,18 +24,14 @@ RSpec.describe 'SpreeProductReviews Review Logic & Lifecycle' do
               if customer.respond_to?(:first_name) && customer.first_name.present?
                 last_initial = customer.respond_to?(:last_name) && customer.last_name.present? ? " #{customer.last_name[0]}." : ''
                 "#{customer.first_name}#{last_initial}".strip
-              elsif customer.respond_to?(:email) && customer.email.present?
-                mask_email(customer.email)
               else
-                'Verified Customer'
+                verified_purchaser ? 'Verified Buyer' : 'Anonymous'
               end
             elsif user.present?
               if user.respond_to?(:name) && user.name.present?
                 user.name
-              elsif user.respond_to?(:email) && user.email.present?
-                mask_email(user.email)
               else
-                'Verified Customer'
+                verified_purchaser ? 'Verified Buyer' : 'Anonymous'
               end
             else
               'Anonymous'
@@ -59,9 +47,14 @@ RSpec.describe 'SpreeProductReviews Review Logic & Lifecycle' do
       expect(mask_method.reviewer_name(name: 'Jane Doe')).to eq('Jane Doe')
     end
 
-    it 'masks email if customer has no first_name' do
+    it 'never leaks email and falls back to Anonymous if customer has no first_name' do
       customer = OpenStruct.new(email: 'customer@example.com')
-      expect(mask_method.reviewer_name(customer: customer)).to eq('c***r@example.com')
+      expect(mask_method.reviewer_name(customer: customer)).to eq('Anonymous')
+    end
+
+    it 'returns Verified Buyer if verified purchaser without display name' do
+      customer = OpenStruct.new(email: 'customer@example.com')
+      expect(mask_method.reviewer_name(customer: customer, verified_purchaser: true)).to eq('Verified Buyer')
     end
 
     it 'formats first name and last initial if customer has names' do

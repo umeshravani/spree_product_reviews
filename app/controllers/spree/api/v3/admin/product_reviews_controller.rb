@@ -5,11 +5,13 @@ module Spree
     module V3
       module Admin
         class ProductReviewsController < (defined?(::Spree::Api::V3::Admin::BaseController) ? ::Spree::Api::V3::Admin::BaseController : ActionController::API)
+          scoped_resource :product_reviews if respond_to?(:scoped_resource)
+
           before_action :load_review, only: [:show, :update, :destroy, :approve, :reject, :mark_spam, :unmark_spam]
 
           # GET /api/v3/admin/product_reviews
           def index
-            scope = Spree::ProductReview.all
+            scope = base_scope
 
             if params[:status].present?
               case params[:status]
@@ -44,12 +46,13 @@ module Spree
 
           # GET /api/v3/admin/product_reviews/counts
           def counts
+            scope = base_scope
             render json: {
               data: {
-                pending: Spree::ProductReview.pending.count,
-                approved: Spree::ProductReview.approved.count,
-                spam: Spree::ProductReview.spam.count,
-                total: Spree::ProductReview.count
+                pending: scope.pending.count,
+                approved: scope.approved.count,
+                spam: scope.spam.count,
+                total: scope.count
               }
             }, status: :ok
           end
@@ -100,8 +103,20 @@ module Spree
 
           private
 
+          def base_scope
+            scope = Spree::ProductReview.all
+            if respond_to?(:current_store) && current_store
+              scope = scope.joins(:product).where(spree_products: { store_id: current_store.id })
+            end
+            scope
+          end
+
+          def read_actions
+            (defined?(super) ? super : []) + %w[index show counts]
+          end
+
           def load_review
-            @review = Spree::ProductReview.find(params[:id])
+            @review = base_scope.find(params[:id])
           end
 
           def admin_review_params

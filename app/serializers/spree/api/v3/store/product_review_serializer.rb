@@ -27,8 +27,6 @@ module Spree
               title: review.title,
               review: review.review,
               rating: review.rating,
-              approved: review.approved,
-              spam: review.spam,
               reviewer_name: review.reviewer_name,
               is_verified_purchase: review.verified_purchaser || review.purchase_date.present?,
               purchase_date: review.purchase_date&.iso8601,

@@ -81,18 +81,14 @@ module Spree
           if customer.respond_to?(:first_name) && customer.first_name.present?
             last_initial = customer.respond_to?(:last_name) && customer.last_name.present? ? " #{customer.last_name[0]}." : ''
             "#{customer.first_name}#{last_initial}".strip
-          elsif customer.respond_to?(:email) && customer.email.present?
-            mask_email(customer.email)
           else
-            'Verified Customer'
+            verified_purchaser? ? 'Verified Buyer' : 'Anonymous'
           end
         elsif user.present?
           if user.respond_to?(:name) && user.name.present?
             user.name
-          elsif user.respond_to?(:email) && user.email.present?
-            mask_email(user.email)
           else
-            'Verified Customer'
+            verified_purchaser? ? 'Verified Buyer' : 'Anonymous'
           end
         else
           'Anonymous'
@@ -150,11 +146,13 @@ module Spree
     def recalculate_product_rating
       return unless product
 
-      approved_reviews = product.reviews.approved
-      count = approved_reviews.count
-      avg = count.positive? ? approved_reviews.average(:rating).to_f.round(2) : 0.0
+      product.with_lock do
+        approved_reviews = product.reviews.approved
+        count = approved_reviews.count
+        avg = count.positive? ? approved_reviews.average(:rating).to_f.round(2) : 0.0
 
-      product.update_columns(average_rating: avg, review_count: count)
+        product.update_columns(average_rating: avg, review_count: count)
+      end
     rescue StandardError => e
       Rails.logger.error("[SpreeProductReviews] Rating recalculation failed: #{e.message}")
     end
@@ -170,14 +168,6 @@ module Spree
     end
 
     private
-
-    def mask_email(email)
-      parts = email.split('@')
-      name = parts.first
-      domain = parts.last
-      masked_name = name.length > 2 ? "#{name[0]}***#{name[-1]}" : "#{name[0]}***"
-      "#{masked_name}@#{domain}"
-    end
 
     def validate_images
       return unless images.attached?

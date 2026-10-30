@@ -56,13 +56,8 @@ class ModernizeSpreeProductReviewsForSpree6 < ActiveRecord::Migration[7.2]
     if table_exists?(:spree_customers) && table_exists?(:spree_users)
       reversible do |dir|
         dir.up do
-          execute <<-SQL
-            UPDATE spree_product_reviews r
-            SET customer_id = c.id
-            FROM spree_users u
-            JOIN spree_customers c ON LOWER(c.email) = LOWER(u.email)
-            WHERE r.user_id = u.id AND r.customer_id IS NULL;
-          SQL
+          require 'spree_product_reviews/legacy_user_migrator'
+          SpreeProductReviews::LegacyUserMigrator.migrate!(verbose: true)
         end
       end
     end
