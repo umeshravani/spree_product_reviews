@@ -14,6 +14,20 @@ module SpreeProductReviews
       end
     end
 
+    initializer 'spree_product_reviews.permissions' do
+      if defined?(Spree) && Spree.respond_to?(:permissions) && Spree.permissions.respond_to?(:register_scope)
+        Spree.permissions.register_scope(:product_reviews, group: :catalog, resources: -> { [Spree::ProductReview] })
+      end
+    end
+
+    initializer 'spree_product_reviews.permitted_attributes' do
+      if defined?(Spree::Product) && Spree::Product.respond_to?(:additional_permitted_attributes)
+        unless Spree::Product.additional_permitted_attributes.include?(:reviews_allowed)
+          Spree::Product.additional_permitted_attributes << :reviews_allowed
+        end
+      end
+    end
+
     config.generators do |g|
       g.test_framework :rspec
     end
@@ -23,20 +37,8 @@ module SpreeProductReviews
         load(c)
       end
 
-      if Spree.respond_to?(:permissions) && Spree.permissions.respond_to?(:register_scope)
+      if defined?(Spree) && Spree.respond_to?(:permissions) && Spree.permissions.respond_to?(:register_scope)
         Spree.permissions.register_scope(:product_reviews, group: :catalog, resources: -> { [Spree::ProductReview] })
-      end
-    end
-
-    config.after_initialize do
-      if Spree.respond_to?(:permissions) && Spree.permissions.respond_to?(:register_scope)
-        Spree.permissions.register_scope(:product_reviews, group: :catalog, resources: -> { [Spree::ProductReview] })
-      end
-
-      if defined?(Spree::Product) && Spree::Product.respond_to?(:additional_permitted_attributes)
-        unless Spree::Product.additional_permitted_attributes.include?(:reviews_allowed)
-          Spree::Product.additional_permitted_attributes << :reviews_allowed
-        end
       end
     end
   end
