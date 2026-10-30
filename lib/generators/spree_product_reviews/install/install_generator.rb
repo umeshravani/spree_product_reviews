@@ -25,6 +25,8 @@ module SpreeProductReviews
         create_file initializer_path, <<~RUBY
           # frozen_string_literal: true
 
+          return unless defined?(SpreeProductReviews)
+
           SpreeProductReviews.configure do |config|
             # Master toggle for reviews
             config.enabled = true
