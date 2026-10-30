@@ -115,3 +115,4 @@ RSpec.describe SpreeProductReviews::LegacyUserMigrator do
     end
   end
 end
+

@@ -8,7 +8,7 @@ module Spree
           skip_before_action :ensure_payload_size, raise: false
           skip_before_action :check_payload_size, raise: false
 
-          before_action :load_product, only: [:index, :create]
+          before_action :load_product, only: [:index, :create, :update, :destroy]
           before_action :load_review, only: [:vote]
 
           # GET /api/v3/store/products/:product_id/product_reviews
@@ -103,6 +103,50 @@ module Spree
                 errors: @review.errors.full_messages
               }, status: :unprocessable_entity
             end
+          end
+
+          # PATCH /api/v3/store/products/:product_id/product_reviews/:id
+          def update
+            customer = resolve_current_customer
+            unless customer
+              return render json: { error: 'unauthorized', message: 'Authentication required.' }, status: :unauthorized
+            end
+
+            @review = @product.reviews.not_discarded.find(params[:id])
+            unless @review.customer_id == customer.id || (customer.respond_to?(:user_id) && @review.user_id == customer.user_id)
+              return render json: { error: 'forbidden', message: 'You can only edit your own reviews.' }, status: :forbidden
+            end
+
+            @review.assign_attributes(review_params)
+            apply_moderation_rules(@review)
+
+            if @review.save
+              @review.record_audit!(action: :edit, moderator: customer, note: 'Updated by reviewer')
+              render json: {
+                data: ProductReviewSerializer.new(@review).serializable_hash,
+                meta: {
+                  message: @review.approved? ? 'Review updated successfully.' : 'Review updated and pending moderation.'
+                }
+              }, status: :ok
+            else
+              render json: { error: 'validation_failed', errors: @review.errors.full_messages }, status: :unprocessable_entity
+            end
+          end
+
+          # DELETE /api/v3/store/products/:product_id/product_reviews/:id
+          def destroy
+            customer = resolve_current_customer
+            unless customer
+              return render json: { error: 'unauthorized', message: 'Authentication required.' }, status: :unauthorized
+            end
+
+            @review = @product.reviews.not_discarded.find(params[:id])
+            unless @review.customer_id == customer.id || (customer.respond_to?(:user_id) && @review.user_id == customer.user_id)
+              return render json: { error: 'forbidden', message: 'You can only withdraw your own reviews.' }, status: :forbidden
+            end
+
+            @review.discard!(moderator: customer, note: 'Withdrawn by customer')
+            head :no_content
           end
 
           # POST /api/v3/store/product_reviews/:id/vote

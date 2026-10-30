@@ -5,7 +5,7 @@ Spree::Core::Engine.add_routes do
     namespace :v3 do
       namespace :store do
         resources :products, only: [] do
-          resources :product_reviews, only: [:index, :create]
+          resources :product_reviews, only: [:index, :create, :update, :destroy]
         end
 
         resources :product_reviews, only: [] do
@@ -16,15 +16,24 @@ Spree::Core::Engine.add_routes do
       end
 
       namespace :admin do
+        resources :products, only: [] do
+          get :reviews_summary, to: 'product_reviews#summary'
+        end
+
         resources :product_reviews do
           collection do
             get :counts
+            post :bulk_moderate
           end
           member do
             post :approve
             post :reject
             post :mark_spam
             post :unmark_spam
+            post :restore
+            post :hide
+            post :unhide
+            delete 'images/:image_id', to: 'product_reviews#destroy_image'
           end
         end
       end

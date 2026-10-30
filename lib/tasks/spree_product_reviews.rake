@@ -21,3 +21,4 @@ namespace :spree_product_reviews do
     puts '------------------------------------------------------------'
   end
 end
+
