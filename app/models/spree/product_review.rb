@@ -50,6 +50,13 @@ module Spree
       !approved? && !spam?
     end
 
+    def status
+      return 'spam' if spam?
+      return 'approved' if approved?
+
+      'pending'
+    end
+
     def approve!
       update(approved: true, spam: false)
     end

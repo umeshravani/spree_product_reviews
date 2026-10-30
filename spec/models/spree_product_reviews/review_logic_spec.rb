@@ -136,12 +136,20 @@ RSpec.describe 'SpreeProductReviews Review Logic & Lifecycle' do
         def pending?
           !@approved && !@spam
         end
+
+        def status
+          return 'spam' if @spam
+          return 'approved' if @approved
+
+          'pending'
+        end
       end
     end
 
     it 'starts in pending state' do
       review = review_state.new(approved: false, spam: false)
       expect(review.pending?).to be true
+      expect(review.status).to eq('pending')
     end
 
     it 'approves review and clears spam' do
@@ -150,12 +158,14 @@ RSpec.describe 'SpreeProductReviews Review Logic & Lifecycle' do
       expect(review.approved).to be true
       expect(review.spam).to be false
       expect(review.pending?).to be false
+      expect(review.status).to eq('approved')
     end
 
     it 'rejects review' do
       review = review_state.new(approved: true, spam: false)
       review.reject!
       expect(review.approved).to be false
+      expect(review.status).to eq('pending')
     end
 
     it 'marks as spam and unapproves' do
@@ -163,6 +173,7 @@ RSpec.describe 'SpreeProductReviews Review Logic & Lifecycle' do
       review.mark_spam!
       expect(review.spam).to be true
       expect(review.approved).to be false
+      expect(review.status).to eq('spam')
     end
 
     it 'clears spam flag' do
