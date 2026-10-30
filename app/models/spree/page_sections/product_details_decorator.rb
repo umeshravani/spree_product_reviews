@@ -8,7 +8,7 @@ module Spree
   end
 end
 
-# Sits OUTSIDE the module definition
-if defined?(Spree::PageSections::ProductDetails)
+# Guarded for Spree 5 backward compatibility; in Spree 6 PageSections is not present
+if defined?(Spree::PageSections::ProductDetails) && !Spree::PageSections::ProductDetails.ancestors.include?(Spree::PageSections::ProductDetailsDecorator)
   Spree::PageSections::ProductDetails.prepend(Spree::PageSections::ProductDetailsDecorator)
 end

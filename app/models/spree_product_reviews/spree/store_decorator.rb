@@ -14,4 +14,6 @@ module SpreeProductReviews
     end
   end
   
-  ::Spree::Store.prepend SpreeProductReviews::Spree::StoreDecorator
+  if defined?(::Spree::Store) && !::Spree::Store.ancestors.include?(SpreeProductReviews::Spree::StoreDecorator)
+  ::Spree::Store.prepend(SpreeProductReviews::Spree::StoreDecorator)
+end
