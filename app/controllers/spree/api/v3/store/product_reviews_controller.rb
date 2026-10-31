@@ -180,11 +180,23 @@ module Spree
                     else
                       Spree::Product
                     end
-            @product = scope.friendly.find(params[:product_id])
+            raw_id = params[:product_id].to_s
+            if defined?(::Spree::PrefixedId) && ::Spree::PrefixedId.prefixed_id?(raw_id)
+              decoded = ::Spree::PrefixedId.decode_prefixed_id(raw_id)
+              @product = scope.find_by(id: decoded) || scope.friendly.find(raw_id)
+            else
+              @product = scope.friendly.find(raw_id)
+            end
           end
 
           def load_review
-            @review = Spree::ProductReview.find(params[:id])
+            raw_id = params[:id].to_s
+            if defined?(::Spree::PrefixedId) && ::Spree::PrefixedId.prefixed_id?(raw_id)
+              decoded = ::Spree::PrefixedId.decode_prefixed_id(raw_id)
+              @review = Spree::ProductReview.find_by(id: decoded) || Spree::ProductReview.find(raw_id)
+            else
+              @review = Spree::ProductReview.find(raw_id)
+            end
           end
 
           def review_params

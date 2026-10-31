@@ -40,6 +40,17 @@ module SpreeProductReviews
       if defined?(Spree) && Spree.respond_to?(:permissions) && Spree.permissions.respond_to?(:register_scope)
         Spree.permissions.register_scope(:product_reviews, group: :catalog, resources: -> { [Spree::ProductReview] })
       end
+
+      if defined?(Spree::Api::Middleware::RequestSizeLimit)
+        module ::SpreeProductReviews
+          module RequestSizeLimitExtension
+            def file_upload?(env)
+              super || (env['REQUEST_METHOD'] == 'POST' && env['PATH_INFO'].to_s.include?('/product_reviews'))
+            end
+          end
+        end
+        Spree::Api::Middleware::RequestSizeLimit.prepend(::SpreeProductReviews::RequestSizeLimitExtension)
+      end
     end
   end
 end
