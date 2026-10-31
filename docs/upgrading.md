@@ -44,22 +44,33 @@ This runs:
 - `20261031000002_add_moderation_audits_and_soft_moderation_to_reviews.rb`: Adds soft moderation columns (`hidden`, `rejected`, `discarded_at`) and creates `spree_review_moderation_audits`.
 - `20261031000003_add_review_reports_and_abuse_safeguards.rb`: Adds `ip_hash`, `flagged_count`, `spam_score` and creates `spree_review_reports`.
 
-### 3. Migrate Historical Spree 5 User References
+### 3. Reconcile Historical Spree 5 User References (Optional / Manual Step)
 
-To migrate existing Spree 5 reviews to Spree 6 customers safely without blind ID copying, run the built-in migration task:
+> [!WARNING]
+> **Do NOT run this migration automatically during automated production deployments or CI/CD pipelines.**
+> Legacy customer reconciliation modifies identity foreign keys. Always run in preview mode (`DRY_RUN=1`) first and review the output before applying changes to production data.
 
+To reconcile existing Spree 5 reviews to Spree 6 customers safely without blind ID collisions, use the built-in reconciliation task:
+
+#### Step 3.1: Dry-Run Preview
 ```bash
-pnpm spree rake spree_product_reviews:migrate_legacy_users
+pnpm spree rake spree_product_reviews:reconcile_legacy_users DRY_RUN=1
+```
+*(Note: `spree_product_reviews:migrate_legacy_users` is available as a supported alias).*
+
+#### Step 3.2: Explicit Identity-Mapping Execution
+```bash
+pnpm spree rake spree_product_reviews:reconcile_legacy_users
 ```
 
-The migration runner:
-- Looks up corresponding `Spree::Customer` records matching legacy users by email.
-- Assigns the new `customer_id` while preserving the historical `user_id`.
-- For legacy records that cannot be matched to a Spree 6 customer, preserves the review and sets display name to the legacy reviewer name or Anonymous (no reviews are discarded).
+The reconciliation runner:
+- Looks up corresponding `Spree::Customer` records matching legacy users by verified email address.
+- Assigns the resolved `customer_id` while preserving the historical `user_id`.
+- Records that cannot be matched to a Spree 6 customer retain their original `user_id` and have `customer_id: nil`. They are safely preserved as historical reviews and never assigned to an unrelated customer.
 
 ### 4. Recalculate Rating Aggregates
 
-To sync existing review ratings to product cache columns:
+To sync existing review ratings to product cache columns (`average_rating` and `review_count`):
 
 ```bash
 pnpm spree rake spree_product_reviews:recalculate_ratings

@@ -14,11 +14,22 @@ The Spree 6 Product Reviews platform consists of three decoupled, independently 
 
 ### Step 1.1: Add the Gem to Gemfile
 
+> [!IMPORTANT]
+> The `spree_product_reviews` gem has not yet been published to the global RubyGems.org registry. Do **not** use `gem 'spree_product_reviews', '~> 6.0.0'` until the gem is published to the registry. For initial production deployment, pin to an exact, reviewed Git commit SHA.
+
+#### Installation Strategy Comparison:
+
+| Method | Syntax | Use Case & Production Readiness |
+| :--- | :--- | :--- |
+| **1. Git Commit Pinning (Recommended for Initial Release)** | `gem 'spree_product_reviews', github: 'umeshravani/spree_product_reviews', ref: 'e8b743f...'` | **Immutable & Cryptographically Verified.** Guarantees reproducible builds and ensures no unreviewed code is pulled into production. |
+| **2. Git Release Tag** | `gem 'spree_product_reviews', github: 'umeshravani/spree_product_reviews', tag: 'v6.0.0'` | **Semantic Git Reference.** Uses a human-readable release tag cut on the repository. Requires Bundler to clone from GitHub. |
+| **3. RubyGems Release** | `gem 'spree_product_reviews', '~> 6.0.0'` | **Global Package Registry.** Valid **only** after official publication to RubyGems.org. Prebuilt and fastest installation. |
+
 In your Spree 6 host application's `Gemfile`:
 
 ```ruby
-# Pinned to Spree 6 development branch or specific commit
-gem 'spree_product_reviews', github: 'umeshravani/spree_product_reviews', branch: 'spree-6'
+# Initial production deployment: Pin to exact, reviewed Git commit SHA
+gem 'spree_product_reviews', github: 'umeshravani/spree_product_reviews', ref: 'e8b743ffe394476537c045b4bbc2b13bc57d8094'
 ```
 
 Run bundle install via Spree CLI:

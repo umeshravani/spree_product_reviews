@@ -80,9 +80,17 @@ module Spree
               }, status: :unauthorized
             end
 
-            # Strip EXIF GPS and device metadata from customer photo uploads prior to storage
+            # Fail-closed sanitization: strip EXIF and verify image privacy before persistence
             if params[:product_review] && params[:product_review][:images].present?
-              params[:product_review][:images] = strip_exif_from_uploads(params[:product_review][:images])
+              begin
+                sanitize_review_images!(params[:product_review][:images])
+              rescue SpreeProductReviews::ImageSanitizer::SanitizationError => e
+                return render json: {
+                  error: 'image_sanitization_failed',
+                  message: e.message,
+                  errors: [e.message]
+                }, status: :unprocessable_entity
+              end
             end
 
             @review = @product.reviews.build(review_params)
@@ -285,25 +293,8 @@ module Spree
             end
           end
 
-          def strip_exif_from_uploads(files)
-            return files if files.blank?
-
-            Array(files).map do |file|
-              next file unless file.respond_to?(:tempfile) && file.content_type =~ %r{\Aimage/(jpeg|jpg|png|webp)\z}i
-
-              begin
-                if defined?(ImageProcessing::Vips)
-                  sanitized_tempfile = ImageProcessing::Vips
-                                         .source(file.tempfile.path)
-                                         .saver(strip: true)
-                                         .call
-                  file.tempfile = sanitized_tempfile
-                end
-              rescue StandardError => e
-                Rails.logger.warn("[SpreeProductReviews] EXIF sanitization error: #{e.message}")
-              end
-              file
-            end
+          def sanitize_review_images!(files)
+            SpreeProductReviews::ImageSanitizer.sanitize_batch!(files)
           end
 
           def review_params

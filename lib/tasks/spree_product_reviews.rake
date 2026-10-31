@@ -20,5 +20,29 @@ namespace :spree_product_reviews do
     end
     puts '------------------------------------------------------------'
   end
+
+  desc 'Alias for reconcile_legacy_users'
+  task migrate_legacy_users: :reconcile_legacy_users
+
+  desc 'Recalculates average_rating and review_count on spree_products from approved reviews'
+  task recalculate_ratings: :environment do
+    puts 'Starting product review aggregate recalculation...'
+    updated_count = 0
+    Spree::Product.find_each do |product|
+      reviews = product.reviews.approved
+      count = reviews.count
+      avg = count.positive? ? (reviews.sum(:rating).to_f / count).round(2) : 0.0
+
+      attrs = {}
+      attrs[:average_rating] = avg if product.has_attribute?(:average_rating)
+      attrs[:review_count] = count if product.has_attribute?(:review_count)
+
+      if attrs.any?
+        product.update_columns(attrs)
+        updated_count += 1
+      end
+    end
+    puts "Successfully recalculated rating aggregates for #{updated_count} products."
+  end
 end
 

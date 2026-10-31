@@ -43,16 +43,18 @@ All incoming review text fields (`title`, `review`, `name`) pass through a sanit
 
 ---
 
-## 4. File Upload Hardening
+## 4. File Upload Hardening & Fail-Closed Sanitization
 
-Customer photo uploads undergo rigorous validation before being attached via Active Storage:
+Customer photo uploads undergo rigorous validation and sanitization via `SpreeProductReviews::ImageSanitizer` before being attached to Active Storage:
 - **Maximum File Count:** Enforced via `max_images_upload` (default 5).
-- **Maximum File Size:** Enforced at 5 MB per image (`max_image_size_mb`).
-- **MIME-Type Whitelisting:** Restricted strictly to `image/jpeg`, `image/png`, and `image/webp`. Executables, SVG, and PDFs are rejected with validation errors.
-- **EXIF GPS & Metadata Scrubbing:** 
-  - Uploaded customer photos are sanitized on arrival in `Spree::Api::V3::Store::ProductReviewsController#strip_exif_from_uploads` using `ImageProcessing::Vips.source(...).saver(strip: true).call`.
-  - All sensitive EXIF metadata (GPS latitude, longitude, altitude, camera manufacturer, and iPhone/device identifiers) are stripped prior to Active Storage persistence.
-  - Image representations served via Store API serializers enforce `{ saver: { strip: true } }` so clients and search engines never receive embedded geolocation data.
+- **Maximum File Size:** Enforced at 5 MB per image (`max_image_size_mb`). Oversized uploads are rejected with HTTP 422.
+- **MIME-Type & Magic Byte Whitelisting:** Restricted strictly to `image/jpeg`, `image/png`, and `image/webp`. Headers and magic bytes are verified. Executables, scripts, SVG, and PDFs are rejected.
+- **Fail-Closed EXIF GPS & Device Metadata Scrubbing:**
+  - Uploaded customer photos are sanitized on arrival via `SpreeProductReviews::ImageSanitizer.sanitize!` using `ImageProcessing::Vips.source(...).saver(strip: true).call`.
+  - All sensitive EXIF metadata (GPS latitude, longitude, altitude, camera manufacturer, and iPhone/device identifiers) are stripped **prior to Active Storage persistence**, replacing the upload stream with the sanitized payload.
+  - **Fail-Closed Architecture:** If the image processing engine (`ImageProcessing::Vips`) is missing or unavailable, or if processing throws an error, the upload is **strictly rejected with HTTP 422**. Unsanitized photographs are **never** persisted to storage or exposed publicly via `rails_blob_url`.
+  - **Zero Sensitive Logging:** Any sanitization failures log only the exception class name; binary streams and EXIF headers are never written to server logs.
+  - **Defense-in-Depth Delivery:** Store API serializers also enforce `{ saver: { strip: true } }` on web representations.
 
 ---
 

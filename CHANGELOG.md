@@ -9,7 +9,8 @@ All notable changes to `spree_product_reviews` are documented in this file.
 #### Backend Engine (`spree_product_reviews`)
 - **Rails 8 & Spree 6 Support:** Re-architected engine to run natively on Spree 6.0.1, Rails 8.1, and Ruby 3.4.
 - **Identity Model Modernization:** Replaced legacy `user_id` with Spree 6 `customer_id` (`Spree::Customer`), retaining `user_id` as optional foreign key.
-- **Spree 5 Migration Task:** Added `spree_product_reviews:migrate_legacy_users` to migrate Spree 5 reviews to Spree 6 customers safely without blind ID collisions.
+- **Spree 5 Migration Task:** Added `spree_product_reviews:reconcile_legacy_users` (and alias `migrate_legacy_users`) with `DRY_RUN=1` preview mode and explicit identity mapping to prevent blind ID collisions.
+- **Ratings Recalculation Task:** Added `spree_product_reviews:recalculate_ratings` to sync product rating aggregates from approved reviews.
 - **Store API V3 Endpoints:** Added REST endpoints under `/api/v3/store/products/:product_id/product_reviews` (list, create, update, withdraw, vote, report, appeal).
 - **Admin API V3 Endpoints:** Added moderation endpoints under `/api/v3/admin/product_reviews` (list, counts, approve, reject, spam, restore, hide, unhide, dismiss_reports, remove_image, discard).
 - **Advanced Anti-Spam & Abuse Safeguards:**
@@ -19,7 +20,7 @@ All notable changes to `spree_product_reviews` are documented in this file.
   - Spam scoring heuristics for suspicious links (+50), blocked words (+40), and excessive character repetition (+30).
   - Customer review abuse reporting (`Spree::ReviewReport`) with unique reporter validation (`customer_id` and `ip_hash`).
   - **Anti-Brigading Immunity:** Verified purchaser reviews and high-reputation reviews are safeguarded against automated suppression campaigns.
-  - **EXIF GPS Scrubbing:** Strips geolocation coordinates and camera hardware identifiers from uploaded customer photos prior to storage.
+  - **Fail-Closed EXIF GPS Scrubbing:** Enforces `SpreeProductReviews::ImageSanitizer` to strip geolocation coordinates and camera hardware identifiers from uploaded customer photos prior to Active Storage persistence; rejects upload if image processor is unavailable or corrupted.
   - **Store Boundary Isolation:** Scopes direct review lookups and actions to `current_store.products`.
   - **Global Killswitch:** Enforces HTTP 403 Forbidden across all Store API endpoints when `config.enabled = false` without altering database records.
   - Customer appeal workflow (`appeal!`).

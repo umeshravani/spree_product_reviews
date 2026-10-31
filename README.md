@@ -47,10 +47,11 @@ spree_product_reviews/
 
 ### 1. Backend Engine Installation
 
-Add the extension to your Spree 6 application's `Gemfile`:
+Add the extension to your Spree 6 application's `Gemfile` pinned to an exact, reviewed commit SHA:
 
 ```ruby
-gem 'spree_product_reviews', github: 'umeshravani/spree_product_reviews', branch: 'spree-6'
+# Initial deployment: pin to reviewed Git commit SHA (RubyGems release pending)
+gem 'spree_product_reviews', github: 'umeshravani/spree_product_reviews', ref: 'e8b743ffe394476537c045b4bbc2b13bc57d8094'
 ```
 
 Install and run migrations:

@@ -3,6 +3,8 @@
 require 'spree_core'
 require 'spree_product_reviews/version'
 require 'spree_product_reviews/configuration'
+require 'spree_product_reviews/image_sanitizer'
+require 'spree_product_reviews/legacy_user_migrator'
 require 'spree_product_reviews/engine'
 
 module SpreeProductReviews
