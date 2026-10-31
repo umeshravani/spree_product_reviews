@@ -21,7 +21,7 @@ The Spree 6 Product Reviews platform consists of three decoupled, independently 
 
 | Method | Syntax | Use Case & Production Readiness |
 | :--- | :--- | :--- |
-| **1. Git Commit Pinning (Recommended for Initial Release)** | `gem 'spree_product_reviews', github: 'umeshravani/spree_product_reviews', ref: 'e8b743f...'` | **Immutable & Cryptographically Verified.** Guarantees reproducible builds and ensures no unreviewed code is pulled into production. |
+| **1. Git Commit Pinning (Recommended for Initial Release)** | `gem 'spree_product_reviews', github: 'umeshravani/spree_product_reviews', ref: 'b674eea...'` | **Immutable & Cryptographically Verified.** Guarantees reproducible builds and ensures no unreviewed code is pulled into production. |
 | **2. Git Release Tag** | `gem 'spree_product_reviews', github: 'umeshravani/spree_product_reviews', tag: 'v6.0.0'` | **Semantic Git Reference.** Uses a human-readable release tag cut on the repository. Requires Bundler to clone from GitHub. |
 | **3. RubyGems Release** | `gem 'spree_product_reviews', '~> 6.0.0'` | **Global Package Registry.** Valid **only** after official publication to RubyGems.org. Prebuilt and fastest installation. |
 
@@ -29,7 +29,7 @@ In your Spree 6 host application's `Gemfile`:
 
 ```ruby
 # Initial production deployment: Pin to exact, reviewed Git commit SHA
-gem 'spree_product_reviews', github: 'umeshravani/spree_product_reviews', ref: 'e8b743ffe394476537c045b4bbc2b13bc57d8094'
+gem 'spree_product_reviews', github: 'umeshravani/spree_product_reviews', ref: 'b674eeae4896ca904be3bcf138abce61fe54e0ac'
 ```
 
 Run bundle install via Spree CLI:
@@ -71,15 +71,13 @@ pnpm add file:/path/to/spree_product_reviews/packages/dashboard/umeshravani-spre
 
 ### Step 2.2: Register the Plugin
 
-In `apps/dashboard/src/plugins.ts` (or `src/spree-plugins.ts`):
+Spree 6 React Dashboard automatically discovers installed companion packages declared with the `"spree": { "dashboard": { "plugin": true } }` manifest marker via `@spree/dashboard/vite`.
+
+Alternatively, if your dashboard uses explicit plugin whitelisting or manual registration, add the side-effect import in `apps/dashboard/src/plugins.ts`:
 
 ```typescript
-import { reviewsPlugin } from '@umeshravani/spree-product-reviews-dashboard'
-
-export const plugins = [
-  // ... other plugins
-  reviewsPlugin(),
-]
+// apps/dashboard/src/plugins.ts
+import '@umeshravani/spree-product-reviews-dashboard'
 ```
 
 ### Step 2.3: Build & Start Dashboard

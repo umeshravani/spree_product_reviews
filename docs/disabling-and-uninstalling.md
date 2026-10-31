@@ -42,7 +42,7 @@ Both UI companions are decoupled npm packages that can be uninstalled without le
 cd apps/dashboard
 pnpm remove @umeshravani/spree-product-reviews-dashboard
 ```
-Remove `reviewsPlugin()` from `src/plugins.ts`.
+Remove `import '@umeshravani/spree-product-reviews-dashboard'` from `src/plugins.ts` if manually imported.
 
 ### Remove Storefront Package:
 ```bash
