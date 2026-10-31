@@ -5,7 +5,11 @@ Spree::Core::Engine.add_routes do
     namespace :v3 do
       namespace :store do
         resources :products, only: [] do
-          resources :product_reviews, only: [:index, :create, :update, :destroy]
+          resources :product_reviews, only: [:index, :create, :update, :destroy] do
+            member do
+              post :vote
+            end
+          end
         end
 
         resources :product_reviews, only: [] do
