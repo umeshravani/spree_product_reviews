@@ -9,7 +9,9 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    "declaration": true,
+    "outDir": "./dist"
   },
   "include": ["src/**/*"],
   "exclude": ["src/routes/**/*", "node_modules", "dist"]

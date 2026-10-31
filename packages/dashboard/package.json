@@ -4,13 +4,18 @@
   "description": "Native Spree 6 Dashboard plugin for Product Reviews administration",
   "license": "MIT",
   "type": "module",
-  "main": "./src/index.tsx",
-  "types": "./src/index.tsx",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./src/index.tsx",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
+    "dist",
     "src",
     "README.md",
     "LICENSE"
@@ -41,6 +46,6 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "build": "echo 'Distributed as TypeScript React source for Spree Dashboard Vite pipeline'"
+    "build": "tsc"
   }
 }

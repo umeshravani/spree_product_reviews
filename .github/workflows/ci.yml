@@ -61,6 +61,11 @@ jobs:
         run: |
           pnpm typecheck
 
+      - name: Build Storefront Package
+        working-directory: packages/storefront
+        run: |
+          pnpm build
+
       - name: Pack Storefront Tarball
         working-directory: packages/storefront
         run: |

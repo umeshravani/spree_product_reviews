@@ -6,3 +6,4 @@ vendor/bundle/
 node_modules/
 *.tgz
 .DS_Store
+dist/
