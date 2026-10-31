@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ruby: ['3.3', '3.4']
+        ruby: ['3.3', '3.4', '4.0']
 
     steps:
       - name: Checkout Code
@@ -105,3 +105,4 @@ jobs:
         run: |
           pnpm pack
           ls -lh *.tgz
+
