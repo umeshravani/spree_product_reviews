@@ -1,112 +1,172 @@
-# Product Reviews & Ratings for Spree Commerce
-Easy Reviews &amp; Ratings integration for Latest Spree Commerce 5.2
+# Spree Product Reviews 6
 
+[![Spree Commerce](https://img.shields.io/badge/Spree_Commerce-6.0.1-red.svg)](https://spreecommerce.org)
+[![Rails](https://img.shields.io/badge/Rails-8.1-CC0000.svg)](https://rubyonrails.org)
+[![Ruby](https://img.shields.io/badge/Ruby-3.4-red.svg)](https://www.ruby-lang.org)
+[![React](https://img.shields.io/badge/React-19.0-61DAFB.svg)](https://react.dev)
+[![Next.js](https://img.shields.io/badge/Next.js-App_Router-black.svg)](https://nextjs.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-<img width="639" height="auto" alt="product-snippet" src="https://github.com/user-attachments/assets/85973ac9-4dc8-4198-85d1-c03b85768875" />
+A standalone, production-grade Product Reviews and Ratings platform engineered natively for **Spree Commerce 6.0.1**, **Rails 8.1**, and modern **React 19 / Next.js App Router** storefronts.
 
+> **Important Notice:** The companion packages `@umeshravani/spree-product-reviews-dashboard` and `@umeshravani/spree-product-reviews-storefront` are currently in **Developer Preview / Release Hardening** on branch `spree-6` and are **not yet published on the public npm registry or RubyGems**. They should be installed via Git repository reference, commit SHA, or locally packaged tarballs (`.tgz`).
 
-## Installation
+---
 
+## Architecture Overview
 
-1. Add this your Gemfile with this line:
+Spree Product Reviews 6 is composed of three decoupled, independently installable modules:
 
-    ```ruby
-    bundle add spree_product_reviews
-    ```
+```
+spree_product_reviews/
+├── app/                  # Rails Engine: Store API V3 & Admin API V3 controllers, models, serializers
+├── db/migrate/           # Idempotent database migrations for Spree 6
+├── lib/                  # Engine registration, preferences configuration, size-limit middleware
+├── packages/
+│   ├── dashboard/        # Companion React Admin Dashboard Plugin (@spree/dashboard)
+│   └── storefront/       # Companion React 19 / Next.js App Router UI Suite (@spree/sdk)
+└── docs/                 # Comprehensive documentation suite
+```
 
-2. Copy & Run Migrations:
+### Core Architecture Highlights
 
-    ```ruby
-    bundle exec rails g spree_product_reviews:install
-    ```
-3. Clone _json_ld.html.erb to Theme directory (Important: Do this Only if you have Separate Theme):<br>
-   So With this Product Reviews can generate Schema Validiation in Google Schema Like
+1. **Zero Core Modifications:**
+   - 100% plug-and-play. Does not modify or monkey-patch Spree core files or host application files.
+2. **Modern Spree 6 Identity Model:**
+   - Connects reviews directly to `Spree::Customer` (`customer_id`) while safely preserving legacy `user_id` records.
+3. **Native React Dashboard Integration:**
+   - Registers via official `defineDashboardPlugin` contracts in Spree 6 React Dashboard (`@spree/dashboard`) with real-time pending review badge, photo moderation, staff notes, and audit history.
+4. **React 19 & Next.js App Router Storefront:**
+   - Modular, mobile-responsive UI components with server-rendered Google Search Central compliant JSON-LD structured data.
+5. **Production Anti-Spam & Security Pipeline:**
+   - Customer & IP rate limiting, duplicate submission detection, salted SHA256 IP hashing (`ip_hash`), XSS sanitization, 5MB image limits, and community abuse reporting.
 
-    <img width="600" height="auto" alt="Screenshot 2025-08-15 at 1 24 00 PM" src="https://github.com/user-attachments/assets/87b36187-2bc1-4715-97dc-851545da713f" /><br><br>
-    
-**Note:** This can make product reviews visible and notable to Google search engine, If you are using a separate theme then replace **_json_ld.html.erb** file in the exact directory mentioned for example "app/views/themes/mytheme/spree/products/" to make schema work, always recommend to check product link in [Rich Results Test](https://search.google.com/test/rich-results). or [Schema Markup Validiator](https://validator.schema.org/). to ensure if script is updated in your store.
-<br><br>
+---
 
-4. Compile Assests for Proper Images & JS loading:
-   
-    ```ruby
-    RAILS_ENV=development bin/rails assets:precompile
-    ```
+## Quickstart
 
-5. Start Server:
+### 1. Backend Engine Installation
 
-    ```ruby
-    foreman start -f Procfile.dev
-    ```
-    or
+Add the extension to your Spree 6 application's `Gemfile`:
 
-    ```ruby
-    docker compose up -d
-    ```
-    <br>
+```ruby
+gem 'spree_product_reviews', github: 'umeshravani/spree_product_reviews', branch: 'spree-6'
+```
 
-    ## Render Widget in Product Details:
+Install and run migrations:
 
-1. Find your Partial file Example: 
-    ```
-    'app/views/themes/default/spree/page_sections/_product_details.html.erb'
-    ```
-    Note: If you dont find this file inside your spree's directory, You can [Download](https://github.com/spree/spree/blob/df400d3557c244ec3829f175a27f3990cdeb2452/storefront/app/views/themes/default/spree/page_sections/_product_details.html.erb#L4) this directly from Spree's Github and place it exactly inside your Spree's directory
+```bash
+pnpm spree exec bundle install
+pnpm spree rails spree_product_reviews:install:migrations
+pnpm spree migrate
+```
 
-2. Place this Rendering Code:
-   ```
-    <% when 'Spree::PageBlocks::Products::Reviews' %>
-    <%= block.render(self, product: product) %>
-   ```
-   Exactly below this part:
-   ```
-   <% when 'Spree::PageBlocks::Products::Description' %>
-   ```
+### 2. Admin Dashboard Plugin Installation
 
-## Admin & Storefront Previews
+In `apps/dashboard`:
 
-1. Admin Page Sections (Storefront Theme Editor):
-   <br>
-   <img width="900" height="auto" alt="Widget config page builder" src="https://github.com/user-attachments/assets/ea71789d-bf01-45ea-86c4-2ca43c79ef1e" /><br>
-2. Product Review Form (Storefront Theme Editor):
-   <br>
-   <img width="900" height="auto" alt="Product Review Form" src="https://github.com/user-attachments/assets/0b035af9-4d23-410e-b190-1e65bbf87016" /><br>
-3. Edit Review from Product (Admin View):
-   <br>
-   <img width="auto" height="600" alt="Screenshot 2025-12-17 at 7 34 11 PM" src="https://github.com/user-attachments/assets/3a1af3f7-dd6f-4a86-b4fb-e174201cdeeb" /><br>
-4. Approve/Disapprove Reviews (Admin View):
-   <br>
-   <img width="900" height="auto" alt="Screenshot 2025-12-17 at 7 33 57 PM" src="https://github.com/user-attachments/assets/49d551ef-7d21-498b-9629-a7ad430cb6e2" /><br>
+```bash
+pnpm add file:/path/to/spree_product_reviews/packages/dashboard/umeshravani-spree-product-reviews-dashboard-1.0.0.tgz
+```
 
+In `apps/dashboard/src/plugins.ts`:
 
-## Published Review:
- <img width="981" height="440" alt="Screenshot 2025-12-17 at 7 31 18 PM copy" src="https://github.com/user-attachments/assets/0e6585dc-8686-4701-b194-1d7a8eef41ca" />
+```typescript
+import { reviewsPlugin } from '@umeshravani/spree-product-reviews-dashboard'
 
+export const plugins = [
+  reviewsPlugin(),
+]
+```
 
-## Live Google Search Result Preview:
-<img width="710" height="208" alt="Screenshot 2025-08-18 at 7 21 06 PM" src="https://github.com/user-attachments/assets/71fce340-b051-4fcf-83ce-e93c74d2fe3a" />
+### 3. Storefront Companion Installation
 
+In `apps/storefront`:
 
-## Features & Roadmap
-1. Easy integration through Storefront theme editor
-2. Customisable from storefront
-3. Approve & Disapprove reviews
-4. Delete & Unapprove review
-5. Ratings visible for non-logged-in users
-6. Images support (Admin side control)
+```bash
+pnpm add file:/path/to/spree_product_reviews/packages/storefront/umeshravani-spree-product-reviews-storefront-1.0.0.tgz
+```
 
-## Troubleshooting
+Render on your product detail page (`app/products/[slug]/page.tsx`):
 
-For common issues such as:
+```tsx
+import {
+  ProductReviewsSection,
+  ProductReviewsJsonLd,
+  createReviewsClient,
+} from '@umeshravani/spree-product-reviews-storefront'
 
-   1. Missing PageBlocks
+export default async function ProductPage({ params }: { params: { slug: string } }) {
+  const { slug } = params
+  const apiHost = process.env.NEXT_PUBLIC_SPREE_API_HOST || 'http://localhost:3000'
 
-   2. ActiveStorage upload errors
+  const client = createReviewsClient({ apiHost })
+  const { data: reviews, meta } = await client.list(slug).catch(() => ({
+    data: [],
+    meta: { total_count: 0, average_rating: 0, review_count: 0, rating_distribution: {} },
+  }))
 
-   3. Turbo aborted requests
+  const productMetadata = {
+    name: 'Sample Product',
+    sku: 'SAMPLE-SKU',
+    url: `https://store.example.com/products/${slug}`,
+    offers: {
+      price: '29.99',
+      priceCurrency: 'USD',
+      availability: 'https://schema.org/InStock',
+    },
+  }
 
-   4. Docker / NGINX configuration issues
+  return (
+    <div>
+      {/* Server-Rendered Google SEO JSON-LD */}
+      <ProductReviewsJsonLd
+        product={productMetadata}
+        reviews={reviews}
+        meta={meta}
+      />
 
-Refer to the dedicated troubleshooting guide:
+      {/* Hydrated Interactive Reviews Section */}
+      <ProductReviewsSection
+        productId={slug}
+        productName={productMetadata.name}
+        apiHost={apiHost}
+        initialData={{ reviews, meta }}
+      />
+    </div>
+  )
+}
+```
 
-See [Troubleshooting Guide](https://github.com/umeshravani/spree_product_reviews/blob/main/TROUBLESHOOTING.md)
+---
+
+## Documentation Suite
+
+| Guide | Description |
+|---|---|
+| [Installation & Setup](docs/installation.md) | Comprehensive installation and setup for Engine, Dashboard, and Storefront |
+| [Configuration Reference](docs/configuration.md) | Centralized initializer settings, rate limits, thresholds, and defaults |
+| [Admin Dashboard Guide](docs/dashboard.md) | Moderation queues, image removal, audit trails, and permissions |
+| [Storefront Companion Guide](docs/storefront.md) | Next.js App Router components, props reference, and headless hook |
+| [Security & Privacy](docs/security-and-privacy.md) | IP hashing, rate limits, spam heuristics, XSS, and upload validation |
+| [Upgrading from Spree 5](docs/upgrading.md) | Step-by-step upgrade guide and legacy customer data migration task |
+| [Disabling & Uninstalling](docs/disabling-and-uninstalling.md) | Safe deactivation and clean uninstallation without data loss |
+| [Compatibility Matrix](docs/compatibility.md) | Supported Spree, Ruby, Rails, React, Next.js, and DB versions |
+| [Screenshots Inventory](docs/screenshots.md) | Inventory of visual verification screenshots across desktop and mobile |
+| [Changelog](CHANGELOG.md) | Version history and release notes |
+
+---
+
+## Security Audit & Compliance
+
+- **XSS Prevention:** HTML and script tags stripped from all review inputs before validation.
+- **Privacy Safeguards:** IP addresses masked and hashed via salted SHA256; raw IPs and emails never serialized publicly.
+- **Scaped Middleware:** Body size expansion to 25 MB strictly scoped to `%r{\A/api/v3/store/products/[^/]+/product_reviews/?\z}`.
+- **Upload Hardening:** MIME whitelist (JPEG, PNG, WebP), 5MB size limit, EXIF metadata stripped.
+- **IDOR Protection:** Ownership verified on updates/deletions; verified purchaser status strictly calculated server-side from completed Spree orders.
+
+---
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).

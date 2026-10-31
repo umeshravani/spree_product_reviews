@@ -9,6 +9,13 @@ export interface ReviewImage {
   filename?: string
 }
 
+export type ReportReason = 'spam' | 'harassment' | 'inappropriate' | 'misleading' | 'other'
+
+export interface ReportReviewPayload {
+  reason: ReportReason | string
+  details?: string
+}
+
 export interface ProductReview {
   id: string
   title: string

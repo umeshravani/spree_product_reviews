@@ -50,6 +50,7 @@ export interface UseProductReviewsResult {
   updateReview: (reviewId: string, payload: UpdateReviewPayload) => Promise<ProductReview>;
   withdrawReview: (reviewId: string) => Promise<void>;
   vote: (reviewId: string, helpful: boolean) => Promise<{ helpful: number; unhelpful: number }>;
+  report: (reviewId: string, reason: string, details?: string) => Promise<{ meta: { message: string } }>;
 }
 
 export function useProductReviews(options: UseProductReviewsOptions): UseProductReviewsResult {
@@ -282,5 +283,11 @@ export function useProductReviews(options: UseProductReviewsOptions): UseProduct
     updateReview,
     withdrawReview,
     vote,
+    report: useCallback(
+      async (reviewId: string, reason: string, details?: string) => {
+        return client.report(reviewId, reason, details, productId);
+      },
+      [client, productId]
+    ),
   };
 }

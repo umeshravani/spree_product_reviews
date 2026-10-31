@@ -14,6 +14,8 @@ export type {
   ReviewsResponse,
   ReviewListQuery,
   ReviewListResponse,
+  ReportReason,
+  ReportReviewPayload,
 } from './types';
 
 // API Client

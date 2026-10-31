@@ -44,8 +44,10 @@ module SpreeProductReviews
       if defined?(Spree::Api::Middleware::RequestSizeLimit)
         module ::SpreeProductReviews
           module RequestSizeLimitExtension
+            REVIEW_SUBMISSION_PATH = %r{\A/api/v3/store/products/[^/]+/product_reviews/?\z}
+
             def file_upload?(env)
-              super || (env['REQUEST_METHOD'] == 'POST' && env['PATH_INFO'].to_s.include?('/product_reviews'))
+              super || (env['REQUEST_METHOD'] == 'POST' && REVIEW_SUBMISSION_PATH.match?(env['PATH_INFO'].to_s))
             end
           end
         end

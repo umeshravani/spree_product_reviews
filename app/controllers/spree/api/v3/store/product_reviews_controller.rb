@@ -9,7 +9,7 @@ module Spree
           skip_before_action :check_payload_size, raise: false
 
           before_action :load_product, only: [:index, :create, :update, :destroy]
-          before_action :load_review, only: [:vote]
+          before_action :load_review, only: [:vote, :report, :appeal]
 
           # GET /api/v3/store/products/:product_id/product_reviews
           def index
@@ -38,7 +38,11 @@ module Spree
             page = [params[:page].to_i, 1].max
             per_page = [[(params[:per_page] || 10).to_i, 1].max, 50].min
             total_count = base_scope.count
-            reviews = base_scope.offset((page - 1) * per_page).limit(per_page)
+
+            # Eager load attachments, blobs, customer and votes to prevent N+1 queries
+            reviews = base_scope.includes(:images_attachments, :images_blobs, :customer, :votes)
+                                .offset((page - 1) * per_page)
+                                .limit(per_page)
 
             # Rating breakdown
             distribution = (1..5).each_with_object({}) do |star, acc|
@@ -117,19 +121,22 @@ module Spree
               return render json: { error: 'forbidden', message: 'You can only edit your own reviews.' }, status: :forbidden
             end
 
-            @review.assign_attributes(review_params)
+            # Re-evaluate spam rules on update
+            update_attrs = review_params.slice(:rating, :title, :review)
+            @review.assign_attributes(update_attrs)
             apply_moderation_rules(@review)
 
             if @review.save
-              @review.record_audit!(action: :edit, moderator: customer, note: 'Updated by reviewer')
+              @review.record_audit!(action: :customer_edited, moderator: 'Customer', note: 'Customer updated review content')
               render json: {
                 data: ProductReviewSerializer.new(@review).serializable_hash,
-                meta: {
-                  message: @review.approved? ? 'Review updated successfully.' : 'Review updated and pending moderation.'
-                }
+                meta: { message: 'Review updated successfully.' }
               }, status: :ok
             else
-              render json: { error: 'validation_failed', errors: @review.errors.full_messages }, status: :unprocessable_entity
+              render json: {
+                error: 'validation_failed',
+                errors: @review.errors.full_messages
+              }, status: :unprocessable_entity
             end
           end
 
@@ -145,7 +152,7 @@ module Spree
               return render json: { error: 'forbidden', message: 'You can only withdraw your own reviews.' }, status: :forbidden
             end
 
-            @review.discard!(moderator: customer, note: 'Withdrawn by customer')
+            @review.discard!(moderator: 'Customer', note: 'Withdrawn by customer')
             head :no_content
           end
 
@@ -170,6 +177,80 @@ module Spree
                 message: e.message
               }, status: :unprocessable_entity
             end
+          end
+
+          # POST /api/v3/store/product_reviews/:id/report
+          def report
+            customer = resolve_current_customer
+            reason = params[:reason].to_s.strip
+            details = params[:details].to_s.strip
+
+            valid_reasons = defined?(Spree::ReviewReport::REASONS) ? Spree::ReviewReport::REASONS : %w[spam harassment inappropriate misleading other]
+            unless valid_reasons.include?(reason)
+              return render json: {
+                error: 'invalid_reason',
+                message: "Reason must be one of: #{valid_reasons.join(', ')}"
+              }, status: :unprocessable_entity
+            end
+
+            ip_hash = Spree::ProductReview.compute_ip_hash(request.remote_ip)
+
+            # Check duplicate report from same customer or IP
+            report_scope = @review.reports
+            report_scope = report_scope.where(customer_id: customer.id) if customer
+            report_scope = report_scope.where(ip_hash: ip_hash) if customer.nil? && ip_hash.present?
+
+            if report_scope.where(status: 'pending').exists?
+              return render json: {
+                meta: { message: 'You have already reported this review. Our moderation team is investigating.' }
+              }, status: :ok
+            end
+
+            @report = @review.reports.build(
+              customer_id: customer&.id,
+              reason: reason,
+              details: details.presence,
+              ip_hash: ip_hash
+            )
+
+            if @report.save
+              render json: {
+                meta: { message: 'Thank you for reporting this review. Our moderation team has been notified.' }
+              }, status: :created
+            else
+              render json: {
+                error: 'report_failed',
+                errors: @report.errors.full_messages
+              }, status: :unprocessable_entity
+            end
+          end
+
+          # POST /api/v3/store/product_reviews/:id/appeal
+          def appeal
+            customer = resolve_current_customer
+            unless customer
+              return render json: { error: 'unauthorized', message: 'Authentication required to submit an appeal.' }, status: :unauthorized
+            end
+
+            unless @review.customer_id == customer.id || (customer.respond_to?(:user_id) && @review.user_id == customer.user_id)
+              return render json: { error: 'forbidden', message: 'You can only appeal decisions on your own reviews.' }, status: :forbidden
+            end
+
+            unless @review.spam? || @review.rejected?
+              return render json: { error: 'invalid_status', message: 'Only rejected or spam reviews are eligible for appeal.' }, status: :unprocessable_entity
+            end
+
+            reason = params[:reason].to_s.strip
+            if reason.blank?
+              return render json: { error: 'missing_reason', message: 'Please provide a reason for your appeal.' }, status: :unprocessable_entity
+            end
+
+            @review.appeal!(reason: reason)
+
+            render json: {
+              data: ProductReviewSerializer.new(@review.reload).serializable_hash,
+              meta: { message: 'Your appeal has been submitted for manual administrator review.' }
+            }, status: :ok
           end
 
           private
@@ -225,40 +306,51 @@ module Spree
                                rescue StandardError
                                  true
                                end
-            should_approve = !require_approval
-            is_spam = false
-
-            # Spam link detection
             disable_links = begin
                               SpreeProductReviews.config.disable_review_links
                             rescue StandardError
                               true
                             end
-
-            if disable_links
-              if review.review.to_s.match?(%r{https?://|www\.|[a-zA-Z0-9-]+\.(com|net|org|io|xyz|biz)}i)
-                should_approve = false
-                is_spam = true
-              end
-            end
-
-            # Spam words detection
             spam_words_str = begin
                                SpreeProductReviews.config.spam_words
                              rescue StandardError
                                ''
                              end
+
+            spam_score = 0
+            is_spam = false
+
+            # 1. Suspicious link detection
+            if disable_links && review.review.to_s.match?(%r{https?://|www\.|[a-zA-Z0-9-]+\.(com|net|org|io|xyz|biz|info|top)}i)
+              spam_score += 50
+              is_spam = true
+            end
+
+            # 2. Blocked spam words detection
             if spam_words_str.present?
               words = spam_words_str.split(',').map(&:strip).reject(&:empty?)
               full_text = "#{review.title} #{review.review}".downcase
               if words.any? { |w| full_text.include?(w.downcase) }
-                should_approve = false
+                spam_score += 40
                 is_spam = true
               end
             end
 
-            review.approved = should_approve
+            # 3. Excessive repeated characters and words detection
+            if review.review.to_s.match?(/(.)\1{9,}/) || review.title.to_s.match?(/(.)\1{9,}/)
+              spam_score += 30
+              is_spam = true
+            end
+
+            review.spam_score = spam_score
             review.spam = is_spam
+
+            # Route to spam queue if flagged as spam; never discard silently
+            if is_spam
+              review.approved = false
+            else
+              review.approved = !require_approval
+            end
           end
 
           def resolve_current_customer

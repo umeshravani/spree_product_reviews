@@ -12,6 +12,8 @@ export interface ProductMetadata {
     priceCurrency: string
     availability?: string
     url?: string
+    itemCondition?: string
+    priceValidUntil?: string
   }
 }
 
@@ -52,6 +54,8 @@ export function generateProductReviewsJsonLd({
       price: String(product.offers.price),
       priceCurrency: product.offers.priceCurrency,
       availability: product.offers.availability || 'https://schema.org/InStock',
+      itemCondition: product.offers.itemCondition || 'https://schema.org/NewCondition',
+      ...(product.offers.priceValidUntil ? { priceValidUntil: product.offers.priceValidUntil } : {}),
       ...(product.offers.url ? { url: product.offers.url } : {}),
     }
   }

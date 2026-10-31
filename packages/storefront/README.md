@@ -260,3 +260,4 @@ To remove this package from a storefront:
 ## License
 
 MIT License. Copyright (c) 2026 Umesh Ravani.
+

@@ -83,6 +83,7 @@ export function ProductReviewsSection({
     updateReview,
     withdrawReview,
     vote,
+    report,
   } = useProductReviews({
     productId,
     client,
@@ -204,6 +205,7 @@ export function ProductReviewsSection({
           onFilterClear={() => setRatingFilter(null)}
           onLoadMore={loadMore}
           onVote={vote}
+          onReport={report}
           onEditReview={(review: ProductReview) => setEditingReview(review)}
           onWithdrawReview={handleWithdrawReview}
           onImageClick={handleImageClick}

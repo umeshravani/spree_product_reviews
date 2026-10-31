@@ -24,6 +24,7 @@ module Spree
 
             {
               id: review.id.to_s,
+              customer_id: review.customer_id&.to_s,
               title: review.title,
               review: review.review,
               rating: review.rating,

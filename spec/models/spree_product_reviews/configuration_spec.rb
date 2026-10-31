@@ -56,6 +56,30 @@ RSpec.describe SpreeProductReviews::Configuration do
     it 'disables review links by default' do
       expect(config.disable_review_links).to be true
     end
+
+    it 'defaults customer rate limit to 5 per hour' do
+      expect(config.customer_rate_limit_per_hour).to eq(5)
+    end
+
+    it 'defaults ip rate limit to 10 per hour' do
+      expect(config.ip_rate_limit_per_hour).to eq(10)
+    end
+
+    it 'defaults report moderation threshold to 3' do
+      expect(config.report_moderation_threshold).to eq(3)
+    end
+
+    it 'defaults reviews per product limit to one_per_customer' do
+      expect(config.reviews_per_product_limit).to eq('one_per_customer')
+    end
+
+    it 'defaults anonymize_ips to true' do
+      expect(config.anonymize_ips).to be true
+    end
+
+    it 'defaults duplicate detection window to 24 hours' do
+      expect(config.duplicate_detection_window_hours).to eq(24)
+    end
   end
 
   describe 'configure block' do

@@ -203,6 +203,68 @@ export class StoreReviewsClient {
   async voteReview(reviewId: string, helpful = true, productId?: string): Promise<{ data: ProductReview; meta: { message: string } }> {
     return this.vote(reviewId, helpful, productId)
   }
+
+  /**
+   * Report an inappropriate or spam review
+   */
+  async report(reviewId: string, reason: string, details?: string, productId?: string): Promise<{ meta: { message: string } }> {
+    const url = productId
+      ? `${this.baseUrl}/api/v3/store/products/${encodeURIComponent(productId)}/product_reviews/${encodeURIComponent(reviewId)}/report`
+      : `${this.baseUrl}/api/v3/store/product_reviews/${encodeURIComponent(reviewId)}/report`
+
+    const headers = await this.getHeaders({
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    })
+
+    const res = await this.fetchFn(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ reason, details }),
+    })
+
+    const json = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      throw new Error(json.message || `Failed to report review: HTTP ${res.status}`)
+    }
+
+    return json
+  }
+
+  async reportReview(reviewId: string, reason: string, details?: string, productId?: string): Promise<{ meta: { message: string } }> {
+    return this.report(reviewId, reason, details, productId)
+  }
+
+  /**
+   * Submit an appeal for a rejected or flagged review
+   */
+  async appeal(reviewId: string, reason: string, productId?: string): Promise<{ meta: { message: string } }> {
+    const url = productId
+      ? `${this.baseUrl}/api/v3/store/products/${encodeURIComponent(productId)}/product_reviews/${encodeURIComponent(reviewId)}/appeal`
+      : `${this.baseUrl}/api/v3/store/product_reviews/${encodeURIComponent(reviewId)}/appeal`
+
+    const headers = await this.getHeaders({
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    })
+
+    const res = await this.fetchFn(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ reason }),
+    })
+
+    const json = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      throw new Error(json.message || `Failed to submit appeal: HTTP ${res.status}`)
+    }
+
+    return json
+  }
+
+  async appealReview(reviewId: string, reason: string, productId?: string): Promise<{ meta: { message: string } }> {
+    return this.appeal(reviewId, reason, productId)
+  }
 }
 
 export function createReviewsClient(config?: ReviewsClientConfig): StoreReviewsClient {

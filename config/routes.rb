@@ -8,6 +8,8 @@ Spree::Core::Engine.add_routes do
           resources :product_reviews, only: [:index, :create, :update, :destroy] do
             member do
               post :vote
+              post :report
+              post :appeal
             end
           end
         end
@@ -15,6 +17,8 @@ Spree::Core::Engine.add_routes do
         resources :product_reviews, only: [] do
           member do
             post :vote
+            post :report
+            post :appeal
           end
         end
       end
@@ -37,6 +41,7 @@ Spree::Core::Engine.add_routes do
             post :restore
             post :hide
             post :unhide
+            post :dismiss_reports
             delete 'images/:image_id', to: 'product_reviews#destroy_image'
           end
         end

@@ -1,6 +1,6 @@
 'use client'
 
-import { Edit3, ShieldCheck, ThumbsUp, Trash2 } from 'lucide-react'
+import { Edit3, Flag, ShieldCheck, ThumbsUp, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import type { ProductReview, ReviewImage } from '../types'
 import { StarRating } from './star-rating'
@@ -10,6 +10,7 @@ export interface ReviewCardProps {
   productId?: string
   isOwner?: boolean
   onVoteHelpful?: (reviewId: string) => Promise<void>
+  onReport?: (reviewId: string, reason: string, details?: string) => Promise<any>
   onEdit?: (review: ProductReview) => void
   onWithdraw?: (reviewId: string) => void
   onImageClick?: (images: ReviewImage[], clickedIndex: number) => void
@@ -21,6 +22,7 @@ export function ReviewCard({
   productId,
   isOwner = false,
   onVoteHelpful,
+  onReport,
   onEdit,
   onWithdraw,
   onImageClick,
@@ -29,6 +31,12 @@ export function ReviewCard({
   const [helpfulCount, setHelpfulCount] = useState(review.helpful_count)
   const [hasVoted, setHasVoted] = useState(false)
   const [isVoting, setIsVoting] = useState(false)
+  const [showReportModal, setShowReportModal] = useState(false)
+  const [reportReason, setReportReason] = useState('spam')
+  const [reportDetails, setReportDetails] = useState('')
+  const [isReporting, setIsReporting] = useState(false)
+  const [reportSuccess, setReportSuccess] = useState(false)
+  const [reportError, setReportError] = useState<string | null>(null)
 
   const handleHelpfulClick = async () => {
     if (hasVoted || isVoting || !onVoteHelpful) return
@@ -45,6 +53,27 @@ export function ReviewCard({
       setHasVoted(false)
     } finally {
       setIsVoting(false)
+    }
+  }
+
+  const handleReportSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!onReport || isReporting) return
+    setIsReporting(true)
+    setReportError(null)
+
+    try {
+      await onReport(review.id, reportReason, reportDetails)
+      setReportSuccess(true)
+      setTimeout(() => {
+        setShowReportModal(false)
+        setReportSuccess(false)
+        setReportDetails('')
+      }, 2000)
+    } catch (err: any) {
+      setReportError(err.message || 'Failed to submit report. Please try again.')
+    } finally {
+      setIsReporting(false)
     }
   }
 
@@ -140,7 +169,7 @@ export function ReviewCard({
         </div>
 
         {/* Customer Self-Service Actions (Owner Only) */}
-        {isOwner && (
+        {isOwner ? (
           <div className="flex items-center gap-2">
             {onEdit && (
               <button
@@ -167,8 +196,90 @@ export function ReviewCard({
               </button>
             )}
           </div>
+        ) : (
+          onReport && (
+            <button
+              type="button"
+              onClick={() => setShowReportModal(true)}
+              className="inline-flex items-center gap-1 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors cursor-pointer"
+              title="Report inappropriate review"
+            >
+              <Flag className="w-3.5 h-3.5" />
+              <span>Report</span>
+            </button>
+          )
         )}
       </div>
+
+      {/* Report Modal */}
+      {showReportModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
+        >
+          <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl shadow-xl max-w-md w-full p-5 space-y-4">
+            <h3 className="text-base font-semibold text-neutral-900 dark:text-neutral-100">
+              Report Review
+            </h3>
+            {reportSuccess ? (
+              <p className="text-sm text-emerald-600 dark:text-emerald-400">
+                Thank you. This review has been submitted to moderators for review.
+              </p>
+            ) : (
+              <form onSubmit={handleReportSubmit} className="space-y-3.5">
+                {reportError && (
+                  <p className="text-xs text-rose-600 dark:text-rose-400">{reportError}</p>
+                )}
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                    Reason for report
+                  </label>
+                  <select
+                    value={reportReason}
+                    onChange={(e) => setReportReason(e.target.value)}
+                    className="w-full text-xs rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-2 text-neutral-900 dark:text-neutral-100"
+                  >
+                    <option value="spam">Spam or advertisement</option>
+                    <option value="inappropriate">Offensive or inappropriate language</option>
+                    <option value="harassment">Harassment or hate speech</option>
+                    <option value="misleading">Misleading or false information</option>
+                    <option value="other">Other issue</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                    Additional details (optional)
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={reportDetails}
+                    onChange={(e) => setReportDetails(e.target.value)}
+                    placeholder="Provide additional context for moderators..."
+                    className="w-full text-xs rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-2 text-neutral-900 dark:text-neutral-100"
+                  />
+                </div>
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowReportModal(false)}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isReporting}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium bg-rose-600 hover:bg-rose-700 text-white cursor-pointer disabled:opacity-50"
+                  >
+                    {isReporting ? 'Submitting...' : 'Submit Report'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </article>
   )
 }

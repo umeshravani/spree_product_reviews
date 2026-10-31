@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'digest'
+
 module Spree
   class ProductReview < (defined?(Spree.base_class) ? Spree.base_class : (defined?(Spree::Base) ? Spree::Base : ActiveRecord::Base))
     self.table_name = 'spree_product_reviews'
@@ -11,6 +13,7 @@ module Spree
     belongs_to :order, class_name: 'Spree::Order', optional: true
 
     has_many :votes, class_name: 'Spree::ReviewVote', foreign_key: :review_id, dependent: :destroy
+    has_many :reports, class_name: 'Spree::ReviewReport', foreign_key: :review_id, dependent: :destroy
     has_many :moderation_audits, class_name: 'Spree::ReviewModerationAudit', foreign_key: :review_id, dependent: :destroy
     has_many_attached :images
 
@@ -20,6 +23,13 @@ module Spree
     validates :review, presence: true
     validate :validate_images
 
+    before_validation :sanitize_review_text
+    before_validation :compute_and_assign_ip_hash
+    before_validation :set_default_product_name, on: :create
+    validate :check_submission_rate_limits, on: :create
+    validate :check_duplicate_review, on: :create
+    validate :check_reviews_per_product_limit, on: :create
+
     attribute :show_identifier, :boolean, default: true
     attribute :verified_purchaser, :boolean, default: false
     attribute :spam, :boolean, default: false
@@ -28,12 +38,15 @@ module Spree
     attribute :rejected, :boolean, default: false
     attribute :helpful_count, :integer, default: 0
     attribute :unhelpful_count, :integer, default: 0
+    attribute :flagged_count, :integer, default: 0
+    attribute :spam_score, :integer, default: 0
 
     scope :approved, -> { where(approved: true, spam: false, hidden: false, rejected: false, discarded_at: nil) }
     scope :pending, -> { where(approved: false, spam: false, hidden: false, rejected: false, discarded_at: nil) }
     scope :spam, -> { where(spam: true, discarded_at: nil) }
     scope :rejected, -> { where(rejected: true, discarded_at: nil) }
     scope :hidden, -> { where(hidden: true, discarded_at: nil) }
+    scope :flagged, -> { where('flagged_count > 0', discarded_at: nil) }
     scope :not_discarded, -> { where(discarded_at: nil) }
     scope :discarded, -> { where.not(discarded_at: nil) }
     scope :verified, -> { where(verified_purchaser: true) }
@@ -43,7 +56,6 @@ module Spree
     scope :lowest_rating, -> { order(rating: :asc, created_at: :desc) }
     scope :most_helpful, -> { order(helpful_count: :desc, created_at: :desc) }
 
-    before_validation :set_default_product_name, on: :create
     before_create :evaluate_verified_purchaser
     after_save :recalculate_product_rating, if: -> {
       saved_change_to_approved? || saved_change_to_spam? || saved_change_to_rating? ||
@@ -53,6 +65,110 @@ module Spree
 
     def set_default_product_name
       self.product_name ||= product&.name
+    end
+
+    def sanitize_review_text
+      self.title = strip_html(title) if title.present?
+      self.review = strip_html(review) if review.present?
+      self.name = strip_html(name) if name.present?
+    end
+
+    def strip_html(str)
+      return str if str.blank?
+
+      if defined?(ActionController::Base.helpers.strip_tags)
+        ActionController::Base.helpers.strip_tags(str).strip
+      else
+        str.gsub(/<[^>]*>/, '').strip
+      end
+    end
+
+    def compute_and_assign_ip_hash
+      return if ip_address.blank?
+
+      salt = if defined?(Rails.application) && Rails.application.respond_to?(:secret_key_base) && Rails.application.secret_key_base.present?
+               Rails.application.secret_key_base
+             else
+               'spree_reviews_salt_2026'
+             end
+      self.ip_hash = Digest::SHA256.hexdigest("#{salt}:#{ip_address}")[0..31]
+
+      # Anonymize raw IP address if configured
+      if (SpreeProductReviews.config.anonymize_ips rescue true)
+        self.ip_address = mask_ip(ip_address)
+      end
+    end
+
+    def mask_ip(ip)
+      return ip if ip.blank?
+
+      if ip.include?('.')
+        parts = ip.split('.')
+        parts[3] = '0' if parts.length == 4
+        parts.join('.')
+      elsif ip.include?(':')
+        parts = ip.split(':')
+        parts[-1] = '0000' if parts.any?
+        parts.join(':')
+      else
+        ip
+      end
+    end
+
+    def check_submission_rate_limits
+      # 1. Customer rate limiting
+      if customer_id.present?
+        limit = (SpreeProductReviews.config.customer_rate_limit_per_hour rescue 5) || 5
+        if limit.positive?
+          recent_count = self.class.where(customer_id: customer_id).where('created_at > ?', 1.hour.ago).count
+          if recent_count >= limit
+            errors.add(:base, "You have reached the submission limit of #{limit} reviews per hour. Please try again later.")
+          end
+        end
+      end
+
+      # 2. IP rate limiting
+      if ip_hash.present?
+        ip_limit = (SpreeProductReviews.config.ip_rate_limit_per_hour rescue 10) || 10
+        if ip_limit.positive?
+          recent_ip_count = self.class.where(ip_hash: ip_hash).where('created_at > ?', 1.hour.ago).count
+          if recent_ip_count >= ip_limit
+            errors.add(:base, 'Submission rate limit exceeded for this network. Please try again later.')
+          end
+        end
+      end
+    end
+
+    def check_duplicate_review
+      window_hours = (SpreeProductReviews.config.duplicate_detection_window_hours rescue 24) || 24
+      window = window_hours.hours
+
+      scope = self.class.where(product_id: product_id).where('created_at > ?', window.ago)
+      if customer_id.present?
+        scope = scope.where(customer_id: customer_id)
+      elsif ip_hash.present?
+        scope = scope.where(ip_hash: ip_hash)
+      else
+        return
+      end
+
+      clean_title = title.to_s.downcase.strip
+      clean_body = review.to_s.downcase.strip
+      if scope.any? { |r| r.title.to_s.downcase.strip == clean_title && r.review.to_s.downcase.strip == clean_body }
+        errors.add(:base, 'A review with identical title and content was already submitted recently.')
+      end
+    end
+
+    def check_reviews_per_product_limit
+      policy = (SpreeProductReviews.config.reviews_per_product_limit rescue 'one_per_customer') || 'one_per_customer'
+      return unless policy == 'one_per_customer'
+      return unless customer_id.present?
+
+      existing = self.class.not_discarded.where(product_id: product_id, customer_id: customer_id)
+      existing = existing.where.not(id: id) if persisted?
+      if existing.exists?
+        errors.add(:base, 'You have already reviewed this product. You can update your existing review.')
+      end
     end
 
     def pending?
@@ -115,30 +231,16 @@ module Spree
 
     def mark_spam!(moderator: nil, note: nil)
       update(
+        approved: false,
+        rejected: false,
         spam: true,
-        approved: false,
-        rejected: false,
         moderated_at: Time.current,
         moderator_name: moderator_display_name(moderator),
         moderator_note: note
       )
-      record_audit!(action: :mark_spam, moderator: moderator, note: note)
+      record_audit!(action: :spam, moderator: moderator, note: note)
       recalculate_product_rating
     end
-
-    def restore_from_spam!(moderator: nil, note: nil)
-      update(
-        spam: false,
-        approved: false,
-        rejected: false,
-        moderated_at: Time.current,
-        moderator_name: moderator_display_name(moderator),
-        moderator_note: note
-      )
-      record_audit!(action: :restore_from_spam, moderator: moderator, note: note)
-      recalculate_product_rating
-    end
-    alias_method :unmark_spam!, :restore_from_spam!
 
     def hide!(moderator: nil, note: nil)
       update(
@@ -151,51 +253,39 @@ module Spree
       recalculate_product_rating
     end
 
-    def unhide!(moderator: nil, note: nil)
-      update(
-        hidden: false,
-        moderated_at: Time.current,
-        moderator_name: moderator_display_name(moderator),
-        moderator_note: note
-      )
-      record_audit!(action: :unhide, moderator: moderator, note: note)
-      recalculate_product_rating
-    end
-
     def restore!(moderator: nil, note: nil)
       update(
-        approved: true,
-        spam: false,
-        rejected: false,
-        hidden: false,
         discarded_at: nil,
+        hidden: false,
+        rejected: false,
+        spam: false,
         moderated_at: Time.current,
         moderator_name: moderator_display_name(moderator),
         moderator_note: note
       )
       record_audit!(action: :restore, moderator: moderator, note: note)
       recalculate_product_rating
+    end
+
+    def appeal!(reason: nil)
+      update(
+        spam: false,
+        rejected: false,
+        approved: false,
+        hidden: false,
+        moderator_note: "Appeal submitted by customer: #{reason}".strip
+      )
+      record_audit!(action: :appealed, moderator: 'Customer', note: reason)
     end
 
     def discard!(moderator: nil, note: nil)
       update(
         discarded_at: Time.current,
-        moderated_at: Time.current,
+        approved: false,
         moderator_name: moderator_display_name(moderator),
         moderator_note: note
       )
-      record_audit!(action: :soft_delete, moderator: moderator, note: note)
-      recalculate_product_rating
-    end
-
-    def undiscard!(moderator: nil, note: nil)
-      update(
-        discarded_at: nil,
-        moderated_at: Time.current,
-        moderator_name: moderator_display_name(moderator),
-        moderator_note: note
-      )
-      record_audit!(action: :restore, moderator: moderator, note: note)
+      record_audit!(action: :discard, moderator: moderator, note: note)
       recalculate_product_rating
     end
 
@@ -204,9 +294,10 @@ module Spree
       return false unless attachment
 
       blob_filename = attachment.filename.to_s
-      attachment.purge
+      attachment.purge_later
+
       record_audit!(
-        action: :remove_image,
+        action: :image_removed,
         moderator: moderator,
         note: note,
         metadata: { image_id: attachment_id, filename: blob_filename }.to_json
@@ -254,7 +345,6 @@ module Spree
     end
 
     def check_verified_purchase
-      return false if customer.nil? && user.nil?
       return true if order_id.present?
 
       target_product = product
@@ -282,6 +372,15 @@ module Spree
 
       if user_id.present? && Spree::Order.column_names.include?('user_id')
         return true if completed_orders.where(user_id: user_id)
+                                       .joins(:line_items)
+                                       .where(spree_line_items: { variant_id: variant_ids })
+                                       .exists?
+      end
+
+      customer_email = customer&.email if customer.respond_to?(:email)
+      customer_email ||= user&.email if user.respond_to?(:email)
+      if customer_email.present? && Spree::Order.column_names.include?('email')
+        return true if completed_orders.where('lower(email) = ?', customer_email.downcase.strip)
                                        .joins(:line_items)
                                        .where(spree_line_items: { variant_id: variant_ids })
                                        .exists?

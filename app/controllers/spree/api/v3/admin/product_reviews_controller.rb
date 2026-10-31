@@ -28,6 +28,8 @@ module Spree
               scope = scope.spam
             when 'hidden'
               scope = scope.hidden
+            when 'flagged'
+              scope = scope.flagged
             when 'discarded'
               scope = scope.discarded
             when 'all'
@@ -90,6 +92,7 @@ module Spree
                 rejected: scope.rejected.count,
                 spam: scope.spam.count,
                 hidden: scope.hidden.count,
+                flagged: scope.flagged.count,
                 total: scope.not_discarded.count
               }
             }, status: :ok
@@ -171,6 +174,17 @@ module Spree
           def unhide
             @review.unhide!(moderator: current_moderator, note: params[:note])
             render json: { data: serialize_review_detail(@review), meta: { message: 'Review unhidden.' } }, status: :ok
+          end
+
+          # POST /api/v3/admin/product_reviews/:id/dismiss_reports
+          def dismiss_reports
+            note = params[:note].presence || 'Reports dismissed by administrator'
+            if @review.respond_to?(:reports)
+              @review.reports.pending.each { |r| r.dismiss!(moderator: current_moderator, note: note) }
+            end
+            @review.update_columns(flagged_count: 0)
+            @review.record_audit!(action: :reports_dismissed, moderator: current_moderator, note: note)
+            render json: { data: serialize_review_detail(@review.reload), meta: { message: 'Reports dismissed successfully.' } }, status: :ok
           end
 
           # DELETE /api/v3/admin/product_reviews/:id/images/:image_id
@@ -368,8 +382,24 @@ module Spree
               end
             end
 
+            # Customer reports
+            reports_data = []
+            if review.respond_to?(:reports)
+              review.reports.newest.limit(10).each do |rep|
+                reports_data << {
+                  id: rep.id.to_s,
+                  reason: rep.reason,
+                  details: rep.details,
+                  status: rep.status,
+                  created_at: rep.created_at&.iso8601
+                }
+              end
+            end
+
             data.merge(
               ip_address: review.ip_address,
+              flagged_count: review.flagged_count || 0,
+              spam_score: review.spam_score || 0,
               locale: review.locale,
               moderated_at: review.moderated_at&.iso8601,
               moderator_name: review.moderator_name,
@@ -378,7 +408,8 @@ module Spree
               images: images_data,
               customer: customer_data,
               product: product_data,
-              moderation_audits: audits_data
+              moderation_audits: audits_data,
+              reports: reports_data
             )
           end
         end

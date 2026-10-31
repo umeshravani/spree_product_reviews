@@ -19,6 +19,7 @@ export interface ProductReviewsListProps {
   onFilterClear?: () => void
   onVoteHelpful?: (reviewId: string) => Promise<void>
   onVote?: (reviewId: string, helpful: boolean) => Promise<{ helpful: number; unhelpful: number }>
+  onReport?: (reviewId: string, reason: string, details?: string) => Promise<any>
   onEdit?: (review: ProductReview) => void
   onEditReview?: (review: ProductReview) => void
   onWithdraw?: (reviewId: string) => void
@@ -46,6 +47,7 @@ export function ProductReviewsList({
   onFilterClear,
   onVoteHelpful,
   onVote,
+  onReport,
   onEdit,
   onEditReview,
   onWithdraw,
@@ -148,6 +150,7 @@ export function ProductReviewsList({
                 review={review}
                 isOwner={!!isOwner}
                 onVoteHelpful={() => handleVote(review.id)}
+                onReport={onReport}
                 onEdit={handleEdit ? () => handleEdit(review) : undefined}
                 onWithdraw={handleWithdraw ? () => handleWithdraw(review) : undefined}
                 onImageClick={(images, index) => onImageClick?.(images, index)}
