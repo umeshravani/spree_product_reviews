@@ -9,8 +9,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   Input,
-  PageHeader,
-  PageTabs,
 } from '@spree/dashboard-ui'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -29,6 +27,7 @@ import {
   ShieldCheck,
   Star,
   Trash2,
+  X,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -175,21 +174,39 @@ export function ReviewsListPage({ initialProductId }: ReviewsListProps) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <PageHeader
-        title={t('admin.product_reviews.title')}
-        description={t('admin.product_reviews.description')}
-      />
+      <div className="flex flex-col gap-1 pb-2">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">
+          {t('admin.product_reviews.title')}
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          {t('admin.product_reviews.description')}
+        </p>
+      </div>
 
       {/* Tabs */}
-      <PageTabs
-        tabs={tabs}
-        activeTab={activeTab}
-        onChange={(tabId) => {
-          setActiveTab(tabId)
-          setCurrentPage(1)
-          setSelectedIds([])
-        }}
-      />
+      <div className="flex items-center gap-1 border-b border-border overflow-x-auto pb-px">
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.id
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => {
+                setActiveTab(tab.id)
+                setCurrentPage(1)
+                setSelectedIds([])
+              }}
+              className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap cursor-pointer ${
+                isActive
+                  ? 'border-primary text-primary font-semibold'
+                  : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30'
+              }`}
+            >
+              {tab.label}
+            </button>
+          )
+        })}
+      </div>
 
       {/* Toolbar / Filters */}
       <Card className="p-4">
