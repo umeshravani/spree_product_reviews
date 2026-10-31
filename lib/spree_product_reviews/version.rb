@@ -1,8 +1,9 @@
-module SpreeProductReviews
-  VERSION = "1.2.0".freeze
+# frozen_string_literal: true
 
-  def gem_version
+module SpreeProductReviews
+  VERSION = '6.0.0'
+
+  def self.gem_version
     Gem::Version.new(VERSION)
   end
 end
-

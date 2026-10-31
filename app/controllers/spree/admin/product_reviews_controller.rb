@@ -1,19 +1,29 @@
+# frozen_string_literal: true
+
 module Spree
   module Admin
-    class ProductReviewsController < ResourceController
-      belongs_to "spree/product", find_by: :slug
+    parent_class = if defined?(Spree::Admin::ResourceController)
+                     Spree::Admin::ResourceController
+                   elsif defined?(ResourceController)
+                     ResourceController
+                   else
+                     ActionController::Base
+                   end
 
-      before_action :find_product_review, only: [:approve, :edit, :update, :destroy, :attach_image, :purge_images]
-
-      def index
-        # optionally add filtering/sorting here
+    class ProductReviewsController < parent_class
+      if respond_to?(:belongs_to)
+        belongs_to "spree/product", find_by: :slug
       end
+
+      before_action :find_product_review, only: [:approve, :edit, :update, :destroy, :attach_image, :purge_images], if: -> { respond_to?(:find_product_review) }
+
+      def index; end
 
       def update
         if @product_review.update(permitted_resource_params)
           flash[:success] = Spree.t('product_review.flash_messages.update.success')
           respond_to do |format|
-            format.turbo_stream { render turbo_stream: turbo_stream.replace("dialog_modal_lg", "") }
+            format.turbo_stream { render turbo_stream: turbo_stream.replace("dialog_modal_lg", "") } if defined?(turbo_stream)
             format.html { redirect_to admin_product_product_reviews_path(@product) }
           end
         else
@@ -23,56 +33,30 @@ module Spree
 
       def approve
         @product_review.update(approved: true)
-        flash[:success] = Spree.t(:review_approved)
-        redirect_to admin_product_product_reviews_path(@product_review.product)
+        flash[:success] = Spree.t('product_review.flash_messages.create.approved')
+        redirect_to admin_product_product_reviews_path(@product)
       end
 
       def disapprove
         @product_review.update(approved: false)
-        flash[:success] = Spree.t(:review_disapproved)
-        redirect_to admin_product_product_reviews_path(@product_review.product)
+        flash[:success] = Spree.t('product_review.flash_messages.create.disapproved')
+        redirect_to admin_product_product_reviews_path(@product)
       end
 
-      def attach_image
-        if params[:file].present?
-          @product_review.images.attach(params[:file])
-        end
-        head :ok
-      end
-
-      def purge_images
-        ids = params[:ids] || []
-        @product_review.images.where(id: ids).each(&:purge_later)
-
-        respond_to do |format|
-          format.json { head :ok }
-          format.html { redirect_back fallback_location: edit_admin_product_product_review_path(@product, @product_review) }
-        end
-      end
-
-      protected
-
-      def location_after_destroy
-        if request.referer.to_s.include?('/admin/reviews')
-          admin_reviews_path
-        else
-          admin_product_product_reviews_path(@product)
-        end
+      def destroy
+        @product_review.destroy
+        flash[:success] = Spree.t('product_review.flash_messages.destroy.success')
+        redirect_to admin_product_product_reviews_path(@product)
       end
 
       private
 
-      def permitted_resource_params
-        params.require(:product_review).permit(
-          :title,
-          :rating,
-          :review,
-          images: []
-        )
-      end
-
       def find_product_review
         @product_review = Spree::ProductReview.find(params[:id])
+      end
+
+      def permitted_resource_params
+        params.require(:product_review).permit(:title, :review, :rating, :approved, :show_identifier)
       end
     end
   end

@@ -1,6 +1,6 @@
 module Spree
-  class ProductReviewsController < (defined?(Spree::StoreController) ? Spree::StoreController : Spree::BaseController)
-    helper Spree::BaseHelper
+  class ProductReviewsController < (defined?(Spree::StoreController) ? Spree::StoreController : (defined?(Spree::BaseController) ? Spree::BaseController : ActionController::Base))
+    helper Spree::BaseHelper if defined?(Spree::BaseHelper)
 
     include Pagy::Backend if defined?(Pagy::Backend)
 

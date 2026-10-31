@@ -1,0 +1,99 @@
+{
+  "admin": {
+    "product_reviews": {
+      "nav": "Product Reviews",
+      "title": "Product Reviews",
+      "description": "Manage and moderate customer product ratings and reviews.",
+      "tabs": {
+        "all": "All",
+        "pending": "Pending Moderation",
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "spam": "Spam",
+        "hidden": "Hidden"
+      },
+      "status": {
+        "pending": "Pending",
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "spam": "Spam",
+        "hidden": "Hidden",
+        "discarded": "Discarded"
+      },
+      "actions": {
+        "approve": "Approve",
+        "reject": "Reject",
+        "mark_spam": "Mark as Spam",
+        "restore": "Restore",
+        "hide": "Hide from Storefront",
+        "unhide": "Unhide",
+        "delete": "Delete Review",
+        "permanent_delete": "Delete Permanently",
+        "view_details": "View Details",
+        "bulk_moderate": "Bulk Actions",
+        "selected": "selected",
+        "cancel": "Cancel",
+        "confirm": "Confirm",
+        "add_note": "Add optional moderation note..."
+      },
+      "filters": {
+        "search_placeholder": "Search reviews, products, reviewers...",
+        "rating": "Rating",
+        "all_ratings": "All Ratings",
+        "sort": "Sort by",
+        "newest": "Newest First",
+        "oldest": "Oldest First",
+        "rating_desc": "Highest Rating",
+        "rating_asc": "Lowest Rating",
+        "helpful": "Most Helpful"
+      },
+      "table": {
+        "product": "Product",
+        "reviewer": "Reviewer",
+        "rating": "Rating",
+        "review": "Review",
+        "status": "Status",
+        "date": "Date",
+        "actions": "Actions",
+        "images": "Images"
+      },
+      "empty": {
+        "title": "No reviews found",
+        "description": "No product reviews match the current status or filters."
+      },
+      "widget": {
+        "title": "Product Reviews",
+        "average": "Average Rating",
+        "total": "Total Reviews",
+        "approved": "Approved",
+        "pending": "Pending",
+        "view_all": "Manage all reviews",
+        "no_reviews": "No reviews yet for this product.",
+        "recent": "Recent Customer Reviews"
+      },
+      "detail": {
+        "title": "Review Details",
+        "moderation_history": "Moderation History",
+        "customer_info": "Customer Information",
+        "product_info": "Product Information",
+        "images": "Review Attachments",
+        "remove_image": "Remove Attachment",
+        "verified_badge": "Verified Purchase",
+        "helpful_votes": "Helpful Feedback",
+        "audit_empty": "No moderation audit events recorded.",
+        "notes": "Moderator Note"
+      },
+      "messages": {
+        "approved": "Review approved successfully.",
+        "rejected": "Review rejected.",
+        "marked_spam": "Review marked as spam.",
+        "restored": "Review restored successfully.",
+        "hidden": "Review hidden from storefront.",
+        "unhidden": "Review unhidden.",
+        "deleted": "Review deleted successfully.",
+        "image_removed": "Attachment removed successfully.",
+        "bulk_success": "Bulk moderation completed successfully."
+      }
+    }
+  }
+}
