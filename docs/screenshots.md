@@ -41,3 +41,4 @@ Screenshots are stored in `packages/storefront/screenshots/` and `packages/dashb
 | `09_moderation_audit_history.png` | Audit trail displaying moderation timestamps and staff user records | 1440 × 900 Desktop |
 | `10_product_details_reviews_widget.png` | Embedded Product Edit screen slot widget | 1440 × 900 Desktop |
 | `11_responsive_tablet_layout.png` | Responsive tablet layout of the reviews administration dashboard | 768 × 1024 Tablet |
+

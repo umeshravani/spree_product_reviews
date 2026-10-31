@@ -34,6 +34,7 @@
     "typescript": "^5.0.0"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build": "echo 'Distributed as TypeScript React source for Next.js bundler pipeline'"
   }
 }

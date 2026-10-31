@@ -51,3 +51,4 @@ Spree.permissions.register_scope(
 ```
 
 Staff members without `manage_product_reviews` or admin privileges receive HTTP 403 Forbidden on write operations.
+

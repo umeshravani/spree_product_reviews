@@ -49,7 +49,10 @@ Customer photo uploads undergo rigorous validation before being attached via Act
 - **Maximum File Count:** Enforced via `max_images_upload` (default 5).
 - **Maximum File Size:** Enforced at 5 MB per image (`max_image_size_mb`).
 - **MIME-Type Whitelisting:** Restricted strictly to `image/jpeg`, `image/png`, and `image/webp`. Executables, SVG, and PDFs are rejected with validation errors.
-- **EXIF Stripping:** Image processing variants strip GPS and device metadata upon variant generation.
+- **EXIF GPS & Metadata Scrubbing:** 
+  - Uploaded customer photos are sanitized on arrival in `Spree::Api::V3::Store::ProductReviewsController#strip_exif_from_uploads` using `ImageProcessing::Vips.source(...).saver(strip: true).call`.
+  - All sensitive EXIF metadata (GPS latitude, longitude, altitude, camera manufacturer, and iPhone/device identifiers) are stripped prior to Active Storage persistence.
+  - Image representations served via Store API serializers enforce `{ saver: { strip: true } }` so clients and search engines never receive embedded geolocation data.
 
 ---
 
@@ -58,6 +61,7 @@ Customer photo uploads undergo rigorous validation before being attached via Act
 - **Server-Side Verification:** The `verified_purchaser` flag cannot be submitted or altered by client requests (not permitted in controller params).
 - **Order Line Item Matching:** The backend verifies whether the customer ID, user ID, or guest order email has a completed order (`status: 'complete'` or `'placed'`) containing a variant of the reviewed product.
 - **IDOR Safeguards:** Review updates and withdrawals require customer token authentication and verify `review.customer_id == current_customer.id`. Non-owners receive HTTP 403 Forbidden.
+- **Store Boundary Scoping:** Direct review lookups (`load_review`) are scoped to `current_store.products` in multi-store environments (`Spree::ProductReview.joins(:product).where(spree_products: { id: current_store.products.select(:id) })`), preventing cross-store parameter tampering or data leaks.
 
 ---
 
@@ -73,6 +77,13 @@ Customer photo uploads undergo rigorous validation before being attached via Act
    - Configured spam words match: **+40 spam points**.
    - Excessive character repetition (`aaaaaa`, `!!!!!!!`): **+30 spam points**.
    - Reviews scoring above threshold are automatically routed to the spam quarantine queue for human moderation.
-4. **Community Reporting & Auto-Flagging:**
+4. **Community Reporting & Unique Entity Counting:**
    - Customers can report suspicious reviews via `POST /api/v3/store/product_reviews/:id/report`.
-   - When report count reaches `report_moderation_threshold` (default: 3), the review is automatically hidden and unapproved until reviewed by staff.
+   - `ReviewReport` enforces database uniqueness constraints scoped to `review_id` for both `customer_id` and `ip_hash`.
+   - The reported count is calculated using `DISTINCT` non-dismissed reporting entities (`unique_customers + unique_ips`), rendering automated spam bot reporting ineffective.
+5. **Anti-Brigading Safeguard (Verified & High-Reputation Immunity):**
+   - Coordinated reporting campaigns by competitors cannot silently wipe legitimate reviews.
+   - Reviews with `verified_purchaser == true` or `helpful_count >= 3` are **never automatically hidden**.
+   - When a verified review reaches the report threshold, it remains **live and visible in the storefront**, while an audit event `:flagged_priority_review` is recorded and an urgent moderation flag is raised for human staff review.
+   - For unverified, low-reputation reviews reaching the threshold, the review is safely moved to pending moderation (`hidden: true`, `approved: false`) pending staff audit.
+

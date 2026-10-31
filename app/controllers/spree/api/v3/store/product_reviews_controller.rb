@@ -8,6 +8,7 @@ module Spree
           skip_before_action :ensure_payload_size, raise: false
           skip_before_action :check_payload_size, raise: false
 
+          before_action :ensure_reviews_enabled!
           before_action :load_product, only: [:index, :create, :update, :destroy]
           before_action :load_review, only: [:vote, :report, :appeal]
 
@@ -64,13 +65,6 @@ module Spree
 
           # POST /api/v3/store/products/:product_id/product_reviews
           def create
-            unless reviews_globally_enabled?
-              return render json: {
-                error: 'reviews_disabled',
-                message: 'Product reviews are currently disabled.'
-              }, status: :unprocessable_entity
-            end
-
             if @product.respond_to?(:reviews_allowed?) && !@product.reviews_allowed?
               return render json: {
                 error: 'product_reviews_disabled',
@@ -84,6 +78,11 @@ module Spree
                 error: 'unauthorized',
                 message: 'Authentication required to post a review.'
               }, status: :unauthorized
+            end
+
+            # Strip EXIF GPS and device metadata from customer photo uploads prior to storage
+            if params[:product_review] && params[:product_review][:images].present?
+              params[:product_review][:images] = strip_exif_from_uploads(params[:product_review][:images])
             end
 
             @review = @product.reviews.build(review_params)
@@ -272,16 +271,52 @@ module Spree
 
           def load_review
             raw_id = params[:id].to_s
+            scope = if respond_to?(:current_store) && current_store
+                      Spree::ProductReview.joins(:product).where(spree_products: { id: current_store.products.select(:id) })
+                    else
+                      Spree::ProductReview
+                    end
+
             if defined?(::Spree::PrefixedId) && ::Spree::PrefixedId.prefixed_id?(raw_id)
               decoded = ::Spree::PrefixedId.decode_prefixed_id(raw_id)
-              @review = Spree::ProductReview.find_by(id: decoded) || Spree::ProductReview.find(raw_id)
+              @review = scope.find_by(id: decoded) || scope.find(raw_id)
             else
-              @review = Spree::ProductReview.find(raw_id)
+              @review = scope.find(raw_id)
+            end
+          end
+
+          def strip_exif_from_uploads(files)
+            return files if files.blank?
+
+            Array(files).map do |file|
+              next file unless file.respond_to?(:tempfile) && file.content_type =~ %r{\Aimage/(jpeg|jpg|png|webp)\z}i
+
+              begin
+                if defined?(ImageProcessing::Vips)
+                  sanitized_tempfile = ImageProcessing::Vips
+                                         .source(file.tempfile.path)
+                                         .saver(strip: true)
+                                         .call
+                  file.tempfile = sanitized_tempfile
+                end
+              rescue StandardError => e
+                Rails.logger.warn("[SpreeProductReviews] EXIF sanitization error: #{e.message}")
+              end
+              file
             end
           end
 
           def review_params
             params.require(:product_review).permit(:rating, :title, :review, :name, :show_identifier, images: [])
+          end
+
+          def ensure_reviews_enabled!
+            return if reviews_globally_enabled?
+
+            render json: {
+              error: 'reviews_disabled',
+              message: 'Product reviews are currently disabled.'
+            }, status: :forbidden
           end
 
           def reviews_globally_enabled?

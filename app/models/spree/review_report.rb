@@ -13,6 +13,8 @@ module Spree
     validates :reason, presence: true, inclusion: { in: REASONS }
     validates :details, length: { maximum: 1000 }
     validates :status, inclusion: { in: STATUSES }
+    validates :customer_id, uniqueness: { scope: :review_id, message: 'You have already reported this review' }, if: -> { customer_id.present? }
+    validates :ip_hash, uniqueness: { scope: :review_id, message: 'This network has already reported this review' }, if: -> { customer_id.blank? && ip_hash.present? }
 
     scope :pending, -> { where(status: 'pending') }
     scope :reviewed, -> { where(status: 'reviewed') }
@@ -45,8 +47,12 @@ module Spree
       return unless review
 
       review.with_lock do
-        new_count = (review.flagged_count || 0) + 1
-        review.update_columns(flagged_count: new_count)
+        # Count DISTINCT unique reporters (customers or IP hashes) among non-dismissed reports
+        unique_customers = review.reports.where.not(status: 'dismissed').where.not(customer_id: nil).distinct.count(:customer_id)
+        unique_ips = review.reports.where.not(status: 'dismissed').where(customer_id: nil).where.not(ip_hash: nil).distinct.count(:ip_hash)
+        unique_reporters_count = unique_customers + unique_ips
+
+        review.update_columns(flagged_count: unique_reporters_count)
 
         threshold = begin
                       SpreeProductReviews.config.report_moderation_threshold
@@ -55,15 +61,31 @@ module Spree
                     end
         threshold = 3 if threshold.nil? || threshold <= 0
 
-        # If flagged count exceeds threshold and review is approved, auto-unapprove for moderation
-        if new_count >= threshold && review.approved?
-          review.update_columns(approved: false, hidden: true)
-          review.record_audit!(
-            action: :auto_flagged,
-            moderator: 'System',
-            note: "Automatically hidden after reaching report threshold (#{new_count} reports)"
-          )
-          review.recalculate_product_rating
+        # Anti-brigading and authenticity safeguards:
+        # Prevent coordinated smear campaigns from taking down legitimate reviews.
+        # Reviews that are verified purchases or have established helpfulness are flagged with priority
+        # for human staff review rather than being automatically suppressed.
+        is_verified = review.verified_purchaser?
+        has_high_reputation = (review.helpful_count || 0) >= 3
+
+        if unique_reporters_count >= threshold && review.approved?
+          if is_verified || has_high_reputation
+            # Retain live but flag for priority review in the moderation queue
+            review.record_audit!(
+              action: :flagged_priority_review,
+              moderator: 'System',
+              note: "Flagged by #{unique_reporters_count} unique reporters. Retained live due to verified purchaser / high reputation safeguard pending human review."
+            )
+          else
+            # Unverified or low-reputation review: auto-hide pending moderation
+            review.update_columns(approved: false, hidden: true)
+            review.record_audit!(
+              action: :auto_flagged,
+              moderator: 'System',
+              note: "Automatically hidden after reaching report threshold (#{unique_reporters_count} distinct reporters)"
+            )
+            review.recalculate_product_rating
+          end
         end
       end
     rescue StandardError => e
@@ -80,3 +102,4 @@ module Spree
     end
   end
 end
+

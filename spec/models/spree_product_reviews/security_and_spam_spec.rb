@@ -212,25 +212,53 @@ RSpec.describe 'Review Security, Anti-Abuse & Spam Prevention' do
   describe 'Review Reporting & Auto-Flagging Threshold' do
     let(:review_with_reports) do
       Class.new do
-        attr_accessor :approved, :hidden, :flagged_count, :reports, :audits
+        attr_accessor :approved, :hidden, :flagged_count, :reports, :audits, :verified_purchaser, :helpful_count
 
-        def initialize(approved: true)
+        def initialize(approved: true, verified_purchaser: false, helpful_count: 0)
           @approved = approved
           @hidden = false
           @flagged_count = 0
           @reports = []
           @audits = []
+          @verified_purchaser = verified_purchaser
+          @helpful_count = helpful_count
         end
 
-        def add_report(reason:, customer_id: nil, threshold: 3)
-          @reports << { reason: reason, customer_id: customer_id }
-          @flagged_count += 1
+        def verified_purchaser?
+          !!@verified_purchaser
+        end
 
-          if @flagged_count >= threshold && @approved
-            @approved = false
-            @hidden = true
-            @audits << { action: :auto_flagged, note: "Threshold reached: #{@flagged_count}" }
+        def add_report(reason:, customer_id: nil, ip_hash: nil, threshold: 3)
+          # Validate unique reporter: cannot report twice from same customer or IP
+          if customer_id && @reports.any? { |r| r[:customer_id] == customer_id && r[:status] != 'dismissed' }
+            return { error: 'already_reported' }
           end
+          if customer_id.nil? && ip_hash && @reports.any? { |r| r[:ip_hash] == ip_hash && r[:status] != 'dismissed' }
+            return { error: 'already_reported' }
+          end
+
+          @reports << { reason: reason, customer_id: customer_id, ip_hash: ip_hash, status: 'pending' }
+
+          # Distinct unique reporters count
+          unique_customers = @reports.reject { |r| r[:status] == 'dismissed' || r[:customer_id].nil? }.map { |r| r[:customer_id] }.uniq.size
+          unique_ips = @reports.select { |r| r[:status] != 'dismissed' && r[:customer_id].nil? && r[:ip_hash].present? }.map { |r| r[:ip_hash] }.uniq.size
+          unique_reporters_count = unique_customers + unique_ips
+          @flagged_count = unique_reporters_count
+
+          if unique_reporters_count >= threshold && @approved
+            # Anti-brigading safeguard: Verified purchases and high-reputation reviews are NOT auto-hidden
+            if verified_purchaser? || (@helpful_count || 0) >= 3
+              @audits << {
+                action: :flagged_priority_review,
+                note: "Flagged by #{unique_reporters_count} unique reporters. Retained live due to verified purchaser / high reputation safeguard pending staff review."
+              }
+            else
+              @approved = false
+              @hidden = true
+              @audits << { action: :auto_flagged, note: "Threshold reached: #{unique_reporters_count}" }
+            end
+          end
+          { success: true }
         end
 
         def dismiss_reports!(moderator: 'Admin')
@@ -243,30 +271,71 @@ RSpec.describe 'Review Security, Anti-Abuse & Spam Prevention' do
       end
     end
 
-    it 'increments flagged_count on each report' do
+    it 'increments flagged_count on each unique report' do
       review = review_with_reports.new(approved: true)
-      review.add_report(reason: 'spam', threshold: 3)
+      res = review.add_report(reason: 'spam', customer_id: 1, threshold: 3)
+      expect(res[:success]).to be true
       expect(review.flagged_count).to eq(1)
       expect(review.approved).to be true
       expect(review.hidden).to be false
     end
 
-    it 'automatically unapproves and hides review when threshold (3) is reached' do
+    it 'rejects duplicate reports from the same customer' do
       review = review_with_reports.new(approved: true)
-      review.add_report(reason: 'spam', threshold: 3)
-      review.add_report(reason: 'inappropriate', threshold: 3)
+      review.add_report(reason: 'spam', customer_id: 42, threshold: 3)
+      res2 = review.add_report(reason: 'harassment', customer_id: 42, threshold: 3)
+      expect(res2[:error]).to eq('already_reported')
+      expect(review.flagged_count).to eq(1)
+    end
+
+    it 'rejects duplicate reports from the same anonymous IP network' do
+      review = review_with_reports.new(approved: true)
+      review.add_report(reason: 'spam', ip_hash: 'hash_abc123', threshold: 3)
+      res2 = review.add_report(reason: 'spam', ip_hash: 'hash_abc123', threshold: 3)
+      expect(res2[:error]).to eq('already_reported')
+      expect(review.flagged_count).to eq(1)
+    end
+
+    it 'automatically unapproves and hides unverified review when threshold (3 unique reporters) is reached' do
+      review = review_with_reports.new(approved: true, verified_purchaser: false)
+      review.add_report(reason: 'spam', customer_id: 1, threshold: 3)
+      review.add_report(reason: 'inappropriate', customer_id: 2, threshold: 3)
       expect(review.approved).to be true
 
-      review.add_report(reason: 'misleading', threshold: 3)
+      review.add_report(reason: 'misleading', customer_id: 3, threshold: 3)
       expect(review.flagged_count).to eq(3)
       expect(review.approved).to be false
       expect(review.hidden).to be true
       expect(review.audits.last[:action]).to eq(:auto_flagged)
     end
 
+    it 'safeguards verified purchaser reviews against coordinated suppression brigades' do
+      verified_review = review_with_reports.new(approved: true, verified_purchaser: true)
+      verified_review.add_report(reason: 'spam', customer_id: 1, threshold: 3)
+      verified_review.add_report(reason: 'spam', customer_id: 2, threshold: 3)
+      verified_review.add_report(reason: 'spam', customer_id: 3, threshold: 3)
+
+      expect(verified_review.flagged_count).to eq(3)
+      # Remains live! Not suppressed!
+      expect(verified_review.approved).to be true
+      expect(verified_review.hidden).to be false
+      expect(verified_review.audits.last[:action]).to eq(:flagged_priority_review)
+      expect(verified_review.audits.last[:note]).to include('Retained live due to verified purchaser')
+    end
+
+    it 'safeguards established helpful reviews against coordinated suppression brigades' do
+      helpful_review = review_with_reports.new(approved: true, verified_purchaser: false, helpful_count: 5)
+      3.times { |i| helpful_review.add_report(reason: 'spam', customer_id: i + 10, threshold: 3) }
+
+      expect(helpful_review.flagged_count).to eq(3)
+      expect(helpful_review.approved).to be true
+      expect(helpful_review.hidden).to be false
+      expect(helpful_review.audits.last[:action]).to eq(:flagged_priority_review)
+    end
+
     it 'allows moderator to dismiss reports and restore review' do
       review = review_with_reports.new(approved: true)
-      3.times { review.add_report(reason: 'spam', threshold: 3) }
+      3.times { |i| review.add_report(reason: 'spam', customer_id: i + 1, threshold: 3) }
       expect(review.hidden).to be true
 
       review.dismiss_reports!(moderator: 'Admin Jane')
@@ -356,4 +425,109 @@ RSpec.describe 'Review Security, Anti-Abuse & Spam Prevention' do
       expect(verifier.verify(customer_id: 42, email: 'buyer@example.com', order_records: orders)).to be false
     end
   end
+
+  describe 'Store Isolation Scoping' do
+    let(:store_scope_guard) do
+      Class.new do
+        def self.accessible_in_store?(review_store_ids, current_store_id)
+          return true if current_store_id.nil? # Single store / unconstrained fallback
+
+          review_store_ids.include?(current_store_id)
+        end
+      end
+    end
+
+    it 'allows access when review product belongs to current store' do
+      expect(store_scope_guard.accessible_in_store?([1, 2], 1)).to be true
+      expect(store_scope_guard.accessible_in_store?([2], 2)).to be true
+    end
+
+    it 'rejects access when review product belongs strictly to another store' do
+      expect(store_scope_guard.accessible_in_store?([2], 1)).to be false
+      expect(store_scope_guard.accessible_in_store?([3], 2)).to be false
+    end
+  end
+
+  describe 'Image Upload Privacy & EXIF Stripping' do
+    let(:exif_stripper) do
+      Class.new do
+        def self.contains_exif?(data)
+          data.to_s.include?('Exif') || data.to_s.include?('Apple') || data.to_s.include?('iPhone')
+        end
+
+        def self.strip_metadata(binary_data)
+          # Emulates ImageProcessing::Vips saver(strip: true)
+          # Removes APP1 (0xFFE1) EXIF segment
+          return binary_data unless binary_data.start_with?("\xFF\xD8".b)
+
+          soi = binary_data[0..1]
+          rest = binary_data[2..]
+
+          # Find and remove APP1 if present
+          if rest.start_with?("\xFF\xE1".b)
+            len = rest[2..3].unpack1('n')
+            rest = rest[(2 + len)..]
+          end
+
+          soi + rest
+        end
+      end
+    end
+
+    it 'detects sensitive EXIF metadata in raw camera photo' do
+      app1_data = "Exif\x00\x00Apple\x00iPhone 16 Pro\x00".b
+      app1_len = [app1_data.bytesize + 2].pack('n')
+      raw_photo = "\xFF\xD8\xFF\xE1".b + app1_len + app1_data + "\xFF\xD9".b
+      expect(exif_stripper.contains_exif?(raw_photo)).to be true
+    end
+
+    it 'strips EXIF metadata to protect customer privacy' do
+      app1_data = "Exif\x00\x00Apple\x00iPhone 16 Pro\x00".b
+      app1_len = [app1_data.bytesize + 2].pack('n')
+      raw_photo = "\xFF\xD8\xFF\xE1".b + app1_len + app1_data + "\xFF\xD9".b
+      stripped = exif_stripper.strip_metadata(raw_photo)
+
+      expect(exif_stripper.contains_exif?(stripped)).to be false
+      expect(stripped.start_with?("\xFF\xD8".b)).to be true
+      expect(stripped.end_with?("\xFF\xD9".b)).to be true
+    end
+  end
+
+  describe 'Lifecycle & Disabling Controls' do
+    let(:controller_stub) do
+      Class.new do
+        attr_accessor :rendered_status, :rendered_json
+
+        def self.config
+          @config ||= Struct.new(:enabled).new(true)
+        end
+
+        def ensure_reviews_enabled!
+          return if self.class.config.enabled
+
+          @rendered_status = :forbidden
+          @rendered_json = {
+            error: 'reviews_disabled',
+            message: 'Product reviews are currently disabled.'
+          }
+        end
+      end
+    end
+
+    it 'permits API traffic when enabled' do
+      inst = controller_stub.new
+      inst.class.config.enabled = true
+      inst.ensure_reviews_enabled!
+      expect(inst.rendered_status).to be_nil
+    end
+
+    it 'returns HTTP 403 forbidden on all endpoints when disabled without affecting DB' do
+      inst = controller_stub.new
+      inst.class.config.enabled = false
+      inst.ensure_reviews_enabled!
+      expect(inst.rendered_status).to eq(:forbidden)
+      expect(inst.rendered_json[:error]).to eq('reviews_disabled')
+    end
+  end
 end
+

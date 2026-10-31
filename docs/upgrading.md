@@ -64,3 +64,4 @@ To sync existing review ratings to product cache columns:
 ```bash
 pnpm spree rake spree_product_reviews:recalculate_ratings
 ```
+

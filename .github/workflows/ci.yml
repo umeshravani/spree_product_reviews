@@ -1,0 +1,107 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - spree-6
+  pull_request:
+    branches:
+      - main
+      - spree-6
+
+jobs:
+  backend-rspec:
+    name: Backend RSpec (Ruby ${{ matrix.ruby }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ruby: ['3.3', '3.4']
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby }}
+          bundler-cache: true
+
+      - name: Run RSpec Tests
+        run: |
+          bundle exec rspec
+
+  storefront-package:
+    name: Storefront Package (React 19 / TypeScript)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install Storefront Dependencies
+        working-directory: packages/storefront
+        run: |
+          pnpm install --no-frozen-lockfile
+
+      - name: Typecheck Storefront
+        working-directory: packages/storefront
+        run: |
+          pnpm typecheck
+
+      - name: Pack Storefront Tarball
+        working-directory: packages/storefront
+        run: |
+          pnpm pack
+          ls -lh *.tgz
+
+  dashboard-package:
+    name: Dashboard Plugin (React / Vite)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install Dashboard Dependencies
+        working-directory: packages/dashboard
+        run: |
+          pnpm install --no-frozen-lockfile
+
+      - name: Typecheck Dashboard
+        working-directory: packages/dashboard
+        run: |
+          pnpm typecheck
+
+      - name: Build Dashboard Plugin
+        working-directory: packages/dashboard
+        run: |
+          pnpm build
+
+      - name: Pack Dashboard Tarball
+        working-directory: packages/dashboard
+        run: |
+          pnpm pack
+          ls -lh *.tgz

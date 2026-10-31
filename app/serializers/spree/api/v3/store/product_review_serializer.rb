@@ -54,9 +54,17 @@ module Spree
 
             review.images.map do |image|
               url = begin
-                      Rails.application.routes.url_helpers.rails_blob_url(image, host: base_url)
+                      if image.respond_to?(:variable?) && image.variable?
+                        # Serve privacy-hardened derivative with EXIF stripped and bounded dimensions
+                        Rails.application.routes.url_helpers.rails_representation_url(
+                          image.representation(resize_to_limit: [1600, 1600], saver: { strip: true }),
+                          host: base_url
+                        )
+                      else
+                        Rails.application.routes.url_helpers.rails_blob_url(image, host: base_url)
+                      end
                     rescue StandardError
-                      "/rails/active_storage/blobs/redirect/#{image.signed_id}/#{image.filename}"
+                      Rails.application.routes.url_helpers.rails_blob_url(image, host: base_url)
                     end
 
               {

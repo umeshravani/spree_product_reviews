@@ -75,3 +75,4 @@ end
 | `max_image_size_mb` | Integer | `5` | Maximum file size per photo (in MB). Formats allowed: JPEG, PNG, WebP. |
 | `disable_review_links` | Boolean | `true` | Increases spam score by +50 if URLs or domains are found in review text. |
 | `spam_words` | String | `''` | Comma-separated blocked words that trigger spam penalties (+40 per match). |
+

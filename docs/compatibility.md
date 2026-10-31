@@ -20,3 +20,4 @@
 - Firefox: Last 2 versions
 - Safari: Last 2 versions (macOS and iOS)
 - Edge: Last 2 versions
+

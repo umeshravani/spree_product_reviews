@@ -94,3 +94,4 @@ class DropSpreeProductReviewsTables < ActiveRecord::Migration[7.2]
 end
 ```
 Run `pnpm spree migrate`.
+

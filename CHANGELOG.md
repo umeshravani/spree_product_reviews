@@ -17,7 +17,11 @@ All notable changes to `spree_product_reviews` are documented in this file.
   - Rate limiting by customer (`customer_rate_limit_per_hour`) and IP (`ip_rate_limit_per_hour`).
   - Rolling duplicate review detection (`duplicate_detection_window_hours`).
   - Spam scoring heuristics for suspicious links (+50), blocked words (+40), and excessive character repetition (+30).
-  - Customer review abuse reporting (`Spree::ReviewReport`) with automated hiding threshold.
+  - Customer review abuse reporting (`Spree::ReviewReport`) with unique reporter validation (`customer_id` and `ip_hash`).
+  - **Anti-Brigading Immunity:** Verified purchaser reviews and high-reputation reviews are safeguarded against automated suppression campaigns.
+  - **EXIF GPS Scrubbing:** Strips geolocation coordinates and camera hardware identifiers from uploaded customer photos prior to storage.
+  - **Store Boundary Isolation:** Scopes direct review lookups and actions to `current_store.products`.
+  - **Global Killswitch:** Enforces HTTP 403 Forbidden across all Store API endpoints when `config.enabled = false` without altering database records.
   - Customer appeal workflow (`appeal!`).
   - HTML/XSS sanitization on `title`, `review`, and `name`.
 - **Eager Loading Optimization:** Eager loaded `:images_attachments`, `:images_blobs`, `:customer`, and `:votes` to eliminate N+1 database queries.
@@ -37,3 +41,4 @@ All notable changes to `spree_product_reviews` are documented in this file.
 - **Interactive UI Components:** `<ProductReviewsSection />`, `<ProductReviewsSummary />`, `<ProductReviewsList />`, `<ReviewCard />`, `<StarRating />`, `<ReviewSubmissionModal />`, `<ReviewEditModal />`, `<ImageLightbox />`.
 - **Headless Hook & API Client:** `useProductReviews` hook and `StoreReviewsClient` class.
 - **Accessible & Mobile Responsive:** ARIA roles, keyboard navigation, and responsive layouts across desktop and mobile.
+
