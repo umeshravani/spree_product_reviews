@@ -19,7 +19,7 @@ export const productReviewsClient = {
     if (params.per_page) search.set('per_page', String(params.per_page))
 
     const query = search.toString()
-    const path = `/api/v3/admin/product_reviews${query ? `?${query}` : ''}`
+    const path = `/product_reviews${query ? `?${query}` : ''}`
     const res = await adminClient.request<ReviewListResponse>('GET', path)
     return res
   },
@@ -27,7 +27,7 @@ export const productReviewsClient = {
   async counts(): Promise<ReviewCounts> {
     const res = await adminClient.request<{ data: ReviewCounts }>(
       'GET',
-      '/api/v3/admin/product_reviews/counts'
+      '/product_reviews/counts'
     )
     return res.data
   },
@@ -35,7 +35,7 @@ export const productReviewsClient = {
   async get(id: string): Promise<ProductReviewDetail> {
     const res = await adminClient.request<{ data: ProductReviewDetail }>(
       'GET',
-      `/api/v3/admin/product_reviews/${id}`
+      `/product_reviews/${id}`
     )
     return res.data
   },
@@ -43,7 +43,7 @@ export const productReviewsClient = {
   async approve(id: string, note?: string): Promise<ProductReviewDetail> {
     const res = await adminClient.request<{ data: ProductReviewDetail }>(
       'POST',
-      `/api/v3/admin/product_reviews/${id}/approve`,
+      `/product_reviews/${id}/approve`,
       { body: { note } }
     )
     return res.data
@@ -52,7 +52,7 @@ export const productReviewsClient = {
   async reject(id: string, note?: string): Promise<ProductReviewDetail> {
     const res = await adminClient.request<{ data: ProductReviewDetail }>(
       'POST',
-      `/api/v3/admin/product_reviews/${id}/reject`,
+      `/product_reviews/${id}/reject`,
       { body: { note } }
     )
     return res.data
@@ -61,7 +61,7 @@ export const productReviewsClient = {
   async markSpam(id: string, note?: string): Promise<ProductReviewDetail> {
     const res = await adminClient.request<{ data: ProductReviewDetail }>(
       'POST',
-      `/api/v3/admin/product_reviews/${id}/mark_spam`,
+      `/product_reviews/${id}/mark_spam`,
       { body: { note } }
     )
     return res.data
@@ -70,7 +70,7 @@ export const productReviewsClient = {
   async restore(id: string, note?: string): Promise<ProductReviewDetail> {
     const res = await adminClient.request<{ data: ProductReviewDetail }>(
       'POST',
-      `/api/v3/admin/product_reviews/${id}/restore`,
+      `/product_reviews/${id}/restore`,
       { body: { note } }
     )
     return res.data
@@ -79,7 +79,7 @@ export const productReviewsClient = {
   async hide(id: string, note?: string): Promise<ProductReviewDetail> {
     const res = await adminClient.request<{ data: ProductReviewDetail }>(
       'POST',
-      `/api/v3/admin/product_reviews/${id}/hide`,
+      `/product_reviews/${id}/hide`,
       { body: { note } }
     )
     return res.data
@@ -88,7 +88,7 @@ export const productReviewsClient = {
   async unhide(id: string, note?: string): Promise<ProductReviewDetail> {
     const res = await adminClient.request<{ data: ProductReviewDetail }>(
       'POST',
-      `/api/v3/admin/product_reviews/${id}/unhide`,
+      `/product_reviews/${id}/unhide`,
       { body: { note } }
     )
     return res.data
@@ -97,7 +97,7 @@ export const productReviewsClient = {
   async deleteImage(reviewId: string, imageId: string): Promise<ProductReviewDetail> {
     const res = await adminClient.request<{ data: ProductReviewDetail }>(
       'DELETE',
-      `/api/v3/admin/product_reviews/${reviewId}/images/${imageId}`
+      `/product_reviews/${reviewId}/images/${imageId}`
     )
     return res.data
   },
@@ -109,7 +109,7 @@ export const productReviewsClient = {
   ): Promise<{ processed_count: number }> {
     const res = await adminClient.request<{ data: { processed_count: number } }>(
       'POST',
-      '/api/v3/admin/product_reviews/bulk_moderate',
+      '/product_reviews/bulk_moderate',
       { body: { ids, action_type: actionType, note } }
     )
     return res.data
@@ -118,14 +118,14 @@ export const productReviewsClient = {
   async delete(id: string, force = false): Promise<void> {
     await adminClient.request(
       'DELETE',
-      `/api/v3/admin/product_reviews/${id}${force ? '?force=true' : ''}`
+      `/product_reviews/${id}${force ? '?force=true' : ''}`
     )
   },
 
   async productSummary(productId: string): Promise<ProductWidgetSummary> {
     const res = await adminClient.request<{ data: ProductWidgetSummary }>(
       'GET',
-      `/api/v3/admin/products/${productId}/reviews_summary`
+      `/products/${productId}/reviews_summary`
     )
     return res.data
   },
