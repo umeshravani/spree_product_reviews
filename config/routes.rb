@@ -24,6 +24,8 @@ Spree::Core::Engine.add_routes do
       end
 
       namespace :admin do
+        resource :product_reviews_settings, only: [:show, :update], path: 'product_reviews/settings', controller: 'product_reviews_settings'
+
         resources :products, only: [] do
           get :reviews_summary, to: 'product_reviews#summary'
         end

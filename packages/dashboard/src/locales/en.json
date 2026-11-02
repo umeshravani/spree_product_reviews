@@ -93,6 +93,10 @@
         "deleted": "Review deleted successfully.",
         "image_removed": "Attachment removed successfully.",
         "bulk_success": "Bulk moderation completed successfully."
+      },
+      "settings": {
+        "title": "Product Reviews",
+        "description": "Configure review policies, verification, and spam filtering in Integrations"
       }
     }
   }

@@ -1,6 +1,6 @@
 'use client'
 
-import { MessageSquarePlus } from 'lucide-react'
+import { Pencil, Star } from 'lucide-react'
 import type { RatingDistribution, ReviewsMeta } from '../types'
 import { StarRating } from './star-rating'
 
@@ -43,52 +43,46 @@ export function ProductReviewsSummary({
   }
 
   return (
-    <div
-      className={`rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 md:p-8 shadow-sm ${className}`}
-    >
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-6 border-b border-neutral-100 dark:border-neutral-800">
-        <div className="flex items-center gap-6">
-          <div className="text-center">
-            <span className="text-5xl font-extrabold tracking-tight text-neutral-900 dark:text-neutral-50">
-              {reviewCount > 0 ? averageRating.toFixed(1) : '0.0'}
-            </span>
-            <div className="mt-1">
-              <StarRating rating={averageRating} size="md" />
-            </div>
-            <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-              Based on {reviewCount} {reviewCount === 1 ? 'review' : 'reviews'}
-            </p>
-          </div>
-
-          <div className="hidden sm:block h-16 w-px bg-neutral-200 dark:bg-neutral-800" />
-
-          {/* Value proposition / prompt */}
-          <div className="hidden sm:block">
-            <h3 className="font-semibold text-neutral-900 dark:text-neutral-100 text-base">
-              Customer Feedback
-            </h3>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 max-w-xs">
-              All reviews are from verified purchasers and subject to store moderation.
-            </p>
-          </div>
+    <div className={`w-full py-6 space-y-8 ${className}`}>
+      {/* Top Bar: Title & Milano "WRITE A REVIEW" CTA */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-neutral-200">
+        <div>
+          <span className="text-xs uppercase tracking-wider text-neutral-500 font-medium">
+            Customer Feedback
+          </span>
         </div>
 
-        {/* Write a review CTA */}
         {onWriteReviewClick && (
           <button
             type="button"
             onClick={onWriteReviewClick}
-            className="w-full md:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-white dark:bg-neutral-100 dark:hover:bg-neutral-200 dark:text-neutral-900 font-medium text-sm transition-colors shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-500 cursor-pointer"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-black hover:bg-neutral-800 text-white font-semibold text-xs tracking-wider uppercase transition-colors rounded-none cursor-pointer shadow-sm border border-black"
           >
-            <MessageSquarePlus className="w-4 h-4" />
             <span>Write a Review</span>
+            <Pencil className="w-3.5 h-3.5 stroke-[2.2]" />
           </button>
         )}
       </div>
 
-      {/* Rating Breakdown Bars */}
-      {reviewCount > 0 ? (
-        <div className="mt-6 space-y-2.5">
+      {/* Main Summary: Left score & Right Milano rating breakdown bars */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
+        {/* Left Column: Big rating score and response count */}
+        <div className="md:col-span-4 flex flex-col items-start space-y-2">
+          <div className="flex items-baseline gap-3">
+            <span className="text-5xl sm:text-6xl font-bold tracking-tight text-neutral-900">
+              {reviewCount > 0 ? averageRating.toFixed(1) : '0.0'}
+            </span>
+            <div className="pt-1">
+              <StarRating rating={averageRating} size="md" />
+            </div>
+          </div>
+          <p className="text-xs text-neutral-500 tracking-wide font-medium">
+            {reviewCount} {reviewCount === 1 ? 'response' : 'responses'}
+          </p>
+        </div>
+
+        {/* Right Column: Milano Rating Breakdown Bars */}
+        <div className="md:col-span-8 space-y-2">
           {[5, 4, 3, 2, 1].map((star) => {
             const count = ratingDistribution[star] || 0
             const pct = distributionPercentages[star] || 0
@@ -99,29 +93,27 @@ export function ProductReviewsSummary({
                 key={star}
                 type="button"
                 onClick={() => handleFilter?.(isSelected ? null : star)}
-                className={`w-full group flex items-center gap-3 text-xs rounded-lg py-1 px-2 -mx-2 transition-colors cursor-pointer ${
+                className={`w-full group flex items-center gap-3 text-xs py-1 px-2 rounded transition-colors cursor-pointer ${
                   isSelected
-                    ? 'bg-neutral-100 dark:bg-neutral-800 font-semibold text-neutral-900 dark:text-neutral-50'
-                    : 'hover:bg-neutral-50 dark:hover:bg-neutral-800/50 text-neutral-600 dark:text-neutral-400'
+                    ? 'bg-neutral-100 font-semibold text-neutral-900'
+                    : 'hover:bg-neutral-50 text-neutral-700'
                 }`}
                 title={`Filter by ${star} star reviews (${count})`}
               >
-                <span className="w-12 text-left font-medium">{star} stars</span>
+                <div className="flex items-center gap-1 w-12 text-left font-medium">
+                  <span>{star}</span>
+                  <Star className="w-3 h-3 fill-amber-400 text-amber-400 flex-shrink-0" />
+                  <span className="text-neutral-500 font-normal">{count}</span>
+                </div>
 
-                <div className="flex-1 h-2 rounded-full bg-neutral-100 dark:bg-neutral-800 overflow-hidden relative">
+                {/* Progress bar container matching Milano */}
+                <div className="flex-1 h-2 bg-neutral-200 overflow-hidden relative">
                   <div
-                    className={`h-full rounded-full transition-all duration-300 ${
-                      isSelected
-                        ? 'bg-amber-500'
-                        : 'bg-amber-400 group-hover:bg-amber-500'
+                    className={`h-full transition-all duration-300 ${
+                      isSelected ? 'bg-black' : 'bg-neutral-900 group-hover:bg-black'
                     }`}
                     style={{ width: `${pct}%` }}
                   />
-                </div>
-
-                <div className="w-16 text-right tabular-nums">
-                  <span className="font-medium">{pct}%</span>
-                  <span className="text-neutral-400 ml-1">({count})</span>
                 </div>
               </button>
             )
@@ -135,18 +127,14 @@ export function ProductReviewsSummary({
               <button
                 type="button"
                 onClick={() => handleFilter?.(null)}
-                className="text-neutral-900 dark:text-neutral-100 font-medium underline hover:no-underline cursor-pointer"
+                className="text-neutral-900 font-medium underline hover:no-underline cursor-pointer"
               >
                 Clear filter
               </button>
             </div>
           )}
         </div>
-      ) : (
-        <div className="text-center py-6 text-neutral-500 dark:text-neutral-400 text-sm">
-          No customer reviews yet. Be the first to share your thoughts on this product!
-        </div>
-      )}
+      </div>
     </div>
   )
 }

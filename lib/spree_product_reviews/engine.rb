@@ -28,6 +28,12 @@ module SpreeProductReviews
       end
     end
 
+    config.after_initialize do
+      if defined?(Spree) && Spree.respond_to?(:integrations)
+        Spree.integrations << 'SpreeProductReviews::Integration' unless Spree.integrations.include?('SpreeProductReviews::Integration')
+      end
+    end
+
     config.generators do |g|
       g.test_framework :rspec
     end

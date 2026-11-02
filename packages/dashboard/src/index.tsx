@@ -1,4 +1,4 @@
-import { defineDashboardPlugin, i18n } from '@spree/dashboard-core'
+import { defineDashboardPlugin, i18n, settingsNav } from '@spree/dashboard-core'
 import { UserStar } from 'lucide-react'
 import { PendingReviewsBadge } from './components/pending-reviews-badge'
 import en from './locales/en.json'
@@ -7,7 +7,29 @@ import { ProductReviewsCard } from './slots/product-reviews-card'
 // 1. Add translations bundle before any render or evaluation
 i18n.addResourceBundle('en', 'translation', en, true, true)
 
-// 2. Register the dashboard plugin with Spree
+// 2. Register settings navigation in Integrations
+try {
+  settingsNav.addGroup({
+    key: 'integrations',
+    labelKey: 'admin.settings_nav.groups.integrations',
+    position: 550,
+  })
+} catch {
+  // Group may already be registered
+}
+
+settingsNav.add({
+  key: 'settings.integrations.product-reviews',
+  labelKey: 'admin.product_reviews.settings.title',
+  descriptionKey: 'admin.product_reviews.settings.description',
+  keywords: ['reviews', 'ratings', 'moderation', 'spam', 'customer feedback'],
+  path: '/settings/integrations',
+  icon: UserStar,
+  group: 'integrations',
+  position: 150,
+})
+
+// 3. Register the dashboard plugin with Spree
 defineDashboardPlugin({
   nav: [
     {

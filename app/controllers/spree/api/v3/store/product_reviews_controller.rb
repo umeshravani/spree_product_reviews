@@ -310,7 +310,18 @@ module Spree
             }, status: :forbidden
           end
 
+          def active_integration
+            @active_integration ||= begin
+              if defined?(SpreeProductReviews::Integration) && respond_to?(:current_store) && current_store
+                SpreeProductReviews::Integration.find_by(store: current_store)
+              end
+            end
+          end
+
           def reviews_globally_enabled?
+            if active_integration&.preferred_enabled != nil
+              return active_integration.preferred_enabled
+            end
             if SpreeProductReviews.config.respond_to?(:enabled)
               SpreeProductReviews.config.enabled
             else
@@ -319,6 +330,9 @@ module Spree
           end
 
           def allow_anonymous_reviews?
+            if active_integration&.preferred_allow_anonymous != nil
+              return active_integration.preferred_allow_anonymous
+            end
             if SpreeProductReviews.config.respond_to?(:allow_anonymous)
               SpreeProductReviews.config.allow_anonymous
             else
@@ -327,20 +341,32 @@ module Spree
           end
 
           def apply_moderation_rules(review)
-            require_approval = begin
-                                 SpreeProductReviews.config.require_approval
-                               rescue StandardError
-                                 true
+            require_approval = if active_integration&.preferred_require_approval != nil
+                                 active_integration.preferred_require_approval
+                               else
+                                 begin
+                                   SpreeProductReviews.config.require_approval
+                                 rescue StandardError
+                                   true
+                                 end
                                end
-            disable_links = begin
-                              SpreeProductReviews.config.disable_review_links
-                            rescue StandardError
-                              true
+            disable_links = if active_integration&.preferred_disable_review_links != nil
+                              active_integration.preferred_disable_review_links
+                            else
+                              begin
+                                SpreeProductReviews.config.disable_review_links
+                              rescue StandardError
+                                true
+                              end
                             end
-            spam_words_str = begin
-                               SpreeProductReviews.config.spam_words
-                             rescue StandardError
-                               ''
+            spam_words_str = if active_integration&.preferred_spam_words.present?
+                               active_integration.preferred_spam_words
+                             else
+                               begin
+                                 SpreeProductReviews.config.spam_words
+                               rescue StandardError
+                                 ''
+                               end
                              end
 
             spam_score = 0

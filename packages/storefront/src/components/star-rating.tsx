@@ -56,7 +56,7 @@ export function StarRating({
                   style={{ width: `${fillAmount * 100}%` }}
                 >
                   <Star
-                    className={`${iconSize} fill-amber-400 text-amber-400 dark:fill-amber-500 dark:text-amber-500`}
+                    className={`${iconSize} max-w-none flex-shrink-0 fill-amber-400 text-amber-400 dark:fill-amber-500 dark:text-amber-500`}
                     strokeWidth={1.5}
                     aria-hidden="true"
                   />
