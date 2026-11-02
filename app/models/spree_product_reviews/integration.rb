@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module SpreeProductReviews
-  class Integration < Spree::Integration
+  class Integration < ::Spree::Integration
     preference :enabled, :boolean, default: true
     preference :require_approval, :boolean, default: true
     preference :allow_anonymous, :boolean, default: false
