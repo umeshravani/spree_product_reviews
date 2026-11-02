@@ -39,7 +39,10 @@ module Spree
             end
 
             # Product filter
-            scope = scope.where(product_id: params[:product_id]) if params[:product_id].present?
+            if params[:product_id].present?
+              product = load_product_by_identifier(params[:product_id])
+              scope = product ? scope.where(product_id: product.id) : scope.none
+            end
 
             # Rating filter
             scope = scope.where(rating: params[:rating].to_i) if params[:rating].present?
@@ -100,7 +103,11 @@ module Spree
 
           # GET /api/v3/admin/products/:product_id/reviews_summary
           def summary
-            product = current_store_products.friendly.find(params[:product_id])
+            product = load_product_by_identifier(params[:product_id])
+            unless product
+              return render json: { error: 'product_not_found', message: 'Product not found.' }, status: :not_found
+            end
+
             reviews = product.reviews.not_discarded
 
             render json: {
@@ -116,8 +123,6 @@ module Spree
                 recent_reviews: serialize_reviews(reviews.newest.limit(5))
               }
             }, status: :ok
-          rescue ActiveRecord::RecordNotFound
-            render json: { error: 'product_not_found', message: 'Product not found.' }, status: :not_found
           end
 
           # GET /api/v3/admin/product_reviews/:id
@@ -271,7 +276,32 @@ module Spree
           end
 
           def load_review
-            @review = base_scope.find(params[:id])
+            raw_id = params[:id].to_s
+            if defined?(::Spree::PrefixedId) && ::Spree::PrefixedId.prefixed_id?(raw_id)
+              decoded = ::Spree::PrefixedId.decode_prefixed_id(raw_id)
+              @review = base_scope.find_by(id: decoded) || base_scope.find(raw_id)
+            else
+              @review = base_scope.find(raw_id)
+            end
+          end
+
+          def load_product_by_identifier(identifier)
+            raw_id = identifier.to_s
+            return nil if raw_id.blank?
+
+            scope = current_store_products
+            if defined?(::Spree::PrefixedId) && ::Spree::PrefixedId.prefixed_id?(raw_id)
+              decoded = ::Spree::PrefixedId.decode_prefixed_id(raw_id)
+              scope.find_by(id: decoded) || (scope.respond_to?(:friendly) ? scope.friendly.find(raw_id) : scope.find_by(slug: raw_id))
+            elsif raw_id.match?(/\A\d+\z/)
+              scope.find_by(id: raw_id)
+            elsif scope.respond_to?(:friendly)
+              scope.friendly.find(raw_id)
+            else
+              scope.find_by(slug: raw_id)
+            end
+          rescue ActiveRecord::RecordNotFound
+            nil
           end
 
           def current_moderator

@@ -16,7 +16,12 @@ export class StoreReviewsClient {
   constructor(config: ReviewsClientConfig = {}) {
     const rawUrl = config.baseUrl || config.apiHost || ''
     this.baseUrl = rawUrl.replace(/\/$/, '')
-    this.fetchFn = config.fetchFn ?? globalThis.fetch
+    this.fetchFn = (input: RequestInfo | URL, init?: RequestInit) => {
+      if (config.fetchFn) {
+        return config.fetchFn(input, init)
+      }
+      return globalThis.fetch(input, init)
+    }
     this.getAuthToken = config.getAuthToken
     this.defaultHeaders = { ...(config.headers ?? {}) }
 

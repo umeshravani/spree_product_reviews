@@ -1,8 +1,8 @@
 {
   "admin": {
     "product_reviews": {
-      "nav": "Product Reviews",
-      "title": "Product Reviews",
+      "nav": "Reviews",
+      "title": "Reviews",
       "description": "Manage and moderate customer product ratings and reviews.",
       "tabs": {
         "all": "All",

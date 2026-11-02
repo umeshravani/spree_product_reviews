@@ -227,38 +227,127 @@ export function ReviewsListPage({ initialProductId }: ReviewsListProps) {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {/* Rating Filter */}
-            <select
-              value={ratingFilter}
-              onChange={(e) => {
-                setRatingFilter(e.target.value)
-                setCurrentPage(1)
-              }}
-              className="h-9 px-3 py-1 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-            >
-              <option value="">{t('admin.product_reviews.filters.all_ratings')}</option>
-              <option value="5">5 Stars</option>
-              <option value="4">4 Stars</option>
-              <option value="3">3 Stars</option>
-              <option value="2">2 Stars</option>
-              <option value="1">1 Star</option>
-            </select>
+            {/* Rating Filter Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9 gap-1.5 text-xs">
+                  <Filter className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span>
+                    {ratingFilter
+                      ? `${ratingFilter} ${ratingFilter === '1' ? 'Star' : 'Stars'}`
+                      : t('admin.product_reviews.filters.all_ratings')}
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => {
+                    setRatingFilter('')
+                    setCurrentPage(1)
+                  }}
+                >
+                  {t('admin.product_reviews.filters.all_ratings')}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setRatingFilter('5')
+                    setCurrentPage(1)
+                  }}
+                >
+                  5 Stars
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setRatingFilter('4')
+                    setCurrentPage(1)
+                  }}
+                >
+                  4 Stars
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setRatingFilter('3')
+                    setCurrentPage(1)
+                  }}
+                >
+                  3 Stars
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setRatingFilter('2')
+                    setCurrentPage(1)
+                  }}
+                >
+                  2 Stars
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setRatingFilter('1')
+                    setCurrentPage(1)
+                  }}
+                >
+                  1 Star
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* Sort Dropdown */}
-            <select
-              value={sortOption}
-              onChange={(e) => {
-                setSortOption(e.target.value)
-                setCurrentPage(1)
-              }}
-              className="h-9 px-3 py-1 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-            >
-              <option value="newest">{t('admin.product_reviews.filters.newest')}</option>
-              <option value="oldest">{t('admin.product_reviews.filters.oldest')}</option>
-              <option value="rating_desc">{t('admin.product_reviews.filters.rating_desc')}</option>
-              <option value="rating_asc">{t('admin.product_reviews.filters.rating_asc')}</option>
-              <option value="helpful">{t('admin.product_reviews.filters.helpful')}</option>
-            </select>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9 gap-1.5 text-xs">
+                  <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span>
+                    {sortOption === 'oldest' && t('admin.product_reviews.filters.oldest')}
+                    {sortOption === 'rating_desc' && t('admin.product_reviews.filters.rating_desc')}
+                    {sortOption === 'rating_asc' && t('admin.product_reviews.filters.rating_asc')}
+                    {sortOption === 'helpful' && t('admin.product_reviews.filters.helpful')}
+                    {sortOption === 'newest' && t('admin.product_reviews.filters.newest')}
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => {
+                    setSortOption('newest')
+                    setCurrentPage(1)
+                  }}
+                >
+                  {t('admin.product_reviews.filters.newest')}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setSortOption('oldest')
+                    setCurrentPage(1)
+                  }}
+                >
+                  {t('admin.product_reviews.filters.oldest')}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setSortOption('rating_desc')
+                    setCurrentPage(1)
+                  }}
+                >
+                  {t('admin.product_reviews.filters.rating_desc')}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setSortOption('rating_asc')
+                    setCurrentPage(1)
+                  }}
+                >
+                  {t('admin.product_reviews.filters.rating_asc')}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setSortOption('helpful')
+                    setCurrentPage(1)
+                  }}
+                >
+                  {t('admin.product_reviews.filters.helpful')}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 

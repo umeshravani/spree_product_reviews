@@ -1,5 +1,5 @@
 import { defineDashboardPlugin, i18n } from '@spree/dashboard-core'
-import { Star } from 'lucide-react'
+import { UserStar } from 'lucide-react'
 import { PendingReviewsBadge } from './components/pending-reviews-badge'
 import en from './locales/en.json'
 import { ProductReviewsCard } from './slots/product-reviews-card'
@@ -14,7 +14,7 @@ defineDashboardPlugin({
       key: 'product-reviews',
       labelKey: 'admin.product_reviews.nav',
       path: '/product_reviews',
-      icon: Star,
+      icon: UserStar,
       position: 650,
       subject: 'Spree::ProductReview',
       badge: PendingReviewsBadge,
