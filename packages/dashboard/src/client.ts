@@ -1,6 +1,7 @@
 import { adminClient } from '@spree/dashboard-core'
 import type {
   ProductReviewDetail,
+  ProductReviewsSettings,
   ProductWidgetSummary,
   ReviewCounts,
   ReviewListParams,
@@ -126,6 +127,23 @@ export const productReviewsClient = {
     const res = await adminClient.request<{ data: ProductWidgetSummary }>(
       'GET',
       `/products/${productId}/reviews_summary`
+    )
+    return res.data
+  },
+
+  async getSettings(): Promise<ProductReviewsSettings> {
+    const res = await adminClient.request<{ data: ProductReviewsSettings }>(
+      'GET',
+      '/product_reviews/settings'
+    )
+    return res.data
+  },
+
+  async updateSettings(settings: Partial<ProductReviewsSettings>): Promise<ProductReviewsSettings> {
+    const res = await adminClient.request<{ data: ProductReviewsSettings }>(
+      'PATCH',
+      '/product_reviews/settings',
+      { body: { settings } }
     )
     return res.data
   },

@@ -312,9 +312,12 @@ module Spree
 
           def active_integration
             @active_integration ||= begin
-              if defined?(SpreeProductReviews::Integration) && respond_to?(:current_store) && current_store
+              if defined?(SpreeProductReviews::Integration) && SpreeProductReviews::Integration.respond_to?(:find_by) && respond_to?(:current_store) && current_store
                 SpreeProductReviews::Integration.find_by(store: current_store)
               end
+            rescue StandardError => e
+              Rails.logger.warn("[SpreeProductReviews] active_integration lookup error: #{e.message}")
+              nil
             end
           end
 

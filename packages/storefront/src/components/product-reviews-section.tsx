@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
+import { Lock, LogIn, X } from 'lucide-react';
 import type {
   ProductReview,
   ReviewImage,
@@ -95,6 +96,7 @@ export function ProductReviewsSection({
 
   // Modal & Lightbox states
   const [isSubmissionOpen, setIsSubmissionOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [editingReview, setEditingReview] = useState<ProductReview | null>(null);
 
   // Lightbox state
@@ -104,16 +106,17 @@ export function ProductReviewsSection({
 
   // Write a review button handler
   const handleWriteReviewClick = useCallback(() => {
-    if (requireLogin && !bearerToken) {
+    const isCustomerPresent = Boolean(bearerToken || currentCustomerId);
+    if (requireLogin && !isCustomerPresent) {
       if (onLoginRequired) {
         onLoginRequired();
       } else {
-        alert('Please sign in to write a review.');
+        setIsAuthModalOpen(true);
       }
       return;
     }
     setIsSubmissionOpen(true);
-  }, [requireLogin, bearerToken, onLoginRequired]);
+  }, [requireLogin, bearerToken, currentCustomerId, onLoginRequired]);
 
   // Image lightbox opener
   const handleImageClick = useCallback((images: ReviewImage[], index: number) => {
@@ -240,6 +243,66 @@ export function ProductReviewsSection({
         open={isLightboxOpen}
         onClose={() => setIsLightboxOpen(false)}
       />
+
+      {/* Sign-In Required Modal (Replaces browser alert) */}
+      {isAuthModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="auth-modal-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 sm:p-6"
+          onClick={() => setIsAuthModalOpen(false)}
+        >
+          <div
+            className="relative w-full max-w-md bg-white dark:bg-neutral-900 rounded-2xl shadow-xl border border-neutral-200 dark:border-neutral-800 p-6 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setIsAuthModalOpen(false)}
+              className="absolute top-4 right-4 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 cursor-pointer"
+              aria-label="Close modal"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-700 dark:text-neutral-300">
+                <Lock className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 id="auth-modal-title" className="text-base font-semibold text-neutral-900 dark:text-white">
+                  Sign In to Write a Review
+                </h3>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                  Customer feedback requires verification
+                </p>
+              </div>
+            </div>
+
+            <p className="text-sm text-neutral-600 dark:text-neutral-300">
+              Only verified customers can leave feedback for {productName}. Please sign in or create an account to share your thoughts and photos.
+            </p>
+
+            <div className="pt-2 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setIsAuthModalOpen(false)}
+                className="px-4 py-2 text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <a
+                href="/account/login"
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-white dark:bg-white dark:hover:bg-neutral-100 dark:text-neutral-900 text-xs font-medium transition-colors"
+              >
+                <LogIn className="w-4 h-4" />
+                <span>Sign In</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

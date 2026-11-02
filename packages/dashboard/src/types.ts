@@ -106,3 +106,22 @@ export interface ReviewListResponse {
     per_page: number
   }
 }
+
+export interface ProductReviewsSettings {
+  enabled: boolean
+  require_approval: boolean
+  review_status_default?: string
+  allow_anonymous: boolean
+  allow_unverified: boolean
+  max_images_upload: number
+  max_image_size_mb?: number
+  block_spam_reviews: boolean
+  disable_review_links: boolean
+  spam_words: string
+  customer_rate_limit_per_hour?: number
+  ip_rate_limit_per_hour?: number
+  report_moderation_threshold: number
+  reviews_per_product_limit?: number
+  anonymize_ips?: boolean
+  duplicate_detection_window_hours?: number
+}

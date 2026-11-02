@@ -1,7 +1,17 @@
 'use client'
 
-import { AlertCircle, CheckCircle2, Image as ImageIcon, Loader2, UploadCloud, X } from 'lucide-react'
-import { useState } from 'react'
+import {
+  AlertCircle,
+  Camera,
+  CheckCircle2,
+  FileVideo,
+  Image as ImageIcon,
+  Loader2,
+  UploadCloud,
+  Video,
+  X,
+} from 'lucide-react'
+import { useRef, useState } from 'react'
 import type { CreateReviewPayload } from '../types'
 import { StarRating } from './star-rating'
 
@@ -46,49 +56,69 @@ export function ReviewSubmissionModal({
   const [review, setReview] = useState('')
   const [name, setName] = useState(initialName)
   const [showIdentifier, setShowIdentifier] = useState(true)
-  const [images, setImages] = useState<File[]>([])
-  const [imagePreviews, setImagePreviews] = useState<string[]>([])
+  const [mediaFiles, setMediaFiles] = useState<File[]>([])
+  const [mediaPreviews, setMediaPreviews] = useState<
+    { url: string; isVideo: boolean; name: string }[]
+  >([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const galleryInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+
+  const handleMediaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return
     const selectedFiles = Array.from(e.target.files)
 
     // Check count limit
-    if (images.length + selectedFiles.length > maxImages) {
-      setError(`You can upload a maximum of ${maxImages} images.`)
+    if (mediaFiles.length + selectedFiles.length > maxImages) {
+      setError(`You can upload a maximum of ${maxImages} media files.`)
       return
     }
 
-    // Validate size (5MB per file) and mime types
+    // Validate size and format
     for (const file of selectedFiles) {
-      if (file.size > 5 * 1024 * 1024) {
-        setError(`"${file.name}" exceeds the 5MB file size limit.`)
+      const isVideo = file.type.startsWith('video/')
+      const isImage = file.type.startsWith('image/')
+
+      if (!isVideo && !isImage) {
+        setError(`"${file.name}" is not a supported image or video format.`)
         return
       }
-      if (!file.type.startsWith('image/')) {
-        setError(`"${file.name}" is not a valid image format.`)
+
+      // Max 50MB for video, 10MB for image
+      const maxSize = isVideo ? 50 * 1024 * 1024 : 10 * 1024 * 1024
+      if (file.size > maxSize) {
+        setError(
+          `"${file.name}" exceeds the ${isVideo ? '50MB' : '10MB'} size limit.`
+        )
         return
       }
     }
 
     setError(null)
-    const newImages = [...images, ...selectedFiles]
-    setImages(newImages)
+    const newFiles = [...mediaFiles, ...selectedFiles]
+    setMediaFiles(newFiles)
 
     // Generate previews
-    const newPreviews = selectedFiles.map((f) => URL.createObjectURL(f))
-    setImagePreviews((prev) => [...prev, ...newPreviews])
+    const newPreviews = selectedFiles.map((f) => ({
+      url: URL.createObjectURL(f),
+      isVideo: f.type.startsWith('video/'),
+      name: f.name,
+    }))
+    setMediaPreviews((prev) => [...prev, ...newPreviews])
+
+    // Reset input
+    e.target.value = ''
   }
 
-  const handleRemoveImage = (index: number) => {
-    const updatedImages = images.filter((_, i) => i !== index)
-    const updatedPreviews = imagePreviews.filter((_, i) => i !== index)
-    URL.revokeObjectURL(imagePreviews[index])
-    setImages(updatedImages)
-    setImagePreviews(updatedPreviews)
+  const handleRemoveMedia = (index: number) => {
+    URL.revokeObjectURL(mediaPreviews[index].url)
+    const updatedFiles = mediaFiles.filter((_, i) => i !== index)
+    const updatedPreviews = mediaPreviews.filter((_, i) => i !== index)
+    setMediaFiles(updatedFiles)
+    setMediaPreviews(updatedPreviews)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -117,7 +147,7 @@ export function ReviewSubmissionModal({
         review: review.trim(),
         name: name.trim() || undefined,
         show_identifier: showIdentifier,
-        images: images.length > 0 ? images : undefined,
+        images: mediaFiles.length > 0 ? mediaFiles : undefined,
       }
 
       const res = await onSubmit(payload)
@@ -150,47 +180,54 @@ export function ReviewSubmissionModal({
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-xl bg-white dark:bg-neutral-900 rounded-2xl shadow-xl border border-neutral-200 dark:border-neutral-800 p-6 sm:p-8 my-8"
+        className="relative w-full max-w-xl bg-white dark:bg-neutral-900 rounded-2xl shadow-xl border border-neutral-200 dark:border-neutral-800 p-6 sm:p-8 space-y-6 my-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close dialog"
-          className="absolute top-5 right-5 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-colors cursor-pointer"
-        >
-          <X className="w-5 h-5" />
-        </button>
-
-        <h3
-          id="write-review-dialog-title"
-          className="text-xl font-bold text-neutral-900 dark:text-neutral-50 mb-1"
-        >
-          Write a Review
-        </h3>
-        <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-6">
-          Share your experience with <span className="font-medium text-neutral-700 dark:text-neutral-300">{productName}</span>
-        </p>
-
-        {error && (
-          <div className="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-xs text-red-700 dark:text-red-300 flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{error}</span>
+        {/* Header */}
+        <div className="flex items-start justify-between border-b border-neutral-100 dark:border-neutral-800 pb-4">
+          <div>
+            <h3
+              id="write-review-dialog-title"
+              className="text-lg font-bold text-neutral-900 dark:text-neutral-100 tracking-tight"
+            >
+              Write a Review
+            </h3>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+              Share your honest feedback for{' '}
+              <span className="font-semibold text-neutral-700 dark:text-neutral-300">
+                {productName}
+              </span>
+            </p>
           </div>
-        )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 p-1 rounded-lg transition-colors cursor-pointer"
+            aria-label="Close dialog"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
 
+        {/* Success Alert */}
         {successMessage && (
-          <div className="mb-4 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 text-sm text-emerald-700 dark:text-emerald-300 flex items-start gap-3">
-            <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-600 mt-0.5" />
-            <div>
-              <p className="font-semibold text-emerald-900 dark:text-emerald-200">Review Received!</p>
-              <p className="text-xs mt-0.5">{successMessage}</p>
-            </div>
+          <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 flex items-center gap-3 text-emerald-800 dark:text-emerald-200">
+            <CheckCircle2 className="w-5 h-5 flex-shrink-0 text-emerald-600 dark:text-emerald-400" />
+            <span className="text-xs sm:text-sm font-medium">{successMessage}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Star Rating Picker */}
+        {/* Error Alert */}
+        {error && (
+          <div className="p-3.5 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 flex items-center gap-2.5 text-red-700 dark:text-red-300">
+            <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-600 dark:text-red-400" />
+            <span className="text-xs font-medium">{error}</span>
+          </div>
+        )}
+
+        {/* Submission Form */}
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Rating */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-2">
               Overall Rating *
@@ -198,12 +235,12 @@ export function ReviewSubmissionModal({
             <div className="flex items-center gap-4">
               <StarRating
                 rating={rating}
-                size="lg"
                 interactive
+                size="lg"
                 onChange={(newRating) => setRating(newRating)}
               />
-              <span className="text-xs font-medium text-neutral-700 dark:text-neutral-300">
-                {RATING_DESCRIPTIONS[rating]}
+              <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400">
+                {RATING_DESCRIPTIONS[rating] || ''}
               </span>
             </div>
           </div>
@@ -214,39 +251,39 @@ export function ReviewSubmissionModal({
               htmlFor="submission-title"
               className="block text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-1.5"
             >
-              Headline / Title *
+              Review Headline *
             </label>
             <input
               id="submission-title"
               type="text"
               required
-              placeholder="e.g. Great fit, superior fabric!"
+              placeholder="e.g. Absolutely fantastic quality & fit!"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-400"
             />
           </div>
 
-          {/* Review Text */}
+          {/* Review Body */}
           <div>
             <label
               htmlFor="submission-review"
               className="block text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-1.5"
             >
-              Written Review *
+              Detailed Review *
             </label>
             <textarea
               id="submission-review"
               required
               rows={4}
-              placeholder="What did you like or dislike? How does it fit? Would you recommend it?"
+              placeholder="What did you like or dislike? How does it look and perform in person?"
               value={review}
               onChange={(e) => setReview(e.target.value)}
               className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-400 resize-y"
             />
           </div>
 
-          {/* Public Nickname */}
+          {/* Nickname */}
           <div>
             <label
               htmlFor="submission-name"
@@ -273,28 +310,54 @@ export function ReviewSubmissionModal({
               onChange={(e) => setShowIdentifier(e.target.checked)}
               className="h-4 w-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-400 cursor-pointer"
             />
-            <label htmlFor="submission-show-id" className="text-xs text-neutral-600 dark:text-neutral-400 cursor-pointer">
+            <label
+              htmlFor="submission-show-id"
+              className="text-xs text-neutral-600 dark:text-neutral-400 cursor-pointer"
+            >
               Display my public nickname with this review (uncheck to post as &ldquo;Verified Customer&rdquo;)
             </label>
           </div>
 
-          {/* Photo Attachments */}
+          {/* Media / Photo / Video Attachments */}
           {photosAllowed && (
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-1.5">
-                Customer Photos (optional, max {maxImages})
+                Customer Photos & Videos (optional, max {maxImages})
               </label>
 
-              {imagePreviews.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {imagePreviews.map((url, index) => (
-                    <div key={url} className="relative group w-16 h-16 rounded-lg overflow-hidden border border-neutral-200 dark:border-neutral-700">
-                      <img src={url} alt="Review attachment preview" className="w-full h-full object-cover" />
+              {mediaPreviews.length > 0 && (
+                <div className="flex flex-wrap gap-2.5 mb-3">
+                  {mediaPreviews.map((item, index) => (
+                    <div
+                      key={item.url}
+                      className="relative group w-20 h-20 rounded-xl overflow-hidden border border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800"
+                    >
+                      {item.isVideo ? (
+                        <div className="w-full h-full relative">
+                          <video
+                            src={item.url}
+                            className="w-full h-full object-cover"
+                            muted
+                            playsInline
+                            loop
+                            autoPlay
+                          />
+                          <div className="absolute bottom-1 right-1 bg-black/70 text-white rounded p-0.5">
+                            <Video className="w-3 h-3" />
+                          </div>
+                        </div>
+                      ) : (
+                        <img
+                          src={item.url}
+                          alt="Review attachment preview"
+                          className="w-full h-full object-cover"
+                        />
+                      )}
                       <button
                         type="button"
-                        onClick={() => handleRemoveImage(index)}
+                        onClick={() => handleRemoveMedia(index)}
                         className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                        aria-label="Remove image"
+                        aria-label="Remove media"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -303,22 +366,50 @@ export function ReviewSubmissionModal({
                 </div>
               )}
 
-              {images.length < maxImages && (
-                <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-neutral-300 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-600 rounded-xl cursor-pointer bg-neutral-50 dark:bg-neutral-800/40 transition-colors">
-                  <UploadCloud className="w-5 h-5 text-neutral-400 mb-1" />
-                  <span className="text-xs font-medium text-neutral-700 dark:text-neutral-300">
-                    Upload photos
-                  </span>
-                  <span className="text-[10px] text-neutral-400">PNG, JPG, WebP up to 5MB each</span>
+              {mediaFiles.length < maxImages && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {/* Option 1: Gallery / Files upload */}
+                  <button
+                    type="button"
+                    onClick={() => galleryInputRef.current?.click()}
+                    className="flex items-center justify-center gap-2 p-3 border border-neutral-200 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-600 rounded-xl bg-neutral-50 dark:bg-neutral-800/40 text-neutral-700 dark:text-neutral-200 text-xs font-medium transition-colors cursor-pointer"
+                  >
+                    <UploadCloud className="w-4 h-4 text-neutral-500" />
+                    <span>Upload Photos / Videos</span>
+                  </button>
+
+                  {/* Option 2: Direct Camera / Capture */}
+                  <button
+                    type="button"
+                    onClick={() => cameraInputRef.current?.click()}
+                    className="flex items-center justify-center gap-2 p-3 border border-neutral-200 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-600 rounded-xl bg-neutral-50 dark:bg-neutral-800/40 text-neutral-700 dark:text-neutral-200 text-xs font-medium transition-colors cursor-pointer"
+                  >
+                    <Camera className="w-4 h-4 text-neutral-500" />
+                    <span>Take Photo / Video</span>
+                  </button>
+
+                  {/* Hidden inputs */}
                   <input
+                    ref={galleryInputRef}
                     type="file"
                     multiple
-                    accept="image/*"
-                    onChange={handleImageChange}
+                    accept="image/*,video/*"
+                    onChange={handleMediaChange}
                     className="hidden"
                   />
-                </label>
+                  <input
+                    ref={cameraInputRef}
+                    type="file"
+                    accept="image/*,video/*"
+                    capture="environment"
+                    onChange={handleMediaChange}
+                    className="hidden"
+                  />
+                </div>
               )}
+              <p className="text-[10px] text-neutral-400 mt-1">
+                Supports JPG, PNG, WebP, MP4, MOV up to 50MB
+              </p>
             </div>
           )}
 
