@@ -34,6 +34,33 @@ module SpreeProductReviews
       end
     end
 
+    initializer 'spree_product_reviews.request_size_limit', after: :load_config_initializers do
+      begin
+        require 'spree/api/middleware/request_size_limit'
+        module ::SpreeProductReviews
+          module RequestSizeLimitExtension
+            REVIEW_SUBMISSION_PATH = %r{\A/api/v3/store/products/[^/]+/product_reviews/?\z}
+            MAX_REVIEW_UPLOAD_SIZE = 64.megabytes
+
+            def max_body_size(env)
+              if env['REQUEST_METHOD'] == 'POST' && REVIEW_SUBMISSION_PATH.match?(env['PATH_INFO'].to_s)
+                return MAX_REVIEW_UPLOAD_SIZE
+              end
+
+              super
+            end
+
+            def file_upload?(env)
+              super || (env['REQUEST_METHOD'] == 'POST' && REVIEW_SUBMISSION_PATH.match?(env['PATH_INFO'].to_s))
+            end
+          end
+        end
+        ::Spree::Api::Middleware::RequestSizeLimit.prepend(::SpreeProductReviews::RequestSizeLimitExtension)
+      rescue LoadError => e
+        Rails.logger.warn("[SpreeProductReviews] Could not load RequestSizeLimit: #{e.message}")
+      end
+    end
+
     config.generators do |g|
       g.test_framework :rspec
     end
@@ -45,19 +72,6 @@ module SpreeProductReviews
 
       if defined?(Spree) && Spree.respond_to?(:permissions) && Spree.permissions.respond_to?(:register_scope)
         Spree.permissions.register_scope(:product_reviews, group: :catalog, resources: -> { [Spree::ProductReview] })
-      end
-
-      if defined?(Spree::Api::Middleware::RequestSizeLimit)
-        module ::SpreeProductReviews
-          module RequestSizeLimitExtension
-            REVIEW_SUBMISSION_PATH = %r{\A/api/v3/store/products/[^/]+/product_reviews/?\z}
-
-            def file_upload?(env)
-              super || (env['REQUEST_METHOD'] == 'POST' && REVIEW_SUBMISSION_PATH.match?(env['PATH_INFO'].to_s))
-            end
-          end
-        end
-        Spree::Api::Middleware::RequestSizeLimit.prepend(::SpreeProductReviews::RequestSizeLimitExtension)
       end
     end
   end

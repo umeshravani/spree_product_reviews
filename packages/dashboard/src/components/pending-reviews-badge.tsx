@@ -1,4 +1,5 @@
 import { useOptionalStore } from '@spree/dashboard-core'
+import { SidebarMenuBadge } from '@spree/dashboard-ui'
 import { useQuery } from '@tanstack/react-query'
 import { productReviewsClient } from '../client'
 
@@ -17,12 +18,11 @@ export function PendingReviewsBadge() {
   }
 
   return (
-    <span
-      className="ml-auto inline-flex items-center justify-center rounded-full bg-amber-500 px-1.5 py-0.2 text-[10px] font-semibold text-white min-w-4 text-center leading-4"
+    <SidebarMenuBadge
       aria-label={`${counts.pending} pending reviews`}
       title={`${counts.pending} reviews pending moderation`}
     >
       {counts.pending > 99 ? '99+' : counts.pending}
-    </span>
+    </SidebarMenuBadge>
   )
 }

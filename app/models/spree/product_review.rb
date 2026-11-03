@@ -418,6 +418,10 @@ module Spree
 
     private
 
+    ALLOWED_IMAGE_TYPES = %w[image/jpeg image/jpg image/png image/webp image/gif].freeze
+    ALLOWED_VIDEO_TYPES = %w[video/mp4 video/webm video/quicktime video/x-matroska].freeze
+    ALLOWED_MEDIA_TYPES = (ALLOWED_IMAGE_TYPES + ALLOWED_VIDEO_TYPES).freeze
+
     def validate_images
       return unless images.attached?
 
@@ -425,21 +429,21 @@ module Spree
       max_imgs = 5 if max_imgs.nil? || max_imgs <= 0
 
       if images.count > max_imgs
-        errors.add(:images, "Maximum #{max_imgs} images allowed")
+        errors.add(:images, "Maximum #{max_imgs} media files allowed")
       end
 
-      max_mb = SpreeProductReviews.config.max_image_size_mb rescue 5
-      max_mb = 5 if max_mb.nil? || max_mb <= 0
-      max_bytes = max_mb.megabytes
+      images.each do |media|
+        content_type = media.blob.content_type.to_s.downcase
+        is_video = ALLOWED_VIDEO_TYPES.include?(content_type)
+        max_mb = is_video ? 50 : 10
+        max_bytes = max_mb.megabytes
 
-      images.each do |image|
-        if image.blob.byte_size > max_bytes
-          errors.add(:images, "Each image must be smaller than #{max_mb}MB")
+        if media.blob.byte_size > max_bytes
+          errors.add(:images, "File exceeds maximum allowed size of #{max_mb}MB")
         end
 
-        allowed_types = %w[image/jpeg image/png image/webp]
-        unless allowed_types.include?(image.blob.content_type)
-          errors.add(:images, "Invalid format (#{image.blob.content_type}). Allowed: JPEG, PNG, WebP")
+        unless ALLOWED_MEDIA_TYPES.include?(content_type)
+          errors.add(:images, "Invalid format (#{content_type}). Allowed: JPEG, PNG, WebP, MP4, MOV, WebM")
         end
       end
     end

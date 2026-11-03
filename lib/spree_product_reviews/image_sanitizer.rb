@@ -10,7 +10,14 @@ module SpreeProductReviews
     class UnsupportedFormatError < SanitizationError; end
     class OversizedUploadError < SanitizationError; end
 
-    ALLOWED_MIME_TYPES = %w[image/jpeg image/jpg image/png image/webp].freeze
+    ALLOWED_IMAGE_MIME_TYPES = %w[image/jpeg image/jpg image/png image/webp].freeze
+    ALLOWED_VIDEO_MIME_TYPES = %w[video/mp4 video/webm video/quicktime video/x-matroska].freeze
+    ALLOWED_MIME_TYPES = (ALLOWED_IMAGE_MIME_TYPES + ALLOWED_VIDEO_MIME_TYPES).freeze
+
+    def self.video?(file)
+      ct = file.respond_to?(:content_type) ? file.content_type.to_s.downcase : ''
+      ALLOWED_VIDEO_MIME_TYPES.include?(ct)
+    end
 
     def self.sanitize!(file, max_mb: nil)
       new(file, max_mb: max_mb).sanitize!
@@ -27,18 +34,25 @@ module SpreeProductReviews
 
     def initialize(file, max_mb: nil)
       @file = file
-      @max_mb = max_mb || begin
-        SpreeProductReviews.config.max_image_size_mb
-      rescue StandardError
-        5
-      end
-      @max_mb = 5 if @max_mb.nil? || @max_mb <= 0
+      @is_video = self.class.video?(file)
+      @max_mb = if @is_video
+                  50
+                else
+                  max_mb || begin
+                    SpreeProductReviews.config.max_image_size_mb
+                  rescue StandardError
+                    10
+                  end
+                end
+      @max_mb = (@is_video ? 50 : 10) if @max_mb.nil? || @max_mb <= 0
     end
 
     def sanitize!
       validate_presence_and_structure!
       validate_size!
       validate_mime_and_magic_bytes!
+      return file if @is_video # Videos are size and magic-byte verified; EXIF stripping applies to raster images
+
       ensure_processor_available!
       process_and_strip_metadata!
     end
@@ -72,18 +86,26 @@ module SpreeProductReviews
     def validate_mime_and_magic_bytes!
       content_type = file.respond_to?(:content_type) ? file.content_type.to_s.downcase : ''
       unless ALLOWED_MIME_TYPES.include?(content_type)
-        raise UnsupportedFormatError, "Unsupported image format (#{content_type.presence || 'unknown'}). Allowed formats: JPEG, PNG, WebP"
+        raise UnsupportedFormatError, "Unsupported image format (#{content_type.presence || 'unknown'}). Allowed formats: JPEG, PNG, WebP, MP4, MOV, WebM"
       end
 
       temp_path = file.respond_to?(:tempfile) ? file.tempfile.path : file.path
-      magic = File.binread(temp_path, 12).to_s
+      header = File.binread(temp_path, 32).to_s
 
-      is_valid_jpeg = magic.start_with?("\xFF\xD8\xFF".b)
-      is_valid_png = magic.start_with?("\x89PNG\r\n\x1a\n".b)
-      is_valid_webp = magic.start_with?("RIFF".b) && magic[8..11] == "WEBP".b
+      if @is_video
+        is_valid_mp4 = header[4..7] == "ftyp".b || header[4..7] == "moov".b || header.include?("ftyp".b)
+        is_valid_webm = header.start_with?("\x1A\x45\xDF\xA3".b)
+        unless is_valid_mp4 || is_valid_webm
+          raise CorruptedFileError, 'Video file header is malformed or corrupted'
+        end
+      else
+        is_valid_jpeg = header.start_with?("\xFF\xD8\xFF".b)
+        is_valid_png = header.start_with?("\x89PNG\r\n\x1a\n".b)
+        is_valid_webp = header.start_with?("RIFF".b) && header[8..11] == "WEBP".b
 
-      unless is_valid_jpeg || is_valid_png || is_valid_webp
-        raise CorruptedFileError, 'Image file header is malformed or corrupted'
+        unless is_valid_jpeg || is_valid_png || is_valid_webp
+          raise CorruptedFileError, 'Image file header is malformed or corrupted'
+        end
       end
     end
 

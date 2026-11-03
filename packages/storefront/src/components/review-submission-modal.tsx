@@ -11,7 +11,7 @@ import {
   Video,
   X,
 } from 'lucide-react'
-import { useRef, useState } from 'react'
+import React, { useRef, useState } from 'react'
 import type { CreateReviewPayload } from '../types'
 import { StarRating } from './star-rating'
 
@@ -56,6 +56,7 @@ export function ReviewSubmissionModal({
   const [review, setReview] = useState('')
   const [name, setName] = useState(initialName)
   const [showIdentifier, setShowIdentifier] = useState(true)
+  const [agreedToTerms, setAgreedToTerms] = useState(true)
   const [mediaFiles, setMediaFiles] = useState<File[]>([])
   const [mediaPreviews, setMediaPreviews] = useState<
     { url: string; isVideo: boolean; name: string }[]
@@ -136,6 +137,10 @@ export function ReviewSubmissionModal({
       setError('Please write a few sentences about your experience.')
       return
     }
+    if (!agreedToTerms) {
+      setError('Please agree to the review terms and conditions before submitting.')
+      return
+    }
 
     setIsSubmitting(true)
     setError(null)
@@ -180,7 +185,7 @@ export function ReviewSubmissionModal({
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-xl bg-white dark:bg-neutral-900 rounded-2xl shadow-xl border border-neutral-200 dark:border-neutral-800 p-6 sm:p-8 space-y-6 my-auto"
+        className="relative w-full max-w-xl bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border border-neutral-200 dark:border-neutral-800 p-6 sm:p-8 space-y-6 my-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -188,21 +193,18 @@ export function ReviewSubmissionModal({
           <div>
             <h3
               id="write-review-dialog-title"
-              className="text-lg font-bold text-neutral-900 dark:text-neutral-100 tracking-tight"
+              className="text-xl font-bold text-neutral-900 dark:text-neutral-100 tracking-tight"
             >
-              Write a Review
+              Add a review for:
             </h3>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-              Share your honest feedback for{' '}
-              <span className="font-semibold text-neutral-700 dark:text-neutral-300">
-                {productName}
-              </span>
+            <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mt-1">
+              {productName}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 p-1 rounded-lg transition-colors cursor-pointer"
+            className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 p-1.5 rounded-lg transition-colors cursor-pointer"
             aria-label="Close dialog"
           >
             <X className="w-5 h-5" />
@@ -239,8 +241,11 @@ export function ReviewSubmissionModal({
                 size="lg"
                 onChange={(newRating) => setRating(newRating)}
               />
-              <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400">
-                {RATING_DESCRIPTIONS[rating] || ''}
+              <span className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">
+                {rating}.0 out of 5
+              </span>
+              <span className="text-xs text-neutral-500 dark:text-neutral-400">
+                ({RATING_DESCRIPTIONS[rating] || ''})
               </span>
             </div>
           </div>
@@ -251,7 +256,7 @@ export function ReviewSubmissionModal({
               htmlFor="submission-title"
               className="block text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-1.5"
             >
-              Review Headline *
+              Review title *
             </label>
             <input
               id="submission-title"
@@ -260,7 +265,7 @@ export function ReviewSubmissionModal({
               placeholder="e.g. Absolutely fantastic quality & fit!"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-400"
+              className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-neutral-100"
             />
           </div>
 
@@ -270,7 +275,7 @@ export function ReviewSubmissionModal({
               htmlFor="submission-review"
               className="block text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-1.5"
             >
-              Detailed Review *
+              Review description *
             </label>
             <textarea
               id="submission-review"
@@ -279,7 +284,7 @@ export function ReviewSubmissionModal({
               placeholder="What did you like or dislike? How does it look and perform in person?"
               value={review}
               onChange={(e) => setReview(e.target.value)}
-              className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-400 resize-y"
+              className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-neutral-100 resize-y"
             />
           </div>
 
@@ -297,32 +302,15 @@ export function ReviewSubmissionModal({
               placeholder="e.g. Sarah M."
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-400"
+              className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-neutral-100"
             />
-          </div>
-
-          {/* Masking / Anonymous Option */}
-          <div className="flex items-center gap-2">
-            <input
-              id="submission-show-id"
-              type="checkbox"
-              checked={showIdentifier}
-              onChange={(e) => setShowIdentifier(e.target.checked)}
-              className="h-4 w-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-400 cursor-pointer"
-            />
-            <label
-              htmlFor="submission-show-id"
-              className="text-xs text-neutral-600 dark:text-neutral-400 cursor-pointer"
-            >
-              Display my public nickname with this review (uncheck to post as &ldquo;Verified Customer&rdquo;)
-            </label>
           </div>
 
           {/* Media / Photo / Video Attachments */}
           {photosAllowed && (
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-1.5">
-                Customer Photos & Videos (optional, max {maxImages})
+                Add real photos of the product to help other customers (Optional, max {maxImages})
               </label>
 
               {mediaPreviews.length > 0 && (
@@ -367,26 +355,29 @@ export function ReviewSubmissionModal({
               )}
 
               {mediaFiles.length < maxImages && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {/* Option 1: Gallery / Files upload */}
-                  <button
-                    type="button"
+                <div className="space-y-2">
+                  {/* Dashed Drag & Drop Box */}
+                  <div
                     onClick={() => galleryInputRef.current?.click()}
-                    className="flex items-center justify-center gap-2 p-3 border border-neutral-200 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-600 rounded-xl bg-neutral-50 dark:bg-neutral-800/40 text-neutral-700 dark:text-neutral-200 text-xs font-medium transition-colors cursor-pointer"
+                    className="border-2 border-dashed border-neutral-300 dark:border-neutral-700 hover:border-neutral-500 dark:hover:border-neutral-400 rounded-xl p-5 text-center cursor-pointer transition-colors bg-neutral-50/50 dark:bg-neutral-800/30 flex flex-col items-center justify-center"
                   >
-                    <UploadCloud className="w-4 h-4 text-neutral-500" />
-                    <span>Upload Photos / Videos</span>
-                  </button>
+                    <UploadCloud className="w-8 h-8 text-neutral-400 mb-2" />
+                    <p className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">
+                      Click to upload <span className="font-normal text-neutral-500">or drag and drop</span>
+                    </p>
+                    <p className="text-xs text-neutral-400 mt-1">PNG, JPG, WebP or Video (Max 50MB)</p>
+                  </div>
 
-                  {/* Option 2: Direct Camera / Capture */}
-                  <button
-                    type="button"
-                    onClick={() => cameraInputRef.current?.click()}
-                    className="flex items-center justify-center gap-2 p-3 border border-neutral-200 dark:border-neutral-700 hover:border-neutral-400 dark:hover:border-neutral-600 rounded-xl bg-neutral-50 dark:bg-neutral-800/40 text-neutral-700 dark:text-neutral-200 text-xs font-medium transition-colors cursor-pointer"
-                  >
-                    <Camera className="w-4 h-4 text-neutral-500" />
-                    <span>Take Photo / Video</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => cameraInputRef.current?.click()}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-xs font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors cursor-pointer"
+                    >
+                      <Camera className="w-3.5 h-3.5 text-neutral-500" />
+                      <span>Take Photo / Video</span>
+                    </button>
+                  </div>
 
                   {/* Hidden inputs */}
                   <input
@@ -407,29 +398,61 @@ export function ReviewSubmissionModal({
                   />
                 </div>
               )}
-              <p className="text-[10px] text-neutral-400 mt-1">
-                Supports JPG, PNG, WebP, MP4, MOV up to 50MB
-              </p>
             </div>
           )}
 
-          {/* Submit Actions */}
-          <div className="pt-4 flex items-center justify-end gap-3 border-t border-neutral-100 dark:border-neutral-800">
+          {/* Checkboxes: Terms & Show Identifier */}
+          <div className="space-y-2 pt-2">
+            <div className="flex items-center gap-2.5">
+              <input
+                id="submission-terms"
+                type="checkbox"
+                checked={agreedToTerms}
+                onChange={(e) => setAgreedToTerms(e.target.checked)}
+                className="h-4 w-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-900 cursor-pointer"
+              />
+              <label
+                htmlFor="submission-terms"
+                className="text-xs text-neutral-600 dark:text-neutral-400 cursor-pointer"
+              >
+                By publishing this review you agree with the <span className="font-semibold text-neutral-900 dark:text-neutral-100">terms and conditions</span>.
+              </label>
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              <input
+                id="submission-show-id"
+                type="checkbox"
+                checked={showIdentifier}
+                onChange={(e) => setShowIdentifier(e.target.checked)}
+                className="h-4 w-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-900 cursor-pointer"
+              />
+              <label
+                htmlFor="submission-show-id"
+                className="text-xs text-neutral-600 dark:text-neutral-400 cursor-pointer"
+              >
+                Show my name in the review (uncheck to post as &ldquo;Verified Customer&rdquo;)
+              </label>
+            </div>
+          </div>
+
+          {/* Submit Actions matching Image 2 */}
+          <div className="pt-4 flex items-center gap-3 border-t border-neutral-100 dark:border-neutral-800">
+            <button
+              type="submit"
+              disabled={isSubmitting || !!successMessage}
+              className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-white dark:bg-neutral-100 dark:hover:bg-neutral-200 dark:text-neutral-900 font-semibold text-sm transition-all shadow-sm disabled:opacity-50 cursor-pointer"
+            >
+              {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+              <span>Add review</span>
+            </button>
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="px-4 py-2 text-xs font-medium text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-neutral-100 cursor-pointer"
+              className="px-5 py-2.5 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-700 font-medium text-sm transition-all cursor-pointer"
             >
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting || !!successMessage}
-              className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-white dark:bg-neutral-100 dark:hover:bg-neutral-200 dark:text-neutral-900 font-medium text-xs transition-colors shadow-sm disabled:opacity-50 cursor-pointer"
-            >
-              {isSubmitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              <span>Submit Review</span>
             </button>
           </div>
         </form>
