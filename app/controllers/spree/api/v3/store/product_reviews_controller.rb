@@ -263,17 +263,24 @@ module Spree
           private
 
           def load_product
-            scope = if respond_to?(:current_store) && current_store
-                      current_store.products
-                    else
-                      Spree::Product
-                    end
             raw_id = params[:product_id].to_s
-            if defined?(::Spree::PrefixedId) && ::Spree::PrefixedId.prefixed_id?(raw_id)
-              decoded = ::Spree::PrefixedId.decode_prefixed_id(raw_id)
-              @product = scope.find_by(id: decoded) || scope.friendly.find(raw_id)
-            else
-              @product = scope.friendly.find(raw_id)
+            scope = respond_to?(:current_store) && current_store ? current_store.products : Spree::Product.all
+
+            @product = if defined?(::Spree::PrefixedId) && ::Spree::PrefixedId.prefixed_id?(raw_id)
+                         decoded = ::Spree::PrefixedId.decode_prefixed_id(raw_id) rescue nil
+                         (scope.find_by(id: decoded) if decoded) ||
+                           (Spree::Product.find_by(id: decoded) if decoded) ||
+                           scope.friendly.find_by(slug: raw_id) ||
+                           Spree::Product.friendly.find_by(slug: raw_id)
+                       else
+                         scope.friendly.find_by(slug: raw_id) ||
+                           scope.find_by(id: raw_id) ||
+                           Spree::Product.friendly.find_by(slug: raw_id) ||
+                           Spree::Product.find_by(id: raw_id)
+                       end
+
+            unless @product
+              render json: { error: 'not_found', message: 'Product not found.' }, status: :not_found
             end
           end
 

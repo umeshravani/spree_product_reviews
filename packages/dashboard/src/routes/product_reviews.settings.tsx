@@ -12,3 +12,4 @@ export const Route = createFileRoute('/_authenticated/$storeId/product_reviews/s
     </Suspense>
   ),
 })
+

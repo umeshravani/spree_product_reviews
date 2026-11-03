@@ -181,7 +181,7 @@ export function ReviewSubmissionModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="write-review-dialog-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 sm:p-6 overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-6 overflow-y-auto"
       onClick={onClose}
     >
       <div
@@ -262,7 +262,7 @@ export function ReviewSubmissionModal({
               id="submission-title"
               type="text"
               required
-              placeholder="e.g. Absolutely fantastic quality & fit!"
+              placeholder="e.g. Great quality and fit"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-neutral-100"
@@ -281,11 +281,14 @@ export function ReviewSubmissionModal({
               id="submission-review"
               required
               rows={4}
-              placeholder="What did you like or dislike? How does it look and perform in person?"
+              placeholder="Share details of your experience with this product..."
               value={review}
               onChange={(e) => setReview(e.target.value)}
               className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-neutral-100 resize-y"
             />
+            <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+              Problems with the product or delivery? <span className="font-semibold text-neutral-800 dark:text-neutral-200 cursor-pointer hover:underline">Send a report</span>.
+            </p>
           </div>
 
           {/* Nickname */}
@@ -299,7 +302,7 @@ export function ReviewSubmissionModal({
             <input
               id="submission-name"
               type="text"
-              placeholder="e.g. Sarah M."
+              placeholder="e.g. Alex M."
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-neutral-100"
@@ -441,7 +444,7 @@ export function ReviewSubmissionModal({
             <button
               type="submit"
               disabled={isSubmitting || !!successMessage}
-              className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 text-white dark:bg-neutral-100 dark:hover:bg-neutral-200 dark:text-neutral-900 font-semibold text-sm transition-all shadow-sm disabled:opacity-50 cursor-pointer"
+              className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg bg-black hover:bg-neutral-800 text-white font-semibold text-sm transition-all shadow-sm disabled:opacity-50 cursor-pointer"
             >
               {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
               <span>Add review</span>

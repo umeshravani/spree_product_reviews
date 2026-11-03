@@ -1,8 +1,6 @@
 import {
   Button,
-  Card,
   Dialog,
-  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -106,25 +104,26 @@ export function ReviewDetailModal({
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
+        <DialogHeader className="pr-10 border-b pb-4">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-3 flex-wrap">
               <StarRating rating={currentReview.rating} size="md" />
-              <DialogTitle className="text-xl font-semibold">
+              <DialogTitle className="text-lg font-semibold tracking-tight">
                 {currentReview.title || 'Untitled Review'}
               </DialogTitle>
+              <ReviewStatusBadge status={currentReview.status} />
             </div>
-            <ReviewStatusBadge status={currentReview.status} />
+            <DialogDescription className="text-xs text-muted-foreground flex items-center gap-2">
+              <span>{t('admin.product_reviews.table.product')}: <strong className="font-medium text-foreground">{currentReview.product_name}</strong></span>
+              <span>•</span>
+              <span>{new Date(currentReview.created_at).toLocaleString()}</span>
+            </DialogDescription>
           </div>
-          <DialogDescription className="text-xs text-muted-foreground">
-            {t('admin.product_reviews.table.product')}: {currentReview.product_name} •{' '}
-            {new Date(currentReview.created_at).toLocaleString()}
-          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 py-2">
           {/* Main Review Text */}
-          <div className="rounded-lg border bg-muted/20 p-4">
+          <div className="rounded-xl border border-border/70 bg-card p-4 shadow-2xs">
             <p className="whitespace-pre-line text-sm leading-relaxed text-foreground">
               {currentReview.review}
             </p>
@@ -133,14 +132,14 @@ export function ReviewDetailModal({
           {/* Review Metadata Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Customer Information */}
-            <Card className="p-4 space-y-2">
-              <div className="flex items-center gap-2 font-medium text-xs text-muted-foreground uppercase tracking-wider">
-                <User className="w-3.5 h-3.5" />
+            <div className="rounded-xl border border-border/70 bg-muted/20 p-4 space-y-2.5">
+              <div className="flex items-center gap-2 font-semibold text-[11px] text-muted-foreground uppercase tracking-wider">
+                <User className="w-3.5 h-3.5 text-muted-foreground" />
                 {t('admin.product_reviews.detail.customer_info')}
               </div>
-              <div className="space-y-1 text-sm">
+              <div className="space-y-1.5 text-sm">
                 <div className="flex items-center gap-2 font-medium">
-                  {currentReview.reviewer_name}
+                  <span>{currentReview.reviewer_name}</span>
                   {currentReview.verified_purchaser && (
                     <span className="inline-flex items-center gap-1 rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
                       <ShieldCheck className="w-3 h-3" />
@@ -159,40 +158,40 @@ export function ReviewDetailModal({
                   </div>
                 )}
               </div>
-            </Card>
+            </div>
 
             {/* Product & Feedback Information */}
-            <Card className="p-4 space-y-2">
-              <div className="flex items-center gap-2 font-medium text-xs text-muted-foreground uppercase tracking-wider">
-                <MessageSquare className="w-3.5 h-3.5" />
+            <div className="rounded-xl border border-border/70 bg-muted/20 p-4 space-y-2.5">
+              <div className="flex items-center gap-2 font-semibold text-[11px] text-muted-foreground uppercase tracking-wider">
+                <MessageSquare className="w-3.5 h-3.5 text-muted-foreground" />
                 {t('admin.product_reviews.detail.helpful_votes')}
               </div>
-              <div className="space-y-1 text-sm">
+              <div className="space-y-2 text-sm">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">Helpful Votes:</span>
-                  <span className="font-semibold text-emerald-600">{currentReview.helpful_count}</span>
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">{currentReview.helpful_count}</span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">Unhelpful Votes:</span>
-                  <span className="font-semibold text-rose-600">{currentReview.unhelpful_count}</span>
+                  <span className="font-semibold text-rose-600 dark:text-rose-400">{currentReview.unhelpful_count}</span>
                 </div>
                 {currentReview.moderator_name && (
-                  <div className="pt-2 border-t text-xs text-muted-foreground">
-                    Last Moderated by <span className="font-medium">{currentReview.moderator_name}</span>
+                  <div className="pt-2 border-t border-border/60 text-xs text-muted-foreground">
+                    Last Moderated by <span className="font-medium text-foreground">{currentReview.moderator_name}</span>
                     {currentReview.moderated_at && (
                       <> on {new Date(currentReview.moderated_at).toLocaleDateString()}</>
                     )}
                   </div>
                 )}
               </div>
-            </Card>
+            </div>
           </div>
 
           {/* Image Attachments Gallery */}
           {currentReview.images && currentReview.images.length > 0 && (
             <div className="space-y-2">
-              <div className="flex items-center gap-2 font-medium text-xs text-muted-foreground uppercase tracking-wider">
-                <ImageIcon className="w-3.5 h-3.5" />
+              <div className="flex items-center gap-2 font-semibold text-[11px] text-muted-foreground uppercase tracking-wider">
+                <ImageIcon className="w-3.5 h-3.5 text-muted-foreground" />
                 {t('admin.product_reviews.detail.images')} ({currentReview.images.length})
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
@@ -223,7 +222,7 @@ export function ReviewDetailModal({
 
           {/* Moderation Note Input */}
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">
+            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               {t('admin.product_reviews.detail.notes')}
             </label>
             <input
@@ -231,29 +230,29 @@ export function ReviewDetailModal({
               value={moderatorNote}
               onChange={(e) => setModeratorNote(e.target.value)}
               placeholder={t('admin.product_reviews.actions.add_note')}
-              className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+              className="w-full px-3.5 py-2 text-sm rounded-lg border border-input bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
 
           {/* Moderation Audit History */}
           <div className="space-y-2">
-            <div className="flex items-center gap-2 font-medium text-xs text-muted-foreground uppercase tracking-wider">
-              <History className="w-3.5 h-3.5" />
+            <div className="flex items-center gap-2 font-semibold text-[11px] text-muted-foreground uppercase tracking-wider">
+              <History className="w-3.5 h-3.5 text-muted-foreground" />
               {t('admin.product_reviews.detail.moderation_history')}
             </div>
             {currentReview.moderation_audits && currentReview.moderation_audits.length > 0 ? (
-              <div className="space-y-2 max-h-48 overflow-y-auto border rounded-lg p-2 divide-y">
+              <div className="space-y-2 max-h-48 overflow-y-auto border border-border/70 rounded-xl p-3 divide-y divide-border/60 bg-muted/10">
                 {currentReview.moderation_audits.map((audit) => (
                   <div key={audit.id} className="pt-2 first:pt-0 text-xs flex items-start justify-between gap-2">
                     <div>
-                      <span className="font-semibold uppercase tracking-wider text-[10px] px-1.5 py-0.5 rounded bg-muted">
+                      <span className="font-semibold uppercase tracking-wider text-[10px] px-1.5 py-0.5 rounded bg-muted text-foreground">
                         {audit.action}
                       </span>
                       {audit.moderator_name && (
                         <span className="ml-2 text-muted-foreground">by {audit.moderator_name}</span>
                       )}
                       {audit.note && (
-                        <p className="mt-0.5 text-foreground italic">"{audit.note}"</p>
+                        <p className="mt-0.5 text-foreground italic">&ldquo;{audit.note}&rdquo;</p>
                       )}
                     </div>
                     <span className="text-[10px] text-muted-foreground shrink-0">
@@ -272,37 +271,41 @@ export function ReviewDetailModal({
 
         {/* Action Controls */}
         <DialogFooter className="flex items-center justify-between sm:justify-between gap-2 pt-4 border-t">
-          <div className="flex items-center gap-1.5">
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => {
-                if (confirm('Permanently delete or withdraw this review?')) {
-                  handleAction('delete')
-                }
-              }}
-              disabled={isSubmitting}
-            >
-              <Trash2 className="w-3.5 h-3.5 mr-1" />
-              {t('admin.product_reviews.actions.delete')}
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              if (confirm('Permanently delete or withdraw this review?')) {
+                handleAction('delete')
+              }
+            }}
+            disabled={isSubmitting}
+            className="text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+          >
+            <Trash2 className="w-3.5 h-3.5 mr-1" />
+            {t('admin.product_reviews.actions.delete')}
+          </Button>
 
           <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={onClose} disabled={isSubmitting}>
+              {t('admin.product_reviews.actions.cancel', 'Cancel')}
+            </Button>
+
             {currentReview.status === 'pending' && (
               <>
                 <Button
                   variant="outline"
                   size="sm"
+                  className="text-rose-600 border-rose-200 hover:bg-rose-50 dark:border-rose-900/50 dark:hover:bg-rose-950/40"
                   onClick={() => handleAction('reject')}
                   disabled={isSubmitting}
                 >
-                  <X className="w-3.5 h-3.5 mr-1 text-rose-500" />
+                  <X className="w-3.5 h-3.5 mr-1" />
                   {t('admin.product_reviews.actions.reject')}
                 </Button>
                 <Button
                   size="sm"
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs font-medium"
                   onClick={() => handleAction('approve')}
                   disabled={isSubmitting}
                 >
@@ -358,12 +361,6 @@ export function ReviewDetailModal({
                 {t('admin.product_reviews.actions.restore')}
               </Button>
             )}
-
-            <DialogClose asChild>
-              <Button variant="ghost" size="sm">
-                {t('admin.product_reviews.actions.cancel')}
-              </Button>
-            </DialogClose>
           </div>
         </DialogFooter>
       </DialogContent>
