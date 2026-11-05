@@ -12,8 +12,10 @@ import {
 } from '@spree/dashboard-ui'
 import {
   Check,
+  CheckCircle2,
   Eye,
   EyeOff,
+  Gift,
   History,
   Image as ImageIcon,
   MessageSquare,
@@ -305,6 +307,37 @@ export function ReviewDetailModal({
                 {currentReview.review}
               </p>
             </div>
+
+            {/* Reward Information Banner */}
+            {currentReview.reward_code && (
+              <div className="rounded-xl border border-amber-200/60 bg-amber-50/50 dark:border-amber-900/40 dark:bg-amber-950/20 p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400">
+                    <Gift className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h5 className="text-xs font-semibold uppercase tracking-wider text-amber-800 dark:text-amber-300">
+                      Incentivized Review Reward Issued
+                    </h5>
+                    <p className="text-sm font-medium text-foreground">
+                      Gift Card Code:{' '}
+                      <code className="px-1.5 py-0.5 rounded bg-muted font-mono font-bold text-xs select-all">
+                        {currentReview.reward_code}
+                      </code>
+                      {currentReview.reward_amount && (
+                        <span className="ml-2 text-xs text-muted-foreground font-normal">
+                          (Amount: {currentReview.reward_amount})
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-400">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  Active Gift Card
+                </span>
+              </div>
+            )}
 
             {/* Review Metadata Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

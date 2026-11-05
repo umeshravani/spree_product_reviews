@@ -34,7 +34,9 @@ module Spree
               helpful_count: review.helpful_count || 0,
               unhelpful_count: review.unhelpful_count || 0,
               created_at: review.created_at&.iso8601,
-              images: serialize_images(review)
+              images: serialize_images(review),
+              reward_code: review.respond_to?(:reward_code) ? review.reward_code : nil,
+              reward_amount: review.respond_to?(:reward_amount) ? review.reward_amount&.to_f : nil
             }
           end
 

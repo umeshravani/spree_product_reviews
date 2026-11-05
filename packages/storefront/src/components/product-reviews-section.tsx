@@ -223,6 +223,8 @@ export function ProductReviewsSection({
         productName={productName}
         allowPhotos={allowPhotos}
         maxImages={maxImages}
+        settings={meta?.settings}
+        isAuthenticated={Boolean(bearerToken || currentCustomerId)}
       />
 
       {/* Review Edit Modal */}

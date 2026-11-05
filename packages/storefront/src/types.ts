@@ -31,6 +31,39 @@ export interface ProductReview {
   created_at: string
   images: ReviewImage[]
   customer_id?: string | null
+  reward_code?: string | null
+  reward_amount?: number | null
+}
+
+export interface ProductReviewsSettings {
+  enabled?: boolean
+  require_approval?: boolean
+  allow_anonymous?: boolean
+  allow_unverified?: boolean
+  max_images_upload?: number
+  max_image_size_mb?: number
+  modal_mode?: 'single' | 'multi'
+  rewards_enabled?: boolean
+  photo_reward_enabled?: boolean
+  photo_reward_percentage?: number
+  photo_reward_amount?: number
+  photo_reward_text?: string
+  video_reward_enabled?: boolean
+  video_reward_percentage?: number
+  video_reward_amount?: number
+  video_reward_text?: string
+  step1_title?: string
+  step1_dislike_label?: string
+  step1_love_label?: string
+  step2_title?: string
+  step2_subtitle?: string
+  step3_title?: string
+  step3_placeholder?: string
+  step4_title?: string
+  step4_subtitle?: string
+  title_star_color?: string
+  title_rating_format?: string
+  title_reviews_label?: string
 }
 
 export type RatingDistribution = Record<number | string, number>
@@ -42,6 +75,7 @@ export interface ReviewsMeta {
   average_rating: number
   review_count: number
   rating_distribution: RatingDistribution
+  settings?: ProductReviewsSettings
   message?: string
   pagination?: {
     total_pages: number

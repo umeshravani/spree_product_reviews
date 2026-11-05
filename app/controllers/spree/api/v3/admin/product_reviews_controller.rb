@@ -349,6 +349,8 @@ module Spree
               helpful_count: review.helpful_count,
               unhelpful_count: review.unhelpful_count,
               images_count: review.images.attached? ? review.images.count : 0,
+              reward_code: review.respond_to?(:reward_code) ? review.reward_code : nil,
+              reward_amount: review.respond_to?(:reward_amount) ? review.reward_amount&.to_f : nil,
               created_at: review.created_at&.iso8601,
               updated_at: review.updated_at&.iso8601
             }
@@ -450,6 +452,9 @@ module Spree
             end
 
             data.merge(
+              reward_code: review.respond_to?(:reward_code) ? review.reward_code : nil,
+              reward_amount: review.respond_to?(:reward_amount) ? review.reward_amount&.to_f : nil,
+              reward_gift_card_id: review.respond_to?(:reward_gift_card_id) ? review.reward_gift_card_id : nil,
               ip_address: review.ip_address,
               flagged_count: review.flagged_count || 0,
               spam_score: review.spam_score || 0,

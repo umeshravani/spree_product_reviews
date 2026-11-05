@@ -58,7 +58,8 @@ module Spree
                 per_page: per_page,
                 average_rating: @product.respond_to?(:average_rating) ? @product.average_rating.to_f : 0.0,
                 review_count: @product.respond_to?(:review_count) ? @product.review_count : 0,
-                rating_distribution: distribution
+                rating_distribution: distribution,
+                settings: public_settings
               }
             }, status: :ok
           end
@@ -445,6 +446,40 @@ module Spree
           rescue StandardError => e
             Rails.logger.warn("[ProductReviewsController] Auth resolution error: #{e.message}")
             nil
+          end
+
+          def public_settings
+            config = SpreeProductReviews.config
+            {
+              enabled: config.enabled,
+              require_approval: config.require_approval,
+              allow_anonymous: config.allow_anonymous,
+              allow_unverified: config.allow_unverified,
+              max_images_upload: config.max_images_upload,
+              max_image_size_mb: config.max_image_size_mb,
+              modal_mode: config.modal_mode || 'multi',
+              rewards_enabled: config.rewards_enabled,
+              photo_reward_enabled: config.photo_reward_enabled,
+              photo_reward_percentage: config.photo_reward_percentage,
+              photo_reward_amount: config.photo_reward_amount,
+              photo_reward_text: config.photo_reward_text,
+              video_reward_enabled: config.video_reward_enabled,
+              video_reward_percentage: config.video_reward_percentage,
+              video_reward_amount: config.video_reward_amount,
+              video_reward_text: config.video_reward_text,
+              step1_title: config.step1_title,
+              step1_dislike_label: config.step1_dislike_label,
+              step1_love_label: config.step1_love_label,
+              step2_title: config.step2_title,
+              step2_subtitle: config.step2_subtitle,
+              step3_title: config.step3_title,
+              step3_placeholder: config.step3_placeholder,
+              step4_title: config.step4_title,
+              step4_subtitle: config.step4_subtitle,
+              title_star_color: config.title_star_color,
+              title_rating_format: config.title_rating_format,
+              title_reviews_label: config.title_reviews_label
+            }
           end
         end
       end

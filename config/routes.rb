@@ -4,6 +4,8 @@ Spree::Core::Engine.add_routes do
   namespace :api, defaults: { format: 'json' } do
     namespace :v3 do
       namespace :store do
+        resource :product_reviews_settings, only: [:show], path: 'product_reviews/settings', controller: 'product_reviews_settings'
+
         resources :products, only: [] do
           resources :product_reviews, only: [:index, :create, :update, :destroy] do
             member do

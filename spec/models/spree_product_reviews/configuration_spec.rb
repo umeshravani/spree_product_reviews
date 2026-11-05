@@ -80,6 +80,46 @@ RSpec.describe SpreeProductReviews::Configuration do
     it 'defaults duplicate detection window to 24 hours' do
       expect(config.duplicate_detection_window_hours).to eq(24)
     end
+
+    it 'defaults modal_mode to multi' do
+      expect(config.modal_mode).to eq('multi')
+    end
+
+    it 'defaults rewards_enabled to true' do
+      expect(config.rewards_enabled).to be true
+    end
+
+    it 'defaults photo rewards settings' do
+      expect(config.photo_reward_enabled).to be true
+      expect(config.photo_reward_percentage).to eq(15)
+      expect(config.photo_reward_amount).to eq(150.0)
+      expect(config.photo_reward_text).to eq('Get 15% off your next purchase')
+    end
+
+    it 'defaults video rewards settings' do
+      expect(config.video_reward_enabled).to be true
+      expect(config.video_reward_percentage).to eq(20)
+      expect(config.video_reward_amount).to eq(200.0)
+      expect(config.video_reward_text).to eq('Get 20% off your next purchase')
+    end
+
+    it 'defaults multi-step wizard titles and labels' do
+      expect(config.step1_title).to eq('How would you rate this item?')
+      expect(config.step1_dislike_label).to eq('Dislike it')
+      expect(config.step1_love_label).to eq('Love it!')
+      expect(config.step2_title).to eq('Show it off')
+      expect(config.step2_subtitle).to eq("We'd love to see it in action!")
+      expect(config.step3_title).to eq('Tell us more!')
+      expect(config.step3_placeholder).to eq('Share your experience')
+      expect(config.step4_title).to eq('Thank you for posting!')
+      expect(config.step4_subtitle).to eq('Your feedback helps others make better choices.')
+    end
+
+    it 'defaults title rating header presentation' do
+      expect(config.title_star_color).to eq('#000000')
+      expect(config.title_rating_format).to eq('{rating}/5 {count}+ reviews')
+      expect(config.title_reviews_label).to eq('reviews')
+    end
   end
 
   describe 'configure block' do

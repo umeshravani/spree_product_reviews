@@ -36,9 +36,15 @@ spree_product_reviews/
    - Connects reviews directly to `Spree::Customer` (`customer_id`) while safely preserving legacy `user_id` records.
 3. **Native React Dashboard Integration:**
    - Registers via official `defineDashboardPlugin` contracts in Spree 6 React Dashboard (`@spree/dashboard`) with real-time pending review badge, photo moderation, staff notes, and audit history.
-4. **React 19 & Next.js App Router Storefront:**
+4. **Multi-Step Wizard & Single-Page Review Modals:**
+   - Choose between a 4-step guided wizard (Star Rating -> Media Upload with Discount Incentives -> Detailed Feedback -> Confirmation) or a clean single-page submission flow with sentence-cased labels and inline login.
+5. **Incentivized Reviews & Automatic Gift Card Rewards:**
+   - Automatically issues native `Spree::GiftCard` rewards into customer accounts upon approval of reviews featuring customer photos or videos, redeemable at checkout.
+6. **Production Summary Breakdown & PDP Star Header:**
+   - Permanent distribution track bars with gold star score (`★ 4.9`), star breakdown rows (5-to-1), and `ProductRatingHeader` (`★★★★★ 4.9/5 1,500+ reviews`) with smooth scrolling to `#reviews`.
+7. **React 19 & Next.js App Router Storefront:**
    - Modular, mobile-responsive UI components with server-rendered Google Search Central compliant JSON-LD structured data.
-5. **Production Anti-Spam & Security Pipeline:**
+8. **Production Anti-Spam & Security Pipeline:**
    - Customer & IP rate limiting, duplicate submission detection, salted SHA256 IP hashing (`ip_hash`), XSS sanitization, 5MB image limits, and community abuse reporting.
 
 ---

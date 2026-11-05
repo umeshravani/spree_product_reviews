@@ -2,17 +2,20 @@
 
 import {
   AlertCircle,
+  ArrowLeft,
   Camera,
   CheckCircle2,
   FileVideo,
+  Gift,
   Image as ImageIcon,
   Loader2,
+  Play,
   UploadCloud,
   Video,
   X,
 } from 'lucide-react'
 import React, { useRef, useState } from 'react'
-import type { CreateReviewPayload } from '../types'
+import type { CreateReviewPayload, ProductReviewsSettings } from '../types'
 import { StarRating } from './star-rating'
 
 export interface ReviewSubmissionModalProps {
@@ -25,6 +28,10 @@ export interface ReviewSubmissionModalProps {
   allowImages?: boolean
   allowPhotos?: boolean
   maxImages?: number
+  settings?: ProductReviewsSettings
+  mode?: 'single' | 'multi'
+  isAuthenticated?: boolean
+  loginUrl?: string
 }
 
 const RATING_DESCRIPTIONS: Record<number, string> = {
@@ -45,12 +52,20 @@ export function ReviewSubmissionModal({
   allowImages = true,
   allowPhotos,
   maxImages = 5,
+  settings,
+  mode,
+  isAuthenticated = true,
+  loginUrl = '/login',
 }: ReviewSubmissionModalProps) {
   const isVisible = open ?? isOpen ?? false
   if (!isVisible) return null
 
+  // Determine modal mode: props > settings > default 'multi'
+  const activeMode: 'single' | 'multi' = mode || settings?.modal_mode || 'multi'
   const photosAllowed = allowPhotos ?? allowImages ?? true
 
+  // Form State
+  const [step, setStep] = useState<number>(1)
   const [rating, setRating] = useState<number>(5)
   const [title, setTitle] = useState('')
   const [review, setReview] = useState('')
@@ -63,12 +78,26 @@ export function ReviewSubmissionModal({
   >([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [rewardCode, setRewardCode] = useState<string | null>(null)
 
-  const galleryInputRef = useRef<HTMLInputElement>(null)
+  const photoInputRef = useRef<HTMLInputElement>(null)
+  const videoInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
 
-  const handleMediaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Settings customizable labels
+  const step1Title = settings?.step1_title || 'How would you rate this item?'
+  const step1Dislike = settings?.step1_dislike_label || 'Dislike it'
+  const step1Love = settings?.step1_love_label || 'Love it!'
+  const step2Title = settings?.step2_title || 'Show it off'
+  const step2Subtitle = settings?.step2_subtitle || "We'd love to see it in action!"
+  const photoRewardText = settings?.photo_reward_text || 'Get 15% off your next purchase'
+  const videoRewardText = settings?.video_reward_text || 'Get 20% off your next purchase'
+  const step3Title = settings?.step3_title || 'Tell us more!'
+  const step3Placeholder = settings?.step3_placeholder || 'Share your experience'
+  const step4Title = settings?.step4_title || 'Thank you for posting!'
+  const step4Subtitle = settings?.step4_subtitle || 'Your feedback helps others make better choices.'
+
+  const handleMediaChange = (e: React.ChangeEvent<HTMLInputElement>, preferredType?: 'image' | 'video') => {
     if (!e.target.files) return
     const selectedFiles = Array.from(e.target.files)
 
@@ -122,20 +151,20 @@ export function ReviewSubmissionModal({
     setMediaPreviews(updatedPreviews)
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
 
     if (rating < 1 || rating > 5) {
       setError('Please select a star rating from 1 to 5.')
       return
     }
-    if (!title.trim()) {
-      setError('Please provide a review headline.')
-      return
-    }
     if (!review.trim()) {
       setError('Please write a few sentences about your experience.')
       return
+    }
+    if (!title.trim()) {
+      // Auto-fallback headline from review text if omitted
+      setTitle(review.trim().slice(0, 60))
     }
     if (!agreedToTerms) {
       setError('Please agree to the review terms and conditions before submitting.')
@@ -148,7 +177,7 @@ export function ReviewSubmissionModal({
     try {
       const payload: CreateReviewPayload = {
         rating,
-        title: title.trim(),
+        title: title.trim() || review.trim().slice(0, 60),
         review: review.trim(),
         name: name.trim() || undefined,
         show_identifier: showIdentifier,
@@ -156,309 +185,666 @@ export function ReviewSubmissionModal({
       }
 
       const res = await onSubmit(payload)
-      let successText = 'Thank you! Your review has been submitted for moderation.'
-      if (res && typeof res === 'object' && 'meta' in res) {
-        const metaObj = (res as { meta?: { message?: string } }).meta
-        if (metaObj && typeof metaObj.message === 'string') {
-          successText = metaObj.message
-        }
+      if (res && typeof res === 'object') {
+        const resObj = res as { data?: { reward_code?: string }; reward_code?: string }
+        const code = resObj.data?.reward_code || resObj.reward_code
+        if (code) setRewardCode(code)
       }
 
-      setSuccessMessage(successText)
-      setTimeout(() => {
-        onClose()
-      }, 2000)
+      if (activeMode === 'multi') {
+        setStep(4) // Advance to confirmation step
+      } else {
+        setTimeout(() => onClose(), 1500)
+      }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to submit review'
-      setError(msg)
+      const errorMsg = err instanceof Error ? err.message : 'Failed to submit review'
+      setError(errorMsg)
     } finally {
       setIsSubmitting(false)
     }
   }
 
+  // Segment Progress Indicator for Multi-Step Flow (4 Segment Pills)
+  const renderProgressPills = (currentStep: number) => {
+    return (
+      <div className="flex items-center gap-2" aria-label={`Step ${currentStep} of 4`}>
+        {[1, 2, 3, 4].map((s) => (
+          <div
+            key={s}
+            className={`h-1.5 w-10 sm:w-12 rounded-full transition-colors duration-300 ${
+              s <= currentStep
+                ? 'bg-black dark:bg-white'
+                : 'bg-neutral-200 dark:bg-neutral-700'
+            }`}
+          />
+        ))}
+      </div>
+    )
+  }
+
+  // ----------------------------------------------------------------------------------
+  // MULTI-STEP WIZARD VIEW (Matching media_1793875123018, media_1793875146160, etc.)
+  // ----------------------------------------------------------------------------------
+  if (activeMode === 'multi') {
+    return (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="review-modal-title"
+      >
+        <div className="relative w-full max-w-xl bg-white dark:bg-neutral-900 rounded-3xl shadow-2xl border border-neutral-100 dark:border-neutral-800 p-8 sm:p-10 flex flex-col justify-between min-h-[460px] transition-all">
+          {/* Top Close Button (Top Left per Screenshot) */}
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute top-6 left-6 p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-800 dark:text-neutral-200 transition-colors cursor-pointer"
+            aria-label="Close"
+          >
+            <X className="w-5 h-5 stroke-[2.2]" />
+          </button>
+
+          {/* STEP 1: How would you rate this item? (media_1793875123018_cc557ae0.png) */}
+          {step === 1 && (
+            <div className="flex-1 flex flex-col items-center justify-center text-center py-6 space-y-8 animate-in fade-in duration-200">
+              <h2
+                id="review-modal-title"
+                className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100 max-w-sm"
+              >
+                {step1Title}
+              </h2>
+
+              <div className="flex flex-col items-center space-y-3">
+                {/* 5 Large Interactive Amber Stars */}
+                <div className="flex items-center gap-3">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => {
+                        setRating(star)
+                        // Smoothly advance to Step 2
+                        setTimeout(() => setStep(2), 250)
+                      }}
+                      className="p-1 rounded-full hover:scale-115 transition-transform duration-150 cursor-pointer focus:outline-none"
+                      aria-label={`${star} star`}
+                    >
+                      <svg
+                        className={`w-9 h-9 sm:w-11 sm:h-11 transition-colors ${
+                          star <= rating
+                            ? 'fill-amber-400 text-amber-400'
+                            : 'fill-transparent text-amber-400'
+                        }`}
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        fill="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"
+                        />
+                      </svg>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Subtitles beneath the stars: "Dislike it" & "Love it!" */}
+                <div className="flex items-center justify-between w-64 sm:w-72 text-xs font-medium text-neutral-800 dark:text-neutral-200 pt-1">
+                  <span>{step1Dislike}</span>
+                  <span>{step1Love}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 2: Show it off (media_1793875146160_bbb176b8.png) */}
+          {step === 2 && (
+            <div className="flex-1 flex flex-col justify-between pt-4 pb-2 animate-in fade-in duration-200">
+              <div className="text-center space-y-1.5 pb-6">
+                <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
+                  {step2Title}
+                </h2>
+                <p className="text-sm text-neutral-600 dark:text-neutral-400">
+                  {step2Subtitle}
+                </p>
+              </div>
+
+              {/* Reward Incentive Cards */}
+              <div className="space-y-4 max-w-md mx-auto w-full">
+                {/* Photo Upload Card */}
+                <div className="border border-neutral-300 dark:border-neutral-700 rounded-2xl p-6 text-center space-y-4 shadow-2xs hover:border-neutral-400 transition-colors">
+                  <h3 className="text-lg font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
+                    {photoRewardText}
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => photoInputRef.current?.click()}
+                    className="w-full inline-flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-100 text-white dark:text-black font-bold text-sm tracking-wide transition-all cursor-pointer"
+                  >
+                    <ImageIcon className="w-4 h-4" />
+                    <span>Add photos</span>
+                  </button>
+                </div>
+
+                {/* Video Upload Card */}
+                <div className="border border-neutral-300 dark:border-neutral-700 rounded-2xl p-6 text-center space-y-4 shadow-2xs hover:border-neutral-400 transition-colors">
+                  <h3 className="text-lg font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
+                    {videoRewardText}
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => videoInputRef.current?.click()}
+                    className="w-full inline-flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-100 text-white dark:text-black font-bold text-sm tracking-wide transition-all cursor-pointer"
+                  >
+                    <Play className="w-4 h-4 fill-current" />
+                    <span>Add video</span>
+                  </button>
+                </div>
+
+                {/* Media Preview Thumbnails */}
+                {mediaPreviews.length > 0 && (
+                  <div className="pt-2 flex flex-wrap gap-2.5 justify-center">
+                    {mediaPreviews.map((preview, idx) => (
+                      <div
+                        key={idx}
+                        className="relative group w-16 h-16 rounded-xl overflow-hidden border border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800"
+                      >
+                        {preview.isVideo ? (
+                          <div className="w-full h-full flex items-center justify-center bg-neutral-900 text-white">
+                            <Video className="w-6 h-6" />
+                          </div>
+                        ) : (
+                          <img
+                            src={preview.url}
+                            alt="Uploaded attachment"
+                            className="w-full h-full object-cover"
+                          />
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveMedia(idx)}
+                          className="absolute top-1 right-1 p-1 rounded-full bg-black/70 text-white hover:bg-black transition-colors"
+                          title="Remove media"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Hidden File Inputs */}
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={(e) => handleMediaChange(e, 'image')}
+                  className="hidden"
+                />
+                <input
+                  ref={videoInputRef}
+                  type="file"
+                  multiple
+                  accept="video/*"
+                  onChange={(e) => handleMediaChange(e, 'video')}
+                  className="hidden"
+                />
+              </div>
+
+              {/* Bottom Nav Bar matching Screenshot */}
+              <div className="pt-8 flex items-center justify-between w-full border-t border-neutral-100 dark:border-neutral-800/80">
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className="inline-flex items-center gap-1.5 text-sm font-bold text-neutral-900 dark:text-neutral-100 hover:opacity-70 transition-opacity cursor-pointer"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Back</span>
+                </button>
+
+                {renderProgressPills(2)}
+
+                <button
+                  type="button"
+                  onClick={() => setStep(3)}
+                  className="text-sm font-bold text-neutral-900 dark:text-neutral-100 hover:opacity-70 transition-opacity cursor-pointer"
+                >
+                  {mediaFiles.length > 0 ? 'Next' : 'Skip'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 3: Tell us more! (media_1793875161750_593f9982.png) */}
+          {step === 3 && (
+            <div className="flex-1 flex flex-col justify-between pt-4 pb-2 animate-in fade-in duration-200">
+              <div className="text-center pb-4">
+                <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
+                  {step3Title}
+                </h2>
+              </div>
+
+              {error && (
+                <div className="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 text-xs flex items-center gap-2 border border-red-200 dark:border-red-900/40">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
+
+              {/* If authentication is required and user is not logged in */}
+              {!isAuthenticated && !settings?.allow_anonymous ? (
+                <div className="my-auto text-center p-6 rounded-2xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 space-y-3">
+                  <h3 className="text-base font-semibold text-neutral-900 dark:text-neutral-100">
+                    Sign in to post your review
+                  </h3>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 max-w-sm mx-auto">
+                    To maintain trustworthy feedback from verified shoppers, please sign in to your account.
+                  </p>
+                  <a
+                    href={loginUrl}
+                    className="inline-flex items-center justify-center px-6 py-2.5 bg-black hover:bg-neutral-800 text-white font-semibold text-xs tracking-wider uppercase rounded-xl transition-colors cursor-pointer"
+                  >
+                    Sign In
+                  </a>
+                </div>
+              ) : (
+                <div className="space-y-4 max-w-md mx-auto w-full">
+                  {/* Headline / Title (Sentence Case) */}
+                  <div>
+                    <input
+                      type="text"
+                      placeholder="Headline (e.g. Amazing quality and fast delivery)"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white transition-all text-neutral-900 dark:text-neutral-100"
+                    />
+                  </div>
+
+                  {/* Main Review Textarea matching Screenshot */}
+                  <div className="relative">
+                    <textarea
+                      rows={5}
+                      placeholder={step3Placeholder}
+                      value={review}
+                      onChange={(e) => setReview(e.target.value)}
+                      className="w-full p-4 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white transition-all resize-none text-neutral-900 dark:text-neutral-100"
+                    />
+                  </div>
+
+                  {/* Nickname & Display Preference */}
+                  <div className="space-y-2 pt-1">
+                    <input
+                      type="text"
+                      placeholder="Your name or nickname (optional)"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-xs focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white transition-all text-neutral-900 dark:text-neutral-100"
+                    />
+
+                    <div className="flex items-center gap-2 pt-1">
+                      <input
+                        id="multi-show-name"
+                        type="checkbox"
+                        checked={showIdentifier}
+                        onChange={(e) => setShowIdentifier(e.target.checked)}
+                        className="w-4 h-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-900 cursor-pointer"
+                      />
+                      <label
+                        htmlFor="multi-show-name"
+                        className="text-xs text-neutral-600 dark:text-neutral-400 cursor-pointer select-none"
+                      >
+                        Display my name with this review (uncheck to post as &ldquo;Verified Customer&rdquo;)
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Bottom Nav Bar */}
+              <div className="pt-6 flex items-center justify-between w-full border-t border-neutral-100 dark:border-neutral-800/80">
+                <button
+                  type="button"
+                  onClick={() => setStep(2)}
+                  className="inline-flex items-center gap-1.5 text-sm font-bold text-neutral-900 dark:text-neutral-100 hover:opacity-70 transition-opacity cursor-pointer"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Back</span>
+                </button>
+
+                {renderProgressPills(3)}
+
+                <button
+                  type="button"
+                  onClick={() => handleSubmit()}
+                  disabled={isSubmitting || !review.trim()}
+                  className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-900 dark:text-neutral-100 font-bold text-sm tracking-wide transition-all disabled:opacity-40 cursor-pointer"
+                >
+                  {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                  <span>Next</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 4: Thank you for posting! (Confirmation & Reward Banner) */}
+          {step === 4 && (
+            <div className="flex-1 flex flex-col items-center justify-center text-center py-6 space-y-6 animate-in zoom-in-95 duration-200">
+              <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                <CheckCircle2 className="w-10 h-10 stroke-[2.2]" />
+              </div>
+
+              <div className="space-y-2 max-w-sm">
+                <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
+                  {step4Title}
+                </h2>
+                <p className="text-sm text-neutral-600 dark:text-neutral-400">
+                  {step4Subtitle}
+                </p>
+              </div>
+
+              {/* Reward Notification Banner */}
+              {mediaFiles.length > 0 && (
+                <div className="max-w-md w-full p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 text-left flex items-start gap-3.5">
+                  <div className="p-2 rounded-xl bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400 flex-shrink-0 mt-0.5">
+                    <Gift className="w-5 h-5" />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
+                      Reward Issued on Approval
+                    </h4>
+                    <p className="text-xs text-neutral-700 dark:text-neutral-300 leading-relaxed">
+                      You&apos;ve uploaded media with your review! As soon as your review is approved by our team, your Gift Card will automatically appear in your account for checkout.
+                    </p>
+                    {rewardCode && (
+                      <div className="pt-1.5 flex items-center gap-2">
+                        <span className="text-[11px] font-medium text-muted-foreground">Reward code:</span>
+                        <code className="px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900/60 font-mono text-xs font-bold text-amber-900 dark:text-amber-100">
+                          {rewardCode}
+                        </code>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-4 w-full max-w-xs">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="w-full py-3.5 px-6 rounded-xl bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-100 text-white dark:text-black font-bold text-sm tracking-wide transition-all cursor-pointer shadow-sm"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // ----------------------------------------------------------------------------------
+  // SINGLE-PAGE CLEAN SUBMISSION FORM (Clean UI/UX, no all-caps, with inline login)
+  // ----------------------------------------------------------------------------------
   return (
     <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="write-review-dialog-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-6 overflow-y-auto"
-      onClick={onClose}
     >
-      <div
-        className="relative w-full max-w-xl bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border border-neutral-200 dark:border-neutral-800 p-6 sm:p-8 space-y-6 my-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-start justify-between border-b border-neutral-100 dark:border-neutral-800 pb-4">
+      <div className="relative w-full max-w-xl max-h-[90vh] overflow-y-auto bg-white dark:bg-neutral-900 rounded-3xl shadow-2xl border border-neutral-100 dark:border-neutral-800 p-6 sm:p-8">
+        {/* Top Header */}
+        <div className="flex items-center justify-between pb-4 border-b border-neutral-100 dark:border-neutral-800">
           <div>
-            <h3
-              id="write-review-dialog-title"
-              className="text-xl font-bold text-neutral-900 dark:text-neutral-100 tracking-tight"
-            >
-              Add a review for:
-            </h3>
-            <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mt-1">
-              {productName}
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
+              Write a review
+            </h2>
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+              Share your feedback for {productName}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 p-1.5 rounded-lg transition-colors cursor-pointer"
-            aria-label="Close dialog"
+            className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Success Alert */}
-        {successMessage && (
-          <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 flex items-center gap-3 text-emerald-800 dark:text-emerald-200">
-            <CheckCircle2 className="w-5 h-5 flex-shrink-0 text-emerald-600 dark:text-emerald-400" />
-            <span className="text-xs sm:text-sm font-medium">{successMessage}</span>
-          </div>
-        )}
-
-        {/* Error Alert */}
         {error && (
-          <div className="p-3.5 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 flex items-center gap-2.5 text-red-700 dark:text-red-300">
-            <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-600 dark:text-red-400" />
-            <span className="text-xs font-medium">{error}</span>
+          <div className="mt-4 p-3 rounded-xl bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 text-xs flex items-center gap-2 border border-red-200 dark:border-red-900/40">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <span>{error}</span>
           </div>
         )}
 
-        {/* Submission Form */}
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Rating */}
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-2">
-              Overall Rating *
-            </label>
-            <div className="flex items-center gap-4">
-              <StarRating
-                rating={rating}
-                interactive
-                size="lg"
-                onChange={(newRating) => setRating(newRating)}
-              />
-              <span className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">
-                {rating}.0 out of 5
-              </span>
-              <span className="text-xs text-neutral-500 dark:text-neutral-400">
-                ({RATING_DESCRIPTIONS[rating] || ''})
-              </span>
+        {/* If Guest Reviews Disabled and User Not Authenticated: Prompt Login */}
+        {!isAuthenticated && !settings?.allow_anonymous ? (
+          <div className="py-8 text-center space-y-4">
+            <div className="w-12 h-12 mx-auto rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-neutral-600 dark:text-neutral-300">
+              <AlertCircle className="w-6 h-6" />
             </div>
-          </div>
-
-          {/* Headline / Title */}
-          <div>
-            <label
-              htmlFor="submission-title"
-              className="block text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-1.5"
+            <div className="space-y-1">
+              <h3 className="text-base font-semibold text-neutral-900 dark:text-neutral-100">
+                Authentication required
+              </h3>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 max-w-sm mx-auto">
+                Please log in to your store account to submit a review for this item.
+              </p>
+            </div>
+            <a
+              href={loginUrl}
+              className="inline-flex items-center justify-center px-6 py-2.5 bg-black hover:bg-neutral-800 text-white font-semibold text-xs tracking-wider uppercase rounded-xl transition-colors cursor-pointer"
             >
-              Review title *
-            </label>
-            <input
-              id="submission-title"
-              type="text"
-              required
-              placeholder="e.g. Great quality and fit"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-neutral-100"
-            />
+              Sign In
+            </a>
           </div>
-
-          {/* Review Body */}
-          <div>
-            <label
-              htmlFor="submission-review"
-              className="block text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-1.5"
-            >
-              Review description *
-            </label>
-            <textarea
-              id="submission-review"
-              required
-              rows={4}
-              placeholder="Share details of your experience with this product..."
-              value={review}
-              onChange={(e) => setReview(e.target.value)}
-              className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-neutral-100 resize-y"
-            />
-            <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-              Problems with the product or delivery? <span className="font-semibold text-neutral-800 dark:text-neutral-200 cursor-pointer hover:underline">Send a report</span>.
-            </p>
-          </div>
-
-          {/* Nickname */}
-          <div>
-            <label
-              htmlFor="submission-name"
-              className="block text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-1.5"
-            >
-              Public Nickname (optional)
-            </label>
-            <input
-              id="submission-name"
-              type="text"
-              placeholder="e.g. Alex M."
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-neutral-100"
-            />
-          </div>
-
-          {/* Media / Photo / Video Attachments */}
-          {photosAllowed && (
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 mb-1.5">
-                Add real photos of the product to help other customers (Optional, max {maxImages})
+        ) : (
+          <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+            {/* Overall Rating (Sentence Case) */}
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                Overall rating <span className="text-red-500">*</span>
               </label>
+              <div className="flex items-center gap-3">
+                <StarRating
+                  rating={rating}
+                  size="lg"
+                  interactive={true}
+                  onChange={(r) => setRating(r)}
+                />
+                <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400">
+                  {RATING_DESCRIPTIONS[rating]}
+                </span>
+              </div>
+            </div>
 
-              {mediaPreviews.length > 0 && (
-                <div className="flex flex-wrap gap-2.5 mb-3">
-                  {mediaPreviews.map((item, index) => (
-                    <div
-                      key={item.url}
-                      className="relative group w-20 h-20 rounded-xl overflow-hidden border border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800"
-                    >
-                      {item.isVideo ? (
-                        <div className="w-full h-full relative">
-                          <video
-                            src={item.url}
-                            className="w-full h-full object-cover"
-                            muted
-                            playsInline
-                            loop
-                            autoPlay
-                          />
-                          <div className="absolute bottom-1 right-1 bg-black/70 text-white rounded p-0.5">
-                            <Video className="w-3 h-3" />
-                          </div>
-                        </div>
-                      ) : (
-                        <img
-                          src={item.url}
-                          alt="Review attachment preview"
-                          className="w-full h-full object-cover"
-                        />
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveMedia(index)}
-                        className="absolute inset-0 bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                        aria-label="Remove media"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
+            {/* Review Headline (Sentence Case) */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                Review headline
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Outstanding quality, exceeded expectations"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white transition-all text-neutral-900 dark:text-neutral-100"
+              />
+            </div>
+
+            {/* Detailed Review (Sentence Case) */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                Detailed review <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                rows={4}
+                placeholder="What did you like or dislike? How does it fit or feel?"
+                value={review}
+                onChange={(e) => setReview(e.target.value)}
+                required
+                className="w-full p-4 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white transition-all resize-none text-neutral-900 dark:text-neutral-100"
+              />
+            </div>
+
+            {/* Public Nickname (Sentence Case) */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                Public nickname (optional)
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Alex"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-900 dark:focus:ring-white transition-all text-neutral-900 dark:text-neutral-100"
+              />
+            </div>
+
+            {/* Photos & Videos Upload */}
+            {photosAllowed && (
+              <div className="space-y-2 pt-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                    Customer photos &amp; videos (optional, max {maxImages})
+                  </label>
+                  {settings?.rewards_enabled && (
+                    <span className="text-[11px] font-medium text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-900/40">
+                      🎁 Earn Gift Card discount
+                    </span>
+                  )}
                 </div>
-              )}
 
-              {mediaFiles.length < maxImages && (
-                <div className="space-y-2">
-                  {/* Dashed Drag & Drop Box */}
-                  <div
-                    onClick={() => galleryInputRef.current?.click()}
-                    className="border-2 border-dashed border-neutral-300 dark:border-neutral-700 hover:border-neutral-500 dark:hover:border-neutral-400 rounded-xl p-5 text-center cursor-pointer transition-colors bg-neutral-50/50 dark:bg-neutral-800/30 flex flex-col items-center justify-center"
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => photoInputRef.current?.click()}
+                    className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs font-semibold hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors cursor-pointer"
                   >
-                    <UploadCloud className="w-8 h-8 text-neutral-400 mb-2" />
-                    <p className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">
-                      Click to upload <span className="font-normal text-neutral-500">or drag and drop</span>
-                    </p>
-                    <p className="text-xs text-neutral-400 mt-1">PNG, JPG, WebP or Video (Max 50MB)</p>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => cameraInputRef.current?.click()}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-xs font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-700 transition-colors cursor-pointer"
-                    >
-                      <Camera className="w-3.5 h-3.5 text-neutral-500" />
-                      <span>Take Photo / Video</span>
-                    </button>
-                  </div>
-
-                  {/* Hidden inputs */}
-                  <input
-                    ref={galleryInputRef}
-                    type="file"
-                    multiple
-                    accept="image/*,video/*"
-                    onChange={handleMediaChange}
-                    className="hidden"
-                  />
-                  <input
-                    ref={cameraInputRef}
-                    type="file"
-                    accept="image/*,video/*"
-                    capture="environment"
-                    onChange={handleMediaChange}
-                    className="hidden"
-                  />
+                    <ImageIcon className="w-4 h-4 text-neutral-500" />
+                    <span>Upload photos</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => videoInputRef.current?.click()}
+                    className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-xs font-semibold hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors cursor-pointer"
+                  >
+                    <Video className="w-4 h-4 text-neutral-500" />
+                    <span>Upload video</span>
+                  </button>
                 </div>
-              )}
-            </div>
-          )}
 
-          {/* Checkboxes: Terms & Show Identifier */}
-          <div className="space-y-2 pt-2">
-            <div className="flex items-center gap-2.5">
-              <input
-                id="submission-terms"
-                type="checkbox"
-                checked={agreedToTerms}
-                onChange={(e) => setAgreedToTerms(e.target.checked)}
-                className="h-4 w-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-900 cursor-pointer"
-              />
-              <label
-                htmlFor="submission-terms"
-                className="text-xs text-neutral-600 dark:text-neutral-400 cursor-pointer"
+                {/* Previews */}
+                {mediaPreviews.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    {mediaPreviews.map((preview, idx) => (
+                      <div
+                        key={idx}
+                        className="relative w-14 h-14 rounded-lg overflow-hidden border border-neutral-200 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800"
+                      >
+                        {preview.isVideo ? (
+                          <div className="w-full h-full flex items-center justify-center bg-neutral-900 text-white">
+                            <Video className="w-5 h-5" />
+                          </div>
+                        ) : (
+                          <img
+                            src={preview.url}
+                            alt="Attachment preview"
+                            className="w-full h-full object-cover"
+                          />
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveMedia(idx)}
+                          className="absolute top-0.5 right-0.5 p-0.5 rounded-full bg-black/70 text-white hover:bg-black transition-colors"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <input
+                  ref={photoInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={(e) => handleMediaChange(e, 'image')}
+                  className="hidden"
+                />
+                <input
+                  ref={videoInputRef}
+                  type="file"
+                  multiple
+                  accept="video/*"
+                  onChange={(e) => handleMediaChange(e, 'video')}
+                  className="hidden"
+                />
+              </div>
+            )}
+
+            {/* Checkboxes: Terms & Show Identifier */}
+            <div className="space-y-2 pt-2">
+              <div className="flex items-center gap-2.5">
+                <input
+                  id="single-show-id"
+                  type="checkbox"
+                  checked={showIdentifier}
+                  onChange={(e) => setShowIdentifier(e.target.checked)}
+                  className="h-4 w-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-900 cursor-pointer"
+                />
+                <label
+                  htmlFor="single-show-id"
+                  className="text-xs text-neutral-600 dark:text-neutral-400 cursor-pointer select-none"
+                >
+                  Display my public nickname with this review (uncheck to post as &ldquo;Verified Customer&rdquo;)
+                </label>
+              </div>
+
+              <div className="flex items-center gap-2.5">
+                <input
+                  id="single-terms"
+                  type="checkbox"
+                  checked={agreedToTerms}
+                  onChange={(e) => setAgreedToTerms(e.target.checked)}
+                  className="h-4 w-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-900 cursor-pointer"
+                />
+                <label
+                  htmlFor="single-terms"
+                  className="text-xs text-neutral-600 dark:text-neutral-400 cursor-pointer select-none"
+                >
+                  By publishing this review you agree with our terms and guidelines.
+                </label>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="pt-4 flex items-center justify-end gap-3 border-t border-neutral-100 dark:border-neutral-800">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={isSubmitting}
+                className="px-5 py-2.5 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-700 font-semibold text-xs tracking-wider uppercase transition-colors cursor-pointer"
               >
-                By publishing this review you agree with the <span className="font-semibold text-neutral-900 dark:text-neutral-100">terms and conditions</span>.
-              </label>
-            </div>
-
-            <div className="flex items-center gap-2.5">
-              <input
-                id="submission-show-id"
-                type="checkbox"
-                checked={showIdentifier}
-                onChange={(e) => setShowIdentifier(e.target.checked)}
-                className="h-4 w-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-900 cursor-pointer"
-              />
-              <label
-                htmlFor="submission-show-id"
-                className="text-xs text-neutral-600 dark:text-neutral-400 cursor-pointer"
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting || !review.trim()}
+                className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-black hover:bg-neutral-800 text-white font-semibold text-xs tracking-wider uppercase transition-all shadow-sm disabled:opacity-40 cursor-pointer"
               >
-                Show my name in the review (uncheck to post as &ldquo;Verified Customer&rdquo;)
-              </label>
+                {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                <span>Submit review</span>
+              </button>
             </div>
-          </div>
-
-          {/* Submit Actions matching Image 2 */}
-          <div className="pt-4 flex items-center gap-3 border-t border-neutral-100 dark:border-neutral-800">
-            <button
-              type="submit"
-              disabled={isSubmitting || !!successMessage}
-              className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg bg-black hover:bg-neutral-800 text-white font-semibold text-sm transition-all shadow-sm disabled:opacity-50 cursor-pointer"
-            >
-              {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-              <span>Add review</span>
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isSubmitting}
-              className="px-5 py-2.5 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-700 font-medium text-sm transition-all cursor-pointer"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
+          </form>
+        )}
       </div>
     </div>
   )

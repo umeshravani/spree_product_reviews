@@ -16,6 +16,7 @@ export type {
   ReviewListResponse,
   ReportReason,
   ReportReviewPayload,
+  ProductReviewsSettings,
 } from './types';
 
 // API Client
@@ -60,6 +61,10 @@ export {
   StarRating,
   type StarRatingProps,
 } from './components/star-rating';
+export {
+  ProductRatingHeader,
+  type ProductRatingHeaderProps,
+} from './components/product-rating-header';
 export {
   ReviewSubmissionModal,
   type ReviewSubmissionModalProps,

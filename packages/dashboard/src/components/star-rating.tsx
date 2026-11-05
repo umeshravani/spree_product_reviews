@@ -92,11 +92,10 @@ export function StarRating({
             className="p-0.5 rounded hover:scale-110 transition-transform cursor-pointer focus:outline-none"
           >
             <Star
-              className={`${iconClass} ${
-                isSelected
-                  ? 'fill-amber-400 text-amber-400 stroke-amber-400'
-                  : 'fill-muted/30 text-muted-foreground/30 hover:fill-amber-200'
-              }`}
+              className={`${iconClass} ${isSelected
+                ? 'fill-amber-400 text-amber-400 stroke-amber-400'
+                : 'fill-muted/30 text-muted-foreground/30 hover:fill-amber-200'
+                }`}
               strokeWidth={1.5}
             />
           </button>

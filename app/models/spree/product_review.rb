@@ -11,6 +11,7 @@ module Spree
     belongs_to :customer, class_name: (defined?(Spree.customer_class) && Spree.customer_class ? Spree.customer_class.to_s : 'Spree::Customer'), optional: true
     belongs_to :user, class_name: (defined?(Spree.user_class) && Spree.user_class ? Spree.user_class.to_s : 'Spree::User'), optional: true
     belongs_to :order, class_name: 'Spree::Order', optional: true
+    belongs_to :gift_card, class_name: 'Spree::GiftCard', optional: true, foreign_key: :reward_gift_card_id
 
     has_many :votes, class_name: 'Spree::ReviewVote', foreign_key: :review_id, dependent: :destroy
     has_many :reports, class_name: 'Spree::ReviewReport', foreign_key: :review_id, dependent: :destroy
@@ -62,6 +63,11 @@ module Spree
         saved_change_to_hidden? || saved_change_to_rejected? || saved_change_to_discarded_at?
     }
     after_destroy :recalculate_product_rating
+    after_commit :check_auto_reward, on: [:create, :update]
+
+    def check_auto_reward
+      issue_review_reward! if approved? && respond_to?(:reward_code) && reward_code.blank?
+    end
 
     def set_default_product_name
       self.product_name ||= product&.name
@@ -213,7 +219,86 @@ module Spree
         moderator_note: note
       )
       record_audit!(action: :approve, moderator: moderator, note: note)
+      issue_review_reward!
       recalculate_product_rating
+    end
+
+    def issue_review_reward!
+      return unless (SpreeProductReviews.config.rewards_enabled rescue true)
+      return if reward_code.present? || (respond_to?(:reward_gift_card_id) && reward_gift_card_id.present?)
+      return unless approved?
+
+      recipient = customer || user
+      return unless recipient.present?
+      return unless images.attached? && images.any?
+
+      has_video = images.any? { |img| img.blob.content_type.to_s.start_with?('video/') rescue false }
+      has_photo = images.any? { |img| img.blob.content_type.to_s.start_with?('image/') rescue false }
+      return unless has_video || has_photo
+
+      config = SpreeProductReviews.config
+      video_ok = has_video && (config.video_reward_enabled rescue true)
+      photo_ok = has_photo && (config.photo_reward_enabled rescue true)
+      return unless video_ok || photo_ok
+
+      reward_amt = 0.0
+      if has_video && video_ok
+        reward_amt = (config.video_reward_amount || config.video_reward_percentage || 200.0).to_f
+      elsif has_photo && photo_ok
+        reward_amt = (config.photo_reward_amount || config.photo_reward_percentage || 150.0).to_f
+      end
+      if has_video && video_ok && has_photo && photo_ok
+        # Both video and photo attached
+        reward_amt = [(config.video_reward_amount || 200.0).to_f, (config.photo_reward_amount || 150.0).to_f].max
+      end
+      reward_amt = 100.0 if reward_amt <= 0
+
+      store = (product&.stores&.first rescue nil) || (defined?(Spree::Store) ? Spree::Store.default : nil)
+      currency = store&.default_currency || 'INR'
+
+      if defined?(Spree::GiftCard)
+        target_customer = if recipient.is_a?(Spree.customer_class)
+                            recipient
+                          elsif recipient.respond_to?(:customer) && recipient.customer.present?
+                            recipient.customer
+                          elsif Spree.customer_class.respond_to?(:find_by) && recipient.respond_to?(:email)
+                            Spree.customer_class.find_by('lower(email) = ?', recipient.email.downcase.strip)
+                          end
+
+        gift_card = Spree::GiftCard.create!(
+          store: store,
+          customer: target_customer,
+          amount: reward_amt,
+          currency: currency
+        )
+
+        update_columns(
+          reward_code: gift_card.code,
+          reward_amount: gift_card.amount,
+          reward_gift_card_id: gift_card.id
+        ) rescue nil
+
+        if respond_to?(:metadata) && (metadata.is_a?(Hash) || metadata.nil?)
+          curr_meta = metadata.is_a?(Hash) ? metadata : {}
+          self.metadata = curr_meta.merge(
+            'reward_gift_card_id' => gift_card.id,
+            'reward_code' => gift_card.code,
+            'reward_amount' => gift_card.amount.to_s,
+            'reward_currency' => currency,
+            'reward_issued_at' => Time.current.iso8601
+          )
+          save(validate: false) rescue nil
+        end
+
+        record_audit!(
+          action: :reward_issued,
+          note: "Gift card reward #{gift_card.code} (#{currency} #{gift_card.amount}) automatically issued for media review."
+        ) rescue nil
+
+        Rails.logger.info("[SpreeProductReviews] Issued GiftCard #{gift_card.code} (#{currency} #{gift_card.amount}) for review ##{id}")
+      end
+    rescue StandardError => e
+      Rails.logger.error("[SpreeProductReviews] Failed to issue review reward for review ##{id}: #{e.message}\n#{e.backtrace.first(3).join("\n")}")
     end
 
     def reject!(moderator: nil, note: nil)

@@ -51,6 +51,9 @@ export interface ProductReviewSummary {
   helpful_count: number
   unhelpful_count: number
   images_count: number
+  reward_code?: string | null
+  reward_amount?: number | null
+  reward_gift_card_id?: number | null
   created_at: string
   updated_at: string
 }
@@ -125,4 +128,26 @@ export interface ProductReviewsSettings {
   reviews_per_product_limit?: number
   anonymize_ips?: boolean
   duplicate_detection_window_hours?: number
+  modal_mode?: 'single' | 'multi'
+  rewards_enabled?: boolean
+  photo_reward_enabled?: boolean
+  photo_reward_percentage?: number
+  photo_reward_amount?: number
+  photo_reward_text?: string
+  video_reward_enabled?: boolean
+  video_reward_percentage?: number
+  video_reward_amount?: number
+  video_reward_text?: string
+  step1_title?: string
+  step1_dislike_label?: string
+  step1_love_label?: string
+  step2_title?: string
+  step2_subtitle?: string
+  step3_title?: string
+  step3_placeholder?: string
+  step4_title?: string
+  step4_subtitle?: string
+  title_star_color?: string
+  title_rating_format?: string
+  title_reviews_label?: string
 }

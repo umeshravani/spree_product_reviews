@@ -75,4 +75,26 @@ end
 | `max_image_size_mb` | Integer | `5` | Maximum file size per photo (in MB). Formats allowed: JPEG, PNG, WebP. |
 | `disable_review_links` | Boolean | `true` | Increases spam score by +50 if URLs or domains are found in review text. |
 | `spam_words` | String | `''` | Comma-separated blocked words that trigger spam penalties (+40 per match). |
+| `modal_mode` | String | `'multi'` | Storefront review modal flow: `'multi'` (4-step interactive wizard) or `'single'` (clean single-page form with sentence-cased labels). |
+| `rewards_enabled` | Boolean | `true` | Automatically issues native Spree Gift Cards to customer accounts when media reviews are approved. |
+| `photo_reward_enabled` | Boolean | `true` | Enables rewards for reviews with photo attachments. |
+| `photo_reward_percentage` | Integer | `15` | Discount percentage for photo reviews (e.g. 15%). |
+| `photo_reward_amount` | Decimal | `150.0` | Default Gift Card currency amount issued for photo reviews. |
+| `photo_reward_text` | String | `'Get 15% off your next purchase'` | Display headline on photo upload card. |
+| `video_reward_enabled` | Boolean | `true` | Enables rewards for reviews with video attachments. |
+| `video_reward_percentage` | Integer | `20` | Discount percentage for video reviews (e.g. 20%). |
+| `video_reward_amount` | Decimal | `200.0` | Default Gift Card currency amount issued for video reviews. |
+| `video_reward_text` | String | `'Get 20% off your next purchase'` | Display headline on video upload card. |
+| `step1_title` | String | `'How would you rate this item?'` | Title for Step 1 rating in the multi-step wizard. |
+| `step1_dislike_label` | String | `'Dislike it'` | Caption under 1-star rating in Step 1. |
+| `step1_love_label` | String | `'Love it!'` | Caption under 5-star rating in Step 1. |
+| `step2_title` | String | `'Show it off'` | Title for Step 2 media upload in the multi-step wizard. |
+| `step2_subtitle` | String | `"We'd love to see it in action!"` | Subtitle for Step 2 media upload. |
+| `step3_title` | String | `'Tell us more!'` | Title for Step 3 feedback text in the multi-step wizard. |
+| `step3_placeholder` | String | `'Share your experience'` | Placeholder for Step 3 review textarea. |
+| `step4_title` | String | `'Thank you for posting!'` | Confirmation title on Step 4 completion. |
+| `step4_subtitle` | String | `'Your feedback helps others make better choices.'` | Confirmation subtitle on Step 4 completion. |
+| `title_star_color` | String | `'#000000'` | Color hex for stars in the ProductRatingHeader snippet (default black). |
+| `title_rating_format` | String | `'{rating}/5 {count}+ reviews'` | Format template for the PDP title rating header. |
+| `title_reviews_label` | String | `'reviews'` | Text label for reviews in the title rating header. |
 
