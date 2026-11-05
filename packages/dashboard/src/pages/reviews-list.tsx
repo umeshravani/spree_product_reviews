@@ -47,8 +47,14 @@ export function ReviewsListPage({ initialProductId }: ReviewsListProps) {
   const storeContext = useOptionalStore()
   const storeId = storeContext?.storeId ?? 'default'
 
-  // State
-  const [activeTab, setActiveTab] = useState<string>('pending')
+  // Read URL search params if present
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+  const urlProductId = searchParams?.get('product_id') || initialProductId
+  const urlTab = searchParams?.get('tab') || 'all'
+
+  // State - default to 'all' tab per requirements
+  const [activeTab, setActiveTab] = useState<string>(urlTab)
+  const [selectedProductId, setSelectedProductId] = useState<string | undefined>(urlProductId)
   const [ratingFilter, setRatingFilter] = useState<string>('')
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [sortOption, setSortOption] = useState<string>('newest')
@@ -68,7 +74,7 @@ export function ReviewsListPage({ initialProductId }: ReviewsListProps) {
   const queryParams = {
     status: activeTab,
     rating: ratingFilter || undefined,
-    product_id: initialProductId,
+    product_id: selectedProductId,
     q: searchQuery || undefined,
     sort: sortOption,
     page: currentPage,
@@ -146,6 +152,10 @@ export function ReviewsListPage({ initialProductId }: ReviewsListProps) {
 
   const tabs = [
     {
+      id: 'all',
+      label: `${t('admin.product_reviews.tabs.all')} ${counts?.total ? `(${counts.total})` : ''}`,
+    },
+    {
       id: 'pending',
       label: `${t('admin.product_reviews.tabs.pending')} ${counts?.pending ? `(${counts.pending})` : ''}`,
     },
@@ -164,10 +174,6 @@ export function ReviewsListPage({ initialProductId }: ReviewsListProps) {
     {
       id: 'hidden',
       label: `${t('admin.product_reviews.tabs.hidden')} ${counts?.hidden ? `(${counts.hidden})` : ''}`,
-    },
-    {
-      id: 'all',
-      label: `${t('admin.product_reviews.tabs.all')} ${counts?.total ? `(${counts.total})` : ''}`,
     },
   ]
 
@@ -209,7 +215,29 @@ export function ReviewsListPage({ initialProductId }: ReviewsListProps) {
       </div>
 
       {/* Toolbar / Filters */}
-      <Card className="p-4">
+      <Card className="p-4 space-y-3">
+        {selectedProductId && (
+          <div className="flex items-center justify-between gap-2 px-3 py-1.5 bg-muted/60 rounded-md border text-xs">
+            <span className="text-muted-foreground">
+              Filtering reviews for product ID: <strong className="font-semibold text-foreground">{selectedProductId}</strong>
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedProductId(undefined)
+                if (typeof window !== 'undefined' && window.history?.replaceState) {
+                  const url = new URL(window.location.href)
+                  url.searchParams.delete('product_id')
+                  window.history.replaceState({}, '', url.toString())
+                }
+              }}
+              className="inline-flex items-center gap-1 font-medium text-foreground hover:text-destructive cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Clear Filter</span>
+            </button>
+          </div>
+        )}
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
           {/* Search */}
           <div className="relative flex-1 max-w-md">
@@ -459,9 +487,34 @@ export function ReviewsListPage({ initialProductId }: ReviewsListProps) {
 
                       {/* Product */}
                       <td className="py-3 px-4">
-                        <span className="font-medium text-foreground line-clamp-1 max-w-[180px]">
-                          {rev.product_name}
-                        </span>
+                        {(() => {
+                          const productHref =
+                            storeId && storeId !== 'default'
+                              ? `/${storeId}/products/${rev.product_id}`
+                              : `/products/${rev.product_id}`
+                          return (
+                            <a
+                              href={productHref}
+                              className="flex items-center gap-3 font-medium text-foreground hover:underline group"
+                            >
+                              <div className="relative size-10 shrink-0 overflow-hidden rounded-md border border-border bg-muted flex items-center justify-center">
+                                {rev.product_thumbnail_url ? (
+                                  <img
+                                    src={rev.product_thumbnail_url}
+                                    alt={rev.product_name || 'Product'}
+                                    className="size-full object-cover"
+                                    loading="lazy"
+                                  />
+                                ) : (
+                                  <ImageIcon className="size-4 text-muted-foreground" />
+                                )}
+                              </div>
+                              <span className="line-clamp-2 max-w-[180px] text-xs font-medium leading-snug">
+                                {rev.product_name}
+                              </span>
+                            </a>
+                          )
+                        })()}
                       </td>
 
                       {/* Reviewer */}

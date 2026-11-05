@@ -328,10 +328,12 @@ module Spree
           end
 
           def serialize_review_summary(review)
+            product = review.product
             {
               id: review.id.to_s,
               product_id: review.product_id.to_s,
-              product_name: review.product&.name || review.product_name,
+              product_name: product&.name || review.product_name,
+              product_thumbnail_url: extract_product_thumbnail(product),
               customer_id: review.customer_id&.to_s,
               user_id: review.user_id&.to_s,
               reviewer_name: review.reviewer_name,
@@ -350,6 +352,27 @@ module Spree
               created_at: review.created_at&.iso8601,
               updated_at: review.updated_at&.iso8601
             }
+          end
+
+          def extract_product_thumbnail(product)
+            return nil unless product
+
+            img = product.primary_media || product.images.first || (product.master&.images&.first rescue nil) rescue nil
+            return nil unless img
+
+            attachment = img.respond_to?(:attachment) && img.attachment.attached? ? img.attachment : (img.respond_to?(:attached?) && img.attached? ? img : nil)
+            return nil unless attachment
+
+            if attachment.respond_to?(:variable?) && attachment.variable?
+              Rails.application.routes.url_helpers.rails_representation_path(
+                attachment.representation(resize_to_limit: [120, 120]),
+                only_path: true
+              ) rescue Rails.application.routes.url_helpers.rails_blob_path(attachment, only_path: true) rescue nil
+            else
+              Rails.application.routes.url_helpers.rails_blob_path(attachment, only_path: true) rescue nil
+            end
+          rescue StandardError
+            nil
           end
 
           def serialize_review_detail(review)

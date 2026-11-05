@@ -41,6 +41,27 @@ export const productReviewsClient = {
     return res.data
   },
 
+  async update(
+    id: string,
+    payload: { title?: string; review?: string; rating?: number; moderator_note?: string }
+  ): Promise<ProductReviewDetail> {
+    const res = await adminClient.request<{ data: ProductReviewDetail }>(
+      'PATCH',
+      `/product_reviews/${id}`,
+      {
+        body: {
+          product_review: {
+            title: payload.title,
+            review: payload.review,
+            rating: payload.rating,
+          },
+          moderator_note: payload.moderator_note,
+        },
+      }
+    )
+    return res.data
+  },
+
   async approve(id: string, note?: string): Promise<ProductReviewDetail> {
     const res = await adminClient.request<{ data: ProductReviewDetail }>(
       'POST',

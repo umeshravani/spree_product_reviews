@@ -99,7 +99,7 @@ export function ProductReviewsCard({ product }: ProductReviewsCardProps) {
             <Link
               to="/$storeId/product_reviews"
               params={{ storeId }}
-              search={{ product_id: productId }}
+              search={{ product_id: productId, tab: 'all' }}
               className="w-full inline-flex items-center justify-center gap-1.5 text-xs text-primary font-medium hover:underline p-1"
             >
               {t('admin.product_reviews.widget.view_all', 'Manage all reviews')}

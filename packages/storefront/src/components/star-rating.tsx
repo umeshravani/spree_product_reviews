@@ -40,23 +40,30 @@ export function StarRating({
         aria-label={`${rating} out of ${maxRating} stars`}
       >
         {Array.from({ length: maxRating }, (_, index) => {
-          const starNumber = index + 1
-          const fillAmount = Math.max(0, Math.min(1, rating - index))
+          const rawDelta = rating - index
+          let fillPct = 0
+          if (rawDelta >= 0.75) {
+            fillPct = 100
+          } else if (rawDelta >= 0.25) {
+            fillPct = 50
+          } else {
+            fillPct = 0
+          }
 
           return (
             <div key={index} className="relative inline-block leading-none">
               <Star
-                className={`${iconSize} text-neutral-300 dark:text-neutral-700`}
+                className={`${iconSize} fill-neutral-100 text-neutral-300 dark:fill-neutral-800 dark:text-neutral-700`}
                 strokeWidth={1.5}
                 aria-hidden="true"
               />
-              {fillAmount > 0 && (
+              {fillPct > 0 && (
                 <div
-                  className="absolute top-0 left-0 overflow-hidden leading-none text-amber-400 dark:text-amber-500"
-                  style={{ width: `${fillAmount * 100}%` }}
+                  className="absolute top-0 left-0 overflow-hidden leading-none h-full"
+                  style={{ width: `${fillPct}%` }}
                 >
                   <Star
-                    className={`${iconSize} max-w-none flex-shrink-0 fill-amber-400 text-amber-400 dark:fill-amber-500 dark:text-amber-500`}
+                    className={`${iconSize} max-w-none flex-shrink-0 fill-amber-400 text-amber-400 stroke-amber-400 dark:fill-amber-400 dark:text-amber-400 dark:stroke-amber-400`}
                     strokeWidth={1.5}
                     aria-hidden="true"
                   />
@@ -109,10 +116,10 @@ export function StarRating({
             <Star
               className={`${iconSize} transition-colors ${
                 isSelected
-                  ? 'fill-amber-400 text-amber-400 dark:fill-amber-500 dark:text-amber-500'
-                  : 'text-neutral-300 dark:text-neutral-600 hover:text-amber-300'
+                  ? 'fill-amber-400 text-amber-400 stroke-amber-400 dark:fill-amber-400 dark:text-amber-400 dark:stroke-amber-400'
+                  : 'fill-neutral-100 text-neutral-300 hover:fill-amber-200 hover:text-amber-400 dark:fill-neutral-800 dark:text-neutral-600'
               }`}
-              strokeWidth={1.75}
+              strokeWidth={1.5}
             />
           </button>
         )

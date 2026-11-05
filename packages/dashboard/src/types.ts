@@ -35,6 +35,7 @@ export interface ProductReviewSummary {
   id: string
   product_id: string
   product_name: string
+  product_thumbnail_url?: string | null
   customer_id?: string | null
   user_id?: string | null
   reviewer_name: string
