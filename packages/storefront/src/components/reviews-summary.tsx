@@ -1,6 +1,5 @@
 'use client'
 
-import { Pencil, Star } from 'lucide-react'
 import type { RatingDistribution, ReviewsMeta } from '../types'
 
 export interface ProductReviewsSummaryProps {
@@ -15,6 +14,21 @@ export interface ProductReviewsSummaryProps {
   onWriteReviewClick?: () => void
   className?: string
 }
+
+const StarIcon = ({ filled = true, className = "" }: { filled?: boolean; className?: string }) => (
+  <svg
+    className={`h-4 w-4 shrink-0 ${
+      filled
+        ? "fill-yellow-400 text-yellow-400"
+        : "fill-neutral-200 text-neutral-200 dark:fill-neutral-700 dark:text-neutral-700"
+    } ${className}`}
+    aria-hidden="true"
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+  >
+    <path d="M13.849 4.22c-.684-1.626-3.014-1.626-3.698 0L8.397 8.387l-4.552.361c-1.775.14-2.495 2.331-1.142 3.477l3.468 2.937-1.06 4.392c-.413 1.713 1.472 3.067 2.992 2.149L12 19.35l3.897 2.354c1.52.918 3.405-.436 2.992-2.15l-1.06-4.39 3.468-2.938c1.353-1.146.633-3.336-1.142-3.477l-4.552-.36-1.754-4.17Z" />
+  </svg>
+)
 
 export function ProductReviewsSummary({
   averageRating: propAverageRating,
@@ -34,130 +48,106 @@ export function ProductReviewsSummary({
   const currentFilter = activeFilter ?? selectedRating
   const handleFilter = onFilterSelect ?? onRatingFilterSelect
 
-  // Calculate percentage for each star level (5 to 1)
-  const distributionPercentages: Record<number, number> = {}
-  for (let star = 5; star >= 1; star--) {
-    const count = ratingDistribution[star] || 0
-    distributionPercentages[star] = reviewCount > 0 ? Math.round((count / reviewCount) * 100) : 0
-  }
-
-  const renderTierStars = (tier: number) => {
-    return (
-      <div className="flex items-center gap-0.5 flex-shrink-0" aria-hidden="true">
-        {[1, 2, 3, 4, 5].map((i) => (
-          <Star
-            key={i}
-            className={`w-3.5 h-3.5 ${
-              i <= tier
-                ? 'fill-amber-400 text-amber-400'
-                : 'fill-transparent text-amber-400'
-            }`}
-            strokeWidth={1.5}
-          />
-        ))}
-      </div>
-    )
-  }
-
   return (
-    <div className={`w-full py-6 space-y-6 ${className}`}>
-      {/* Top CTA Row */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-neutral-200 dark:border-neutral-800">
-        <div>
-          <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
-            Customer Reviews
-          </h3>
-          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-            Verified purchaser ratings and feedback
-          </p>
-        </div>
-
-        {onWriteReviewClick && (
-          <button
-            type="button"
-            onClick={onWriteReviewClick}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-black dark:bg-white hover:bg-neutral-800 dark:hover:bg-neutral-100 text-white dark:text-black font-semibold text-xs tracking-wider uppercase transition-colors rounded-lg cursor-pointer shadow-sm"
-          >
-            <span>Write a Review</span>
-            <Pencil className="w-3.5 h-3.5 stroke-[2.2]" />
-          </button>
-        )}
-      </div>
-
-      {/* Production-Grade Rating Breakdown matching UI Reference (media_1793875096970_1f00cf57.png) */}
-      <div className="max-w-md mx-auto sm:mx-0 py-2 space-y-3">
-        {/* Prominent Center Score Header: Single Large Gold Star + 4.9 */}
-        <div className="flex items-center justify-center sm:justify-start gap-2.5 pb-2">
-          <Star className="w-8 h-8 fill-amber-400 text-amber-400" strokeWidth={1.5} />
-          <span className="text-3xl sm:text-4xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
-            {averageRating > 0 ? averageRating.toFixed(1) : '0.0'}
-          </span>
-        </div>
-
-        {/* 5 Rating Breakdown Rows (5 to 1 stars) */}
-        <div className="space-y-2">
-          {[5, 4, 3, 2, 1].map((star) => {
-            const count = ratingDistribution[star] || 0
-            const pct = distributionPercentages[star] || 0
-            const isSelected = currentFilter === star
-
-            return (
-              <button
-                key={star}
-                type="button"
-                onClick={() => handleFilter?.(isSelected ? null : star)}
-                className={`w-full group flex items-center gap-3.5 py-1 px-2 rounded-md transition-colors cursor-pointer ${
-                  isSelected
-                    ? 'bg-neutral-100 dark:bg-neutral-800 font-semibold'
-                    : 'hover:bg-neutral-50 dark:hover:bg-neutral-900/50'
-                }`}
-                title={`Filter by ${star} star reviews (${count})`}
-              >
-                {/* 5 star icons for this tier */}
-                {renderTierStars(star)}
-
-                {/* Permanent Grey Track with Dark Grey/Slate Fill */}
-                <div className="flex-1 h-2 bg-neutral-100 dark:bg-neutral-800 rounded-xs overflow-hidden relative">
-                  {count > 0 && (
-                    <div
-                      className={`h-full bg-neutral-600 dark:bg-neutral-400 rounded-xs transition-all duration-300 ${
-                        isSelected ? 'bg-black dark:bg-white' : 'group-hover:bg-neutral-800 dark:group-hover:bg-neutral-300'
-                      }`}
-                      style={{
-                        width: `${Math.max(pct, 2)}%`,
-                      }}
-                    />
-                  )}
-                </div>
-
-                {/* Count in Parentheses */}
-                <span className="w-14 text-right text-xs sm:text-sm text-neutral-700 dark:text-neutral-300 font-normal">
-                  ({count.toLocaleString()})
-                </span>
-              </button>
-            )
-          })}
-        </div>
-
-        {/* Filter status & clear filter */}
-        {currentFilter !== null && (
-          <div className="pt-2 flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400">
-            <span>
-              Showing {currentFilter} star reviews ({ratingDistribution[currentFilter] || 0})
+    <div className={`w-full py-6 ${className}`}>
+      {/* Header Row */}
+      <div className="flex items-center gap-3">
+        <h3 className="text-2xl font-semibold text-gray-900 dark:text-white">
+          Customer Reviews
+        </h3>
+        {reviewCount > 0 && (
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-0.5">
+              {[...Array(5)].map((_, i) => (
+                <StarIcon key={i} filled={i < Math.round(averageRating)} />
+              ))}
+            </div>
+            <p className="text-sm font-medium leading-none text-gray-500 dark:text-gray-400">
+              ({averageRating.toFixed(1)})
+            </p>
+            <span className="text-sm font-medium leading-none text-gray-900 dark:text-white">
+              {reviewCount} {reviewCount === 1 ? 'Review' : 'Reviews'}
             </span>
-            <button
-              type="button"
-              onClick={() => handleFilter?.(null)}
-              className="text-neutral-900 dark:text-neutral-100 font-semibold underline hover:no-underline cursor-pointer"
-            >
-              Clear filter
-            </button>
           </div>
         )}
       </div>
+
+      {/* Breakdown Layout matching user's reference */}
+      <div className="my-6 gap-8 sm:flex sm:items-start md:my-8">
+        <div className="shrink-0 space-y-4">
+          <p className="text-2xl font-semibold leading-none text-gray-900 dark:text-white">
+            {reviewCount > 0
+              ? `${averageRating.toFixed(1)} out of 5`
+              : "No reviews yet"}
+          </p>
+
+          {onWriteReviewClick && (
+            <button
+              type="button"
+              onClick={onWriteReviewClick}
+              className="mb-2 me-2 rounded-lg px-5 py-2.5 text-sm font-medium text-white focus:outline-none focus:ring-4 transition-colors bg-black hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 cursor-pointer shadow-sm"
+            >
+              Write a review
+            </button>
+          )}
+        </div>
+
+        {reviewCount > 0 && (
+          <div className="mt-6 min-w-0 flex-1 space-y-3 sm:mt-0">
+            {[5, 4, 3, 2, 1].map((stars) => {
+              const count = ratingDistribution[stars] || 0
+              const percentage =
+                reviewCount > 0 ? (count / reviewCount) * 100 : 0
+              const isSelected = currentFilter === stars
+
+              return (
+                <div
+                  key={stars}
+                  onClick={() => handleFilter?.(isSelected ? null : stars)}
+                  className={`flex items-center gap-2 py-1 px-1.5 rounded-md transition-colors cursor-pointer ${
+                    isSelected
+                      ? 'bg-neutral-100 dark:bg-neutral-800'
+                      : 'hover:bg-neutral-50 dark:hover:bg-neutral-900/50'
+                  }`}
+                  title={`Filter by ${stars} star reviews (${count})`}
+                >
+                  <p className="w-2 shrink-0 text-start text-sm font-medium leading-none text-gray-900 dark:text-white">
+                    {stars}
+                  </p>
+                  <StarIcon />
+                  <div className="h-1.5 w-64 sm:w-80 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                    <div
+                      className="h-1.5 rounded-full bg-yellow-300"
+                      style={{ width: `${percentage}%` }}
+                    />
+                  </div>
+                  <span className="w-12 shrink-0 text-right text-sm font-medium leading-none hover:underline sm:w-auto sm:text-left text-gray-900 hover:text-black dark:text-gray-300 dark:hover:text-white font-semibold">
+                    {count} <span className="hidden sm:inline">reviews</span>
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {currentFilter !== null && (
+        <div className="flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400 pt-3 border-t border-neutral-100 dark:border-neutral-800">
+          <span>
+            Showing {currentFilter} star reviews ({ratingDistribution[currentFilter] || 0})
+          </span>
+          <button
+            type="button"
+            onClick={() => handleFilter?.(null)}
+            className="hover:underline font-semibold text-neutral-900 dark:text-neutral-100 cursor-pointer"
+          >
+            Clear filter
+          </button>
+        </div>
+      )}
     </div>
   )
 }
 
-// Convenient Aliases
 export { ProductReviewsSummary as ReviewsSummary, type ProductReviewsSummaryProps as ReviewsSummaryProps }
+

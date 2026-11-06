@@ -34,10 +34,12 @@ module Spree
                 photo_reward_enabled: config.photo_reward_enabled,
                 photo_reward_percentage: config.photo_reward_percentage,
                 photo_reward_amount: config.photo_reward_amount,
+                photo_reward_promotion_id: config.photo_reward_promotion_id,
                 photo_reward_text: config.photo_reward_text,
                 video_reward_enabled: config.video_reward_enabled,
                 video_reward_percentage: config.video_reward_percentage,
                 video_reward_amount: config.video_reward_amount,
+                video_reward_promotion_id: config.video_reward_promotion_id,
                 video_reward_text: config.video_reward_text,
                 step1_title: config.step1_title,
                 step1_dislike_label: config.step1_dislike_label,
@@ -48,7 +50,10 @@ module Spree
                 step3_placeholder: config.step3_placeholder,
                 step4_title: config.step4_title,
                 step4_subtitle: config.step4_subtitle,
+                single_form_title: config.single_form_title,
+                single_form_description: config.single_form_description,
                 title_star_color: config.title_star_color,
+                bottom_star_color: config.bottom_star_color,
                 title_rating_format: config.title_rating_format,
                 title_reviews_label: config.title_reviews_label
               }
@@ -65,13 +70,14 @@ module Spree
               :report_moderation_threshold, :reviews_per_product_limit,
               :anonymize_ips, :duplicate_detection_window_hours,
               :modal_mode, :rewards_enabled,
-              :photo_reward_enabled, :photo_reward_percentage, :photo_reward_amount, :photo_reward_text,
-              :video_reward_enabled, :video_reward_percentage, :video_reward_amount, :video_reward_text,
+              :photo_reward_enabled, :photo_reward_percentage, :photo_reward_amount, :photo_reward_promotion_id, :photo_reward_text,
+              :video_reward_enabled, :video_reward_percentage, :video_reward_amount, :video_reward_promotion_id, :video_reward_text,
               :step1_title, :step1_dislike_label, :step1_love_label,
               :step2_title, :step2_subtitle,
               :step3_title, :step3_placeholder,
               :step4_title, :step4_subtitle,
-              :title_star_color, :title_rating_format, :title_reviews_label
+              :single_form_title, :single_form_description,
+              :title_star_color, :bottom_star_color, :title_rating_format, :title_reviews_label
             )
 
             settings.each do |key, value|

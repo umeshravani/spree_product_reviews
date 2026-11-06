@@ -47,10 +47,12 @@ export interface ProductReviewsSettings {
   photo_reward_enabled?: boolean
   photo_reward_percentage?: number
   photo_reward_amount?: number
+  photo_reward_promotion_id?: string
   photo_reward_text?: string
   video_reward_enabled?: boolean
   video_reward_percentage?: number
   video_reward_amount?: number
+  video_reward_promotion_id?: string
   video_reward_text?: string
   step1_title?: string
   step1_dislike_label?: string
@@ -61,7 +63,10 @@ export interface ProductReviewsSettings {
   step3_placeholder?: string
   step4_title?: string
   step4_subtitle?: string
+  single_form_title?: string
+  single_form_description?: string
   title_star_color?: string
+  bottom_star_color?: string
   title_rating_format?: string
   title_reviews_label?: string
 }

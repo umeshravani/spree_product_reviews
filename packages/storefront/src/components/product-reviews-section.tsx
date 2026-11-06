@@ -157,6 +157,12 @@ export function ProductReviewsSection({
     [withdrawReview]
   );
 
+  const userExistingReview = reviews.find(
+    (r) =>
+      Boolean(currentCustomerId) &&
+      (((r as any).user_id && (r as any).user_id === currentCustomerId) || r.customer_id === currentCustomerId)
+  )
+
   return (
     <section
       id="product-reviews-section"
@@ -220,6 +226,8 @@ export function ProductReviewsSection({
         open={isSubmissionOpen}
         onClose={() => setIsSubmissionOpen(false)}
         onSubmit={handleSubmitReview}
+        onUpdateReview={updateReview}
+        existingReview={userExistingReview}
         productName={productName}
         allowPhotos={allowPhotos}
         maxImages={maxImages}

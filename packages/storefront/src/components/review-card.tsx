@@ -83,6 +83,13 @@ export function ReviewCard({
     day: 'numeric',
   })
 
+  const isEdited = Boolean(
+    (review as any).edited ||
+      ((review as any).updated_at &&
+        (review as any).created_at &&
+        new Date((review as any).updated_at).getTime() - new Date((review as any).created_at).getTime() > 60000)
+  )
+
   return (
     <article
       className={`border-b border-neutral-200 dark:border-neutral-800 py-6 last:border-b-0 space-y-3.5 ${className}`}
@@ -107,9 +114,14 @@ export function ReviewCard({
         </div>
         <time
           dateTime={review.created_at}
-          className="text-xs text-neutral-500 dark:text-neutral-400"
+          className="text-xs text-neutral-500 dark:text-neutral-400 flex items-center gap-1.5"
         >
-          {formattedDate}
+          <span>{formattedDate}</span>
+          {isEdited && (
+            <span className="text-[11px] font-normal text-neutral-400 dark:text-neutral-500">
+              (Edited)
+            </span>
+          )}
         </time>
       </div>
 

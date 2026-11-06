@@ -28,11 +28,13 @@ module SpreeProductReviews
       preference :photo_reward_enabled, :boolean, default: true
       preference :photo_reward_percentage, :integer, default: 15
       preference :photo_reward_amount, :decimal, default: 150.0
+      preference :photo_reward_promotion_id, :string, default: ''
       preference :photo_reward_text, :string, default: 'Get 15% off your next purchase'
 
       preference :video_reward_enabled, :boolean, default: true
       preference :video_reward_percentage, :integer, default: 20
       preference :video_reward_amount, :decimal, default: 200.0
+      preference :video_reward_promotion_id, :string, default: ''
       preference :video_reward_text, :string, default: 'Get 20% off your next purchase'
 
       # Multi-step wizard customizable labels
@@ -46,8 +48,13 @@ module SpreeProductReviews
       preference :step4_title, :string, default: 'Thank you for posting!'
       preference :step4_subtitle, :string, default: 'Your feedback helps others make better choices.'
 
-      # Title rating header presentation
+      # Single page form labels
+      preference :single_form_title, :string, default: 'Write a review'
+      preference :single_form_description, :string, default: 'Share your feedback for this product'
+
+      # Star Rating Presentation
       preference :title_star_color, :string, default: '#000000'
+      preference :bottom_star_color, :string, default: '#FBBF24'
       preference :title_rating_format, :string, default: '{rating}/5 {count}+ reviews'
       preference :title_reviews_label, :string, default: 'reviews'
     else
@@ -58,13 +65,14 @@ module SpreeProductReviews
                     :report_moderation_threshold, :reviews_per_product_limit,
                     :anonymize_ips, :duplicate_detection_window_hours,
                     :modal_mode, :rewards_enabled,
-                    :photo_reward_enabled, :photo_reward_percentage, :photo_reward_amount, :photo_reward_text,
-                    :video_reward_enabled, :video_reward_percentage, :video_reward_amount, :video_reward_text,
+                    :photo_reward_enabled, :photo_reward_percentage, :photo_reward_amount, :photo_reward_promotion_id, :photo_reward_text,
+                    :video_reward_enabled, :video_reward_percentage, :video_reward_amount, :video_reward_promotion_id, :video_reward_text,
                     :step1_title, :step1_dislike_label, :step1_love_label,
                     :step2_title, :step2_subtitle,
                     :step3_title, :step3_placeholder,
                     :step4_title, :step4_subtitle,
-                    :title_star_color, :title_rating_format, :title_reviews_label
+                    :single_form_title, :single_form_description,
+                    :title_star_color, :bottom_star_color, :title_rating_format, :title_reviews_label
 
       def initialize
         @enabled = true
@@ -89,15 +97,30 @@ module SpreeProductReviews
         @photo_reward_enabled = true
         @photo_reward_percentage = 15
         @photo_reward_amount = 150.0
+        @photo_reward_promotion_id = ''
         @photo_reward_text = 'Get 15% off your next purchase'
         @video_reward_enabled = true
         @video_reward_percentage = 20
         @video_reward_amount = 200.0
+        @video_reward_promotion_id = ''
         @video_reward_text = 'Get 20% off your next purchase'
         @step1_title = 'How would you rate this item?'
         @step1_dislike_label = 'Dislike it'
         @step1_love_label = 'Love it!'
         @step2_title = 'Show it off'
+        @step2_subtitle = "We'd love to see it in action!"
+        @step3_title = 'Tell us more!'
+        @step3_placeholder = 'Share your experience'
+        @step4_title = 'Thank you for posting!'
+        @step4_subtitle = 'Your feedback helps others make better choices.'
+        @single_form_title = 'Write a review'
+        @single_form_description = 'Share your feedback for this product'
+        @title_star_color = '#000000'
+        @bottom_star_color = '#FBBF24'
+        @title_rating_format = '{rating}/5 {count}+ reviews'
+        @title_reviews_label = 'reviews'
+      end
+    end
         @step2_subtitle = "We'd love to see it in action!"
         @step3_title = 'Tell us more!'
         @step3_placeholder = 'Share your experience'

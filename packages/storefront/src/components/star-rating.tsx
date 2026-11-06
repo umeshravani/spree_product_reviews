@@ -1,6 +1,5 @@
 'use client'
 
-import { Star } from 'lucide-react'
 import { useState } from 'react'
 
 export interface StarRatingProps {
@@ -10,6 +9,7 @@ export interface StarRatingProps {
   interactive?: boolean
   onChange?: (rating: number) => void
   label?: string
+  color?: string
   className?: string
 }
 
@@ -27,6 +27,7 @@ export function StarRating({
   interactive = false,
   onChange,
   label,
+  color,
   className = '',
 }: StarRatingProps) {
   const [hoverRating, setHoverRating] = useState<number | null>(null)
@@ -40,36 +41,23 @@ export function StarRating({
         aria-label={`${rating} out of ${maxRating} stars`}
       >
         {Array.from({ length: maxRating }, (_, index) => {
-          const rawDelta = rating - index
-          let fillPct = 0
-          if (rawDelta >= 0.75) {
-            fillPct = 100
-          } else if (rawDelta >= 0.25) {
-            fillPct = 50
-          } else {
-            fillPct = 0
-          }
+          const isFilled = index < Math.round(rating)
 
           return (
-            <div key={index} className="relative inline-block leading-none">
-              <Star
-                className={`${iconSize} fill-neutral-100 text-neutral-300 dark:fill-neutral-800 dark:text-neutral-700`}
-                strokeWidth={1.5}
-                aria-hidden="true"
-              />
-              {fillPct > 0 && (
-                <div
-                  className="absolute top-0 left-0 overflow-hidden leading-none h-full"
-                  style={{ width: `${fillPct}%` }}
-                >
-                  <Star
-                    className={`${iconSize} max-w-none flex-shrink-0 fill-amber-400 text-amber-400 stroke-amber-400 dark:fill-amber-400 dark:text-amber-400 dark:stroke-amber-400`}
-                    strokeWidth={1.5}
-                    aria-hidden="true"
-                  />
-                </div>
-              )}
-            </div>
+            <svg
+              key={index}
+              className={`${iconSize} shrink-0 transition-colors ${
+                isFilled
+                  ? 'fill-yellow-400 text-yellow-400'
+                  : 'fill-neutral-200 text-neutral-200 dark:fill-neutral-700 dark:text-neutral-700'
+              }`}
+              style={isFilled && color ? { fill: color, color } : undefined}
+              aria-hidden="true"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+            >
+              <path d="M13.849 4.22c-.684-1.626-3.014-1.626-3.698 0L8.397 8.387l-4.552.361c-1.775.14-2.495 2.331-1.142 3.477l3.468 2.937-1.06 4.392c-.413 1.713 1.472 3.067 2.992 2.149L12 19.35l3.897 2.354c1.52.918 3.405-.436 2.992-2.15l-1.06-4.39 3.468-2.938c1.353-1.146.633-3.336-1.142-3.477l-4.552-.36-1.754-4.17Z" />
+            </svg>
           )
         })}
         {label && <span className="ml-1 text-xs text-neutral-500 dark:text-neutral-400">{label}</span>}
@@ -111,16 +99,19 @@ export function StarRating({
                 onChange?.(starNumber)
               }
             }}
-            className="p-1 rounded transition-transform hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 cursor-pointer"
+            className="p-1 rounded transition-transform hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 cursor-pointer"
           >
-            <Star
+            <svg
               className={`${iconSize} transition-colors ${
                 isSelected
-                  ? 'fill-amber-400 text-amber-400 stroke-amber-400 dark:fill-amber-400 dark:text-amber-400 dark:stroke-amber-400'
-                  : 'fill-neutral-100 text-neutral-300 hover:fill-amber-200 hover:text-amber-400 dark:fill-neutral-800 dark:text-neutral-600'
+                  ? 'fill-yellow-400 text-yellow-400'
+                  : 'fill-neutral-200 text-neutral-200 dark:fill-neutral-700 dark:text-neutral-700'
               }`}
-              strokeWidth={1.5}
-            />
+              style={isSelected && color ? { fill: color, color } : undefined}
+              viewBox="0 0 24 24"
+            >
+              <path d="M13.849 4.22c-.684-1.626-3.014-1.626-3.698 0L8.397 8.387l-4.552.361c-1.775.14-2.495 2.331-1.142 3.477l3.468 2.937-1.06 4.392c-.413 1.713 1.472 3.067 2.992 2.149L12 19.35l3.897 2.354c1.52.918 3.405-.436 2.992-2.15l-1.06-4.39 3.468-2.938c1.353-1.146.633-3.336-1.142-3.477l-4.552-.36-1.754-4.17Z" />
+            </svg>
           </button>
         )
       })}
