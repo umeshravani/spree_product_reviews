@@ -121,15 +121,5 @@ module SpreeProductReviews
         @title_reviews_label = 'reviews'
       end
     end
-        @step2_subtitle = "We'd love to see it in action!"
-        @step3_title = 'Tell us more!'
-        @step3_placeholder = 'Share your experience'
-        @step4_title = 'Thank you for posting!'
-        @step4_subtitle = 'Your feedback helps others make better choices.'
-        @title_star_color = '#000000'
-        @title_rating_format = '{rating}/5 {count}+ reviews'
-        @title_reviews_label = 'reviews'
-      end
-    end
   end
 end
