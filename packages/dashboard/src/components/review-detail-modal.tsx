@@ -76,10 +76,16 @@ export function ReviewDetailModal({
 
   if (!currentReview) return null
 
+  const productTargetId =
+    currentReview.product?.prefixed_id ||
+    currentReview.product_prefixed_id ||
+    currentReview.product?.id ||
+    currentReview.product_id
+
   const productHref =
     storeId && storeId !== 'default'
-      ? `/${storeId}/products/${currentReview.product_id}`
-      : `/products/${currentReview.product_id}`
+      ? `/${storeId}/products/${productTargetId}`
+      : `/products/${productTargetId}`
 
   const handleStartEdit = () => {
     setEditTitle(currentReview.title || '')
@@ -170,8 +176,8 @@ export function ReviewDetailModal({
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="pr-10 border-b pb-4">
+      <DialogContent className="sm:max-w-3xl md:max-w-4xl w-[95vw] p-0 flex flex-col max-h-[90vh] overflow-hidden rounded-2xl shadow-2xl border border-border bg-card">
+        <DialogHeader className="px-6 py-5 border-b border-border bg-card shrink-0 pr-12">
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div className="flex items-center gap-3 flex-wrap">
@@ -213,7 +219,8 @@ export function ReviewDetailModal({
           </div>
         </DialogHeader>
 
-        {isEditing ? (
+        <div className="px-6 py-5 overflow-y-auto flex-1 space-y-6">
+          {isEditing ? (
           /* Admin Edit View */
           <div className="space-y-5 py-4">
             <div className="rounded-xl border border-border bg-card p-5 space-y-4 shadow-xs">
@@ -415,18 +422,38 @@ export function ReviewDetailModal({
                       key={img.id}
                       className="group relative rounded-lg border overflow-hidden bg-muted/40 aspect-square flex flex-col justify-between"
                     >
-                      {img.url ? (
-                        <img
-                          src={img.url}
-                          alt={img.filename}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center text-xs text-muted-foreground">
-                          <ImageIcon className="w-8 h-8 opacity-40 mb-1" />
-                          <span className="truncate max-w-full text-[10px]">{img.filename}</span>
-                        </div>
-                      )}
+                      {(() => {
+                        const isVideo = Boolean(
+                          img.content_type?.startsWith('video/') ||
+                            img.filename?.toLowerCase().match(/\.(mp4|mov|webm|ogg)$/)
+                        )
+                        if (isVideo && img.url) {
+                          return (
+                            <video
+                              src={img.url}
+                              controls
+                              playsInline
+                              preload="metadata"
+                              className="w-full h-full object-cover"
+                            />
+                          )
+                        }
+                        if (img.url) {
+                          return (
+                            <img
+                              src={img.url}
+                              alt={img.filename}
+                              className="w-full h-full object-cover"
+                            />
+                          )
+                        }
+                        return (
+                          <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center text-xs text-muted-foreground">
+                            <ImageIcon className="w-8 h-8 opacity-40 mb-1" />
+                            <span className="truncate max-w-full text-[10px]">{img.filename}</span>
+                          </div>
+                        )
+                      })()}
                       <button
                         type="button"
                         onClick={() => handleRemoveImage(img.id)}
@@ -498,9 +525,10 @@ export function ReviewDetailModal({
             </div>
           </div>
         )}
+        </div>
 
         {/* Action Controls */}
-        <DialogFooter className="flex items-center justify-between sm:justify-between gap-2 pt-4 border-t">
+        <DialogFooter className="px-6 py-4 border-t border-border bg-muted/30 shrink-0 flex items-center justify-between gap-3 flex-wrap">
           <Button
             variant="outline"
             size="sm"

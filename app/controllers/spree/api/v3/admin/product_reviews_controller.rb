@@ -329,9 +329,12 @@ module Spree
 
           def serialize_review_summary(review)
             product = review.product
+            prefixed_id = (product&.respond_to?(:prefixed_id) && product.prefixed_id.presence) || review.product_id.to_s
             {
               id: review.id.to_s,
-              product_id: review.product_id.to_s,
+              product_id: prefixed_id,
+              product_raw_id: review.product_id.to_s,
+              product_prefixed_id: prefixed_id,
               product_name: product&.name || review.product_name,
               product_thumbnail_url: extract_product_thumbnail(product),
               customer_id: review.customer_id&.to_s,
@@ -415,8 +418,11 @@ module Spree
             product_data = nil
             if review.product.present?
               p = review.product
+              prefixed_p_id = (p.respond_to?(:prefixed_id) && p.prefixed_id.presence) || p.id.to_s
               product_data = {
-                id: p.id.to_s,
+                id: prefixed_p_id,
+                raw_id: p.id.to_s,
+                prefixed_id: prefixed_p_id,
                 name: p.name,
                 slug: p.slug
               }

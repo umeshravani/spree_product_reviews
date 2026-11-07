@@ -92,93 +92,115 @@ export function ReviewCard({
 
   return (
     <article
-      className={`border-b border-neutral-200 dark:border-neutral-800 py-6 last:border-b-0 space-y-3.5 ${className}`}
+      className={`border-b border-neutral-200 dark:border-neutral-800 py-6 last:border-b-0 ${className}`}
       aria-labelledby={`review-title-${review.id}`}
     >
-      {/* Header: Rating, Date, Author, Verified Badge */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 text-sm">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-8">
+        {/* Left Column: Rating, Author, Date, Verified Badge */}
+        <div className="w-full sm:w-48 md:w-56 shrink-0 space-y-1.5">
           <StarRating rating={review.rating} size="sm" />
-          <span className="font-semibold text-neutral-900 dark:text-neutral-100">
+          <div className="font-semibold text-sm text-neutral-900 dark:text-neutral-100 truncate">
             {review.reviewer_name || 'Verified Customer'}
-          </span>
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400">
+            <time dateTime={review.created_at}>{formattedDate}</time>
+            {isEdited && (
+              <span className="text-[11px] font-normal text-neutral-400 dark:text-neutral-500">
+                (Edited)
+              </span>
+            )}
+          </div>
           {review.is_verified_purchase && (
-            <span
-              className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-400 px-2 py-0.5 rounded-full"
-              title="Verified Buyer of this product"
-            >
-              <ShieldCheck className="w-3.5 h-3.5" aria-hidden="true" />
-              Verified Buyer
-            </span>
+            <div className="pt-0.5">
+              <span
+                className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-400 px-2 py-0.5 rounded-full"
+                title="Verified Buyer of this product"
+              >
+                <ShieldCheck className="w-3.5 h-3.5" aria-hidden="true" />
+                Verified Buyer
+              </span>
+            </div>
           )}
         </div>
-        <time
-          dateTime={review.created_at}
-          className="text-xs text-neutral-500 dark:text-neutral-400 flex items-center gap-1.5"
-        >
-          <span>{formattedDate}</span>
-          {isEdited && (
-            <span className="text-[11px] font-normal text-neutral-400 dark:text-neutral-500">
-              (Edited)
-            </span>
-          )}
-        </time>
-      </div>
 
-      {/* Review Title & Body */}
-      <div className="space-y-1.5">
-        <h4
-          id={`review-title-${review.id}`}
-          className="font-medium text-base text-neutral-900 dark:text-neutral-100"
-        >
-          {review.title}
-        </h4>
-        <p className="text-sm leading-relaxed text-neutral-700 dark:text-neutral-300 whitespace-pre-line">
-          {review.review}
-        </p>
-      </div>
-
-      {/* Customer Attachments Grid */}
-      {review.images && review.images.length > 0 && (
-        <div className="flex flex-wrap gap-2 pt-1" aria-label="Review photo attachments">
-          {review.images.map((image, idx) => (
-            <button
-              key={image.id}
-              type="button"
-              onClick={() => onImageClick?.(review.images, idx)}
-              className="group relative w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden border border-neutral-200 dark:border-neutral-700 hover:ring-2 hover:ring-neutral-900 dark:hover:ring-neutral-100 transition focus:outline-none cursor-pointer"
-              aria-label={`View full photo ${idx + 1}`}
-            >
-              <img
-                src={image.url}
-                alt={image.filename || `Review photo ${idx + 1}`}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                loading="lazy"
-              />
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Footer: Helpful Vote & Actions */}
-      <div className="flex items-center justify-between pt-1 text-xs text-neutral-500 dark:text-neutral-400">
-        <div className="flex items-center gap-3">
-          <span>Was this review helpful?</span>
-          <button
-            type="button"
-            onClick={handleHelpfulClick}
-            disabled={hasVoted || isVoting}
-            aria-pressed={hasVoted}
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium transition-colors cursor-pointer ${
-              hasVoted
-                ? 'border-emerald-600 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-500'
-                : 'border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300'
-            }`}
+        {/* Right Column: Title, Review body, Portrait Attachments, Helpful & Actions */}
+        <div className="flex-1 min-w-0 space-y-3">
+          <h4
+            id={`review-title-${review.id}`}
+            className="font-semibold text-base text-neutral-900 dark:text-neutral-100"
           >
-            <ThumbsUp className={`w-3.5 h-3.5 ${hasVoted ? 'fill-current' : ''}`} aria-hidden="true" />
-            <span>Yes ({helpfulCount})</span>
-          </button>
-        </div>
+            {review.title}
+          </h4>
+          <p className="text-sm leading-relaxed text-neutral-700 dark:text-neutral-300 whitespace-pre-line">
+            {review.review}
+          </p>
+
+          {/* Customer Attachments Grid — EXACT 80x128 portrait style (w-20 h-32) */}
+          {review.images && review.images.length > 0 && (
+            <div className="flex flex-wrap gap-3 pt-1" aria-label="Review photo attachments">
+              {review.images.map((image, idx) => {
+                const isVideo = Boolean(
+                  image.content_type?.startsWith('video/') ||
+                    image.filename?.toLowerCase().match(/\.(mp4|mov|webm|ogg)$/)
+                )
+                return (
+                  <button
+                    key={image.id}
+                    type="button"
+                    onClick={() => onImageClick?.(review.images, idx)}
+                    className="group relative w-20 h-32 rounded-lg overflow-hidden border border-neutral-200 dark:border-neutral-700 hover:ring-2 hover:ring-black dark:hover:ring-white transition focus:outline-none cursor-pointer bg-neutral-100 dark:bg-neutral-800 shrink-0"
+                    aria-label={`View ${isVideo ? 'video' : 'photo'} ${idx + 1}`}
+                  >
+                    {isVideo ? (
+                      <>
+                        <video
+                          src={image.url}
+                          playsInline
+                          muted
+                          preload="metadata"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                        />
+                        <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                          <div className="p-1.5 rounded-full bg-black/60 text-white">
+                            <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                              <path d="M8 5v14l11-7z" />
+                            </svg>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <img
+                        src={image.url}
+                        alt={image.filename || `Review photo ${idx + 1}`}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                        loading="lazy"
+                      />
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Footer: Helpful Vote & Actions */}
+          <div className="flex items-center justify-between pt-2 text-xs text-neutral-500 dark:text-neutral-400">
+            <div className="flex items-center gap-3">
+              <span>Was this review helpful to you?</span>
+              <button
+                type="button"
+                onClick={handleHelpfulClick}
+                disabled={hasVoted || isVoting}
+                aria-pressed={hasVoted}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium transition-colors cursor-pointer ${
+                  hasVoted
+                    ? 'border-emerald-600 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-500'
+                    : 'border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300'
+                }`}
+              >
+                <ThumbsUp className={`w-3.5 h-3.5 ${hasVoted ? 'fill-current' : ''}`} aria-hidden="true" />
+                <span>Yes ({helpfulCount})</span>
+              </button>
+            </div>
 
         {/* Customer Self-Service Actions (Owner Only) */}
         {isOwner ? (
@@ -221,6 +243,8 @@ export function ReviewCard({
             </button>
           )
         )}
+      </div>
+        </div>
       </div>
 
       {/* Report Modal */}

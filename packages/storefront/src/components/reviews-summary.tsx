@@ -74,10 +74,18 @@ export function ProductReviewsSummary({
 
       {/* Breakdown Layout matching user's reference */}
       <div className="my-6 gap-8 sm:flex sm:items-start md:my-8">
-        <div className="shrink-0 space-y-4">
-          <p className="text-2xl font-semibold leading-none text-gray-900 dark:text-white">
+        <div className="shrink-0 space-y-3">
+          <div className="flex items-center gap-2">
+            <svg className="w-8 h-8 fill-yellow-400 text-yellow-400 shrink-0" viewBox="0 0 24 24">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+            </svg>
+            <span className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white">
+              {reviewCount > 0 ? averageRating.toFixed(1) : "0.0"}
+            </span>
+          </div>
+          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
             {reviewCount > 0
-              ? `${averageRating.toFixed(1)} out of 5`
+              ? `${reviewCount} ${reviewCount === 1 ? 'verified review' : 'verified reviews'}`
               : "No reviews yet"}
           </p>
 
@@ -85,7 +93,7 @@ export function ProductReviewsSummary({
             <button
               type="button"
               onClick={onWriteReviewClick}
-              className="mb-2 me-2 rounded-lg px-5 py-2.5 text-sm font-medium text-white focus:outline-none focus:ring-4 transition-colors bg-black hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200 cursor-pointer shadow-sm"
+              className="mt-2 inline-flex items-center justify-center rounded-lg px-6 py-2.5 text-sm font-semibold text-white bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 transition-colors shadow-xs cursor-pointer"
             >
               Write a review
             </button>
@@ -93,7 +101,7 @@ export function ProductReviewsSummary({
         </div>
 
         {reviewCount > 0 && (
-          <div className="mt-6 min-w-0 flex-1 space-y-3 sm:mt-0">
+          <div className="mt-6 min-w-0 flex-1 space-y-2.5 sm:mt-0">
             {[5, 4, 3, 2, 1].map((stars) => {
               const count = ratingDistribution[stars] || 0
               const percentage =
@@ -104,25 +112,26 @@ export function ProductReviewsSummary({
                 <div
                   key={stars}
                   onClick={() => handleFilter?.(isSelected ? null : stars)}
-                  className={`flex items-center gap-2 py-1 px-1.5 rounded-md transition-colors cursor-pointer ${
+                  className={`flex items-center gap-3 py-1 px-2 rounded-md transition-colors cursor-pointer ${
                     isSelected
                       ? 'bg-neutral-100 dark:bg-neutral-800'
                       : 'hover:bg-neutral-50 dark:hover:bg-neutral-900/50'
                   }`}
                   title={`Filter by ${stars} star reviews (${count})`}
                 >
-                  <p className="w-2 shrink-0 text-start text-sm font-medium leading-none text-gray-900 dark:text-white">
-                    {stars}
-                  </p>
-                  <StarIcon />
-                  <div className="h-1.5 w-64 sm:w-80 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    {[...Array(5)].map((_, i) => (
+                      <StarIcon key={i} filled={i < stars} />
+                    ))}
+                  </div>
+                  <div className="h-2 w-48 sm:w-64 md:w-80 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
                     <div
-                      className="h-1.5 rounded-full bg-yellow-300"
+                      className="h-2 rounded-full bg-yellow-400 transition-all duration-300"
                       style={{ width: `${percentage}%` }}
                     />
                   </div>
-                  <span className="w-12 shrink-0 text-right text-sm font-medium leading-none hover:underline sm:w-auto sm:text-left text-gray-900 hover:text-black dark:text-gray-300 dark:hover:text-white font-semibold">
-                    {count} <span className="hidden sm:inline">reviews</span>
+                  <span className="text-xs sm:text-sm font-normal text-neutral-500 dark:text-neutral-400 shrink-0 min-w-[2.5rem]">
+                    ({count.toLocaleString()})
                   </span>
                 </div>
               )

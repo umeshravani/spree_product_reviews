@@ -488,10 +488,11 @@ export function ReviewsListPage({ initialProductId }: ReviewsListProps) {
                       {/* Product */}
                       <td className="py-3 px-4">
                         {(() => {
+                          const targetProductId = rev.product_prefixed_id || rev.product_id
                           const productHref =
                             storeId && storeId !== 'default'
-                              ? `/${storeId}/products/${rev.product_id}`
-                              : `/products/${rev.product_id}`
+                              ? `/${storeId}/products/${targetProductId}`
+                              : `/products/${targetProductId}`
                           return (
                             <a
                               href={productHref}

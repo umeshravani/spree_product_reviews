@@ -1,6 +1,6 @@
 {
   "name": "@umeshravani/spree-product-reviews-dashboard",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Native Spree 6 Dashboard plugin for Product Reviews administration",
   "license": "MIT",
   "type": "module",

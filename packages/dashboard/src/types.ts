@@ -18,6 +18,8 @@ export interface ReviewCustomer {
 
 export interface ReviewProduct {
   id: string
+  raw_id?: string
+  prefixed_id?: string
   name: string
   slug?: string
 }
@@ -34,6 +36,8 @@ export interface ReviewModerationAudit {
 export interface ProductReviewSummary {
   id: string
   product_id: string
+  product_raw_id?: string | null
+  product_prefixed_id?: string | null
   product_name: string
   product_thumbnail_url?: string | null
   customer_id?: string | null

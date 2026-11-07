@@ -1,6 +1,6 @@
 {
   "name": "@umeshravani/spree-product-reviews-storefront",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Reusable React 19 and Next.js App Router companion package for Spree 6 Product Reviews",
   "license": "MIT",
   "type": "module",
