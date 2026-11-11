@@ -1,47 +1,46 @@
-# frozen_string_literal: true
-
 module Spree
-  class ReviewVote < (defined?(Spree.base_class) ? Spree.base_class : (defined?(Spree::Base) ? Spree::Base : ActiveRecord::Base))
-    self.table_name = 'spree_review_votes'
+  class ReviewVote < Spree.base_class
+    has_prefix_id :revvote
 
-    belongs_to :review, class_name: 'Spree::ProductReview'
-    belongs_to :customer, class_name: (defined?(Spree.customer_class) && Spree.customer_class ? Spree.customer_class.to_s : 'Spree::Customer'), optional: true
-    belongs_to :user, class_name: (defined?(Spree.user_class) && Spree.user_class ? Spree.user_class.to_s : 'Spree::User'), optional: true
+    VOTES = %w[helpful not_helpful].freeze
 
-    validates :review, presence: true
-    validates :helpful, inclusion: { in: [true, false] }
-    validate :validate_voter_presence
-    validate :validate_unique_vote, on: :create
+    belongs_to :review, class_name: 'Spree::Review', inverse_of: :votes, touch: true
+    belongs_to :customer, class_name: Spree.customer_class.to_s, optional: true
 
-    after_save :update_review_counts
-    after_destroy :update_review_counts
+    validates :review, :vote, presence: true
+    validates :vote, inclusion: { in: VOTES }
+    validate :user_or_ip_address_present
+    validate :single_vote_per_actor
+
+    scope :helpful, -> { where(vote: 'helpful') }
+    scope :not_helpful, -> { where(vote: 'not_helpful') }
+
+    after_commit :recalculate_review_vote_counts
 
     private
 
-    def validate_voter_presence
-      if customer_id.blank? && user_id.blank? && ip_address.blank?
-        errors.add(:base, 'Voter identification (customer or IP address) required')
-      end
+    def user_or_ip_address_present
+      return if customer_id.present? || ip_address.present?
+
+      errors.add(:base, :blank)
     end
 
-    def validate_unique_vote
-      scope = self.class.where(review_id: review_id)
-      if customer_id.present?
-        errors.add(:customer_id, 'has already voted on this review') if scope.where(customer_id: customer_id).exists?
-      elsif user_id.present?
-        errors.add(:user_id, 'has already voted on this review') if scope.where(user_id: user_id).exists?
-      elsif ip_address.present?
-        errors.add(:ip_address, 'has already voted on this review from this IP') if scope.where(ip_address: ip_address).exists?
-      end
+    def single_vote_per_actor
+      return if review_id.blank?
+
+      existing = self.class.where(review_id: review_id)
+      existing = existing.where.not(id: id) if persisted?
+      existing = if customer_id.present?
+                   existing.where(customer_id: customer_id)
+                 else
+                   existing.where(ip_address: ip_address)
+                 end
+
+      errors.add(:base, :taken) if existing.exists?
     end
 
-    def update_review_counts
-      return unless review
-
-      review.update_columns(
-        helpful_count: review.votes.where(helpful: true).count,
-        unhelpful_count: review.votes.where(helpful: false).count
-      )
+    def recalculate_review_vote_counts
+      review&.recalculate_vote_counts!
     end
   end
 end

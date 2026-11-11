@@ -1,78 +1,64 @@
-# Upgrading from Spree 5 to Spree 6
+# Upgrading from `spree_product_reviews` 6.0.x to 6.1.0
 
-The Spree 6 release of `spree_product_reviews` represents a modern re-architecture designed for Rails 8, Spree 6 API V3, and modern React 19 / Next.js storefronts.
-
----
-
-## Key Breaking Changes from Spree 5
-
-| Aspect | Spree 5 Implementation | Spree 6 Modern Architecture |
-|---|---|---|
-| **Identity Model** | Referenced legacy `user_id` pointing to `spree_users` | Uses `customer_id` (`Spree::Customer`) with optional legacy `user_id` preservation |
-| **Admin Interface** | Legacy Deface ERB overrides into Rails admin views | Standalone React companion plugin for Spree 6 React Dashboard (`@spree/dashboard`) |
-| **Storefront** | ERB partials and jQuery scripts | Headless React 19 / Next.js App Router companion package |
-| **API Endpoints** | Legacy Spree V1/V2 endpoints | Standard Spree Store API V3 and Admin API V3 endpoints |
-| **Order Matching** | Relied on Spree 5 order state machine (`state == 'complete'`) | Supports Spree 6 order statuses (`completed_at`, `status == 'placed'`, `status == 'complete'`) |
+`spree_product_reviews` `6.1.0` introduces non-destructive database migrations, backwards-compatible Ruby/API aliases, Admin Dashboard plugin `2.0.0`, and Storefront package `2.0.0`. Existing staging or production stores running `6.0.0` can upgrade in-place without losing any reviews, customer media, votes, abuse reports, or moderation audits.
 
 ---
 
-## Step-by-Step Upgrade Process
+## What Happens Automatically During Upgrade
 
-### 1. Update Gemfile
+When you install the new migrations and run `pnpm spree migrate`:
 
-Replace legacy git reference with Spree 6 branch:
+1. **`20261112000001_create_spree_product_reviews_v2_tables`**
+   - Idempotently creates `spree_reviews`, `spree_review_media`, `spree_review_questions`, `spree_review_question_options`, `spree_review_answers`, `spree_product_review_summaries`, and `spree_review_settings`, and extends existing `spree_review_votes`, `spree_review_reports`, and `spree_review_moderation_audits` tables with any missing v6.1 columns.
+2. **`20261112000002_upgrade_legacy_spree_product_reviews`**
+   - Safely drops legacy foreign-key constraints referencing `spree_product_reviews` before remapping rows to `spree_reviews`.
+   - Converts `spree_review_votes.helpful` (`boolean`) to `vote` (`"helpful"` / `"not_helpful"`) and sets unique indexes cleanly.
+   - Relaxes `spree_review_reports.status` NOT NULL constraints cleanly.
+   - Normalizes stringified `spree_review_moderation_audits.metadata` into structured JSON.
+   - Copies all legacy `spree_product_reviews` rows into `spree_reviews` (preserving IDs, timestamps, customer/order links, moderation notes, and IP hashes).
+   - Remaps `ActiveStorage::Attachment` records previously attached to `record_type = 'Spree::ProductReview'` onto new `Spree::ReviewMedia` records without duplicating or moving stored files on disk/S3.
+   - Recalculates `Spree::ProductReviewSummary` aggregates for every store & product.
+   - Seeds default `Spree::ReviewSetting` rows for existing stores.
+   - Renames `spree_product_reviews` -> `spree_legacy_product_reviews` so historical rows stay archived safely.
+
+---
+
+## Step-by-Step Upgrade Checklist
+
+### 1. Backend Gem (`server/Gemfile`)
 
 ```ruby
-gem 'spree_product_reviews', github: 'umeshravani/spree_product_reviews', branch: 'spree-6'
+gem 'spree_product_reviews', github: 'umeshravani/spree_product_reviews', tag: 'v6.1.0'
 ```
 
-Run bundle:
+Update the bundle, remove old `*.spree_product_reviews.rb` timestamped migrations *only if* `20261112000001` replaces fresh creation (keep already-ran migrations or install new ones cleanly):
 
 ```bash
-pnpm spree exec bundle install
-```
-
-### 2. Copy and Run Migrations
-
-```bash
-pnpm spree rails spree_product_reviews:install:migrations
+pnpm spree exec bundle update spree_product_reviews
+pnpm spree exec bin/rails railties:install:migrations FROM=spree_product_reviews
 pnpm spree migrate
+pnpm spree restart
 ```
 
-This runs:
-- `20261031000001_modernize_spree_product_reviews_for_spree6.rb`: Adds `customer_id`, `verified_purchaser`, `helpful_count`, `name`, and composite indexes.
-- `20261031000002_add_moderation_audits_and_soft_moderation_to_reviews.rb`: Adds soft moderation columns (`hidden`, `rejected`, `discarded_at`) and creates `spree_review_moderation_audits`.
-- `20261031000003_add_review_reports_and_abuse_safeguards.rb`: Adds `ip_hash`, `flagged_count`, `spam_score` and creates `spree_review_reports`.
+> **Note:** Old initializers referencing `SpreeReviews::Config`, `Spree::ProductReview`, or legacy config keys (`max_images_upload`, `max_image_size_mb`, `max_video_size_mb`, `review_status_default`) remain supported via aliases. Once upgraded, update your initializer to `SpreeProductReviews::Config` at your convenience.
 
-### 3. Reconcile Historical Spree 5 User References (Optional / Manual Step)
+### 2. Admin Dashboard (`apps/dashboard`)
 
-> [!WARNING]
-> **Do NOT run this migration automatically during automated production deployments or CI/CD pipelines.**
-> Legacy customer reconciliation modifies identity foreign keys. Always run in preview mode (`DRY_RUN=1`) first and review the output before applying changes to production data.
-
-To reconcile existing Spree 5 reviews to Spree 6 customers safely without blind ID collisions, use the built-in reconciliation task:
-
-#### Step 3.1: Dry-Run Preview
-```bash
-pnpm spree rake spree_product_reviews:reconcile_legacy_users DRY_RUN=1
-```
-*(Note: `spree_product_reviews:migrate_legacy_users` is available as a supported alias).*
-
-#### Step 3.2: Explicit Identity-Mapping Execution
-```bash
-pnpm spree rake spree_product_reviews:reconcile_legacy_users
-```
-
-The reconciliation runner:
-- Looks up corresponding `Spree::Customer` records matching legacy users by verified email address.
-- Assigns the resolved `customer_id` while preserving the historical `user_id`.
-- Records that cannot be matched to a Spree 6 customer retain their original `user_id` and have `customer_id: nil`. They are safely preserved as historical reviews and never assigned to an unrelated customer.
-
-### 4. Recalculate Rating Aggregates
-
-To sync existing review ratings to product cache columns (`average_rating` and `review_count`):
+Replace the `1.x` plugin tarball with `2.0.0`:
 
 ```bash
-pnpm spree rake spree_product_reviews:recalculate_ratings
+cd apps/dashboard
+pnpm add ./vendor/packages/umeshravani-spree-product-reviews-dashboard-2.0.0.tgz
 ```
+
+### 3. Storefront (`apps/storefront`)
+
+Upgrade the companion package to `2.0.0`:
+
+```bash
+cd apps/storefront
+pnpm add file:vendor/packages/umeshravani-spree-product-reviews-storefront-2.0.0.tgz
+```
+
+Update imports if you referenced temporary `@spree-reviews/storefront` paths back to `@umeshravani/spree-product-reviews-storefront`, add `<ProductCardRating />` to your cards per [docs/storefront.md](storefront.md), and rebuild Next.js (`pnpm build`).
 

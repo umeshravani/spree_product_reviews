@@ -1,171 +1,104 @@
 import { adminClient } from '@spree/dashboard-core'
-import type {
-  ProductReviewDetail,
-  ProductReviewsSettings,
-  ProductWidgetSummary,
-  ReviewCounts,
-  ReviewListParams,
-  ReviewListResponse,
-} from './types'
+import type { Choice, Page, Question, Review, ReviewCounts, ReviewSettings } from './types'
 
-export const productReviewsClient = {
-  async list(params: ReviewListParams = {}): Promise<ReviewListResponse> {
-    const search = new URLSearchParams()
-    if (params.status && params.status !== 'all') search.set('status', params.status)
-    if (params.rating) search.set('rating', String(params.rating))
-    if (params.product_id) search.set('product_id', params.product_id)
-    if (params.q) search.set('q', params.q)
-    if (params.sort) search.set('sort', params.sort)
-    if (params.page) search.set('page', String(params.page))
-    if (params.per_page) search.set('per_page', String(params.per_page))
+export interface ReviewListFilters {
+  page: number
+  limit?: number
+  status?: string
+  statuses?: string[]
+  rating?: number | string
+  search?: string
+  productId?: string
+  verifiedPurchase?: string
+  mediaType?: string
+  sort?: string
+}
 
-    const query = search.toString()
-    const path = `/product_reviews${query ? `?${query}` : ''}`
-    const res = await adminClient.request<ReviewListResponse>('GET', path)
-    return res
+export type ReviewBulkAction =
+  | 'approve'
+  | 'reject'
+  | 'hide'
+  | 'unhide'
+  | 'mark_spam'
+  | 'restore'
+  | 'pending'
+  | 'delete'
+
+export const reviewsClient = {
+  list: ({
+    page,
+    limit = 25,
+    status,
+    statuses,
+    rating,
+    search,
+    productId,
+    verifiedPurchase,
+    mediaType,
+    sort,
+  }: ReviewListFilters) => {
+    const resolvedStatus =
+      statuses && statuses.length > 0
+        ? statuses.join(',')
+        : status && status !== 'all'
+          ? status
+          : undefined
+
+    return adminClient.request<Page<Review>>('GET', '/reviews', {
+      params: {
+        page,
+        limit,
+        ...(resolvedStatus ? { status: resolvedStatus } : {}),
+        ...(rating ? { rating } : {}),
+        ...(search?.trim() ? { search: search.trim() } : {}),
+        ...(productId ? { product_id: productId } : {}),
+        ...(verifiedPurchase ? { verified_purchase: verifiedPurchase } : {}),
+        ...(mediaType ? { media_type: mediaType } : {}),
+        ...(sort ? { sort } : {}),
+      },
+    })
   },
-
-  async counts(): Promise<ReviewCounts> {
-    const res = await adminClient.request<{ data: ReviewCounts }>(
-      'GET',
-      '/product_reviews/counts'
-    )
-    return res.data
-  },
-
-  async get(id: string): Promise<ProductReviewDetail> {
-    const res = await adminClient.request<{ data: ProductReviewDetail }>(
-      'GET',
-      `/product_reviews/${id}`
-    )
-    return res.data
-  },
-
-  async update(
+  counts: () => adminClient.request<{ data: ReviewCounts }>('GET', '/reviews/counts'),
+  get: (id: string) => adminClient.request<Review>('GET', `/reviews/${id}`),
+  update: (id: string, body: object) =>
+    adminClient.request<Review>('PATCH', `/reviews/${id}`, { body }),
+  moderate: (
     id: string,
-    payload: { title?: string; review?: string; rating?: number; moderator_note?: string }
-  ): Promise<ProductReviewDetail> {
-    const res = await adminClient.request<{ data: ProductReviewDetail }>(
-      'PATCH',
-      `/product_reviews/${id}`,
-      {
-        body: {
-          product_review: {
-            title: payload.title,
-            review: payload.review,
-            rating: payload.rating,
-          },
-          moderator_note: payload.moderator_note,
-        },
-      }
-    )
-    return res.data
-  },
-
-  async approve(id: string, note?: string): Promise<ProductReviewDetail> {
-    const res = await adminClient.request<{ data: ProductReviewDetail }>(
-      'POST',
-      `/product_reviews/${id}/approve`,
-      { body: { note } }
-    )
-    return res.data
-  },
-
-  async reject(id: string, note?: string): Promise<ProductReviewDetail> {
-    const res = await adminClient.request<{ data: ProductReviewDetail }>(
-      'POST',
-      `/product_reviews/${id}/reject`,
-      { body: { note } }
-    )
-    return res.data
-  },
-
-  async markSpam(id: string, note?: string): Promise<ProductReviewDetail> {
-    const res = await adminClient.request<{ data: ProductReviewDetail }>(
-      'POST',
-      `/product_reviews/${id}/mark_spam`,
-      { body: { note } }
-    )
-    return res.data
-  },
-
-  async restore(id: string, note?: string): Promise<ProductReviewDetail> {
-    const res = await adminClient.request<{ data: ProductReviewDetail }>(
-      'POST',
-      `/product_reviews/${id}/restore`,
-      { body: { note } }
-    )
-    return res.data
-  },
-
-  async hide(id: string, note?: string): Promise<ProductReviewDetail> {
-    const res = await adminClient.request<{ data: ProductReviewDetail }>(
-      'POST',
-      `/product_reviews/${id}/hide`,
-      { body: { note } }
-    )
-    return res.data
-  },
-
-  async unhide(id: string, note?: string): Promise<ProductReviewDetail> {
-    const res = await adminClient.request<{ data: ProductReviewDetail }>(
-      'POST',
-      `/product_reviews/${id}/unhide`,
-      { body: { note } }
-    )
-    return res.data
-  },
-
-  async deleteImage(reviewId: string, imageId: string): Promise<ProductReviewDetail> {
-    const res = await adminClient.request<{ data: ProductReviewDetail }>(
-      'DELETE',
-      `/product_reviews/${reviewId}/images/${imageId}`
-    )
-    return res.data
-  },
-
-  async bulkModerate(
-    ids: string[],
-    actionType: 'approve' | 'reject' | 'mark_spam' | 'hide' | 'restore',
-    note?: string
-  ): Promise<{ processed_count: number }> {
-    const res = await adminClient.request<{ data: { processed_count: number } }>(
-      'POST',
-      '/product_reviews/bulk_moderate',
-      { body: { ids, action_type: actionType, note } }
-    )
-    return res.data
-  },
-
-  async delete(id: string, force = false): Promise<void> {
-    await adminClient.request(
-      'DELETE',
-      `/product_reviews/${id}${force ? '?force=true' : ''}`
-    )
-  },
-
-  async productSummary(productId: string): Promise<ProductWidgetSummary> {
-    const res = await adminClient.request<{ data: ProductWidgetSummary }>(
-      'GET',
-      `/products/${productId}/reviews_summary`
-    )
-    return res.data
-  },
-
-  async getSettings(): Promise<ProductReviewsSettings> {
-    const res = await adminClient.request<{ data: ProductReviewsSettings }>(
-      'GET',
-      '/product_reviews/settings'
-    )
-    return res.data
-  },
-
-  async updateSettings(settings: Partial<ProductReviewsSettings>): Promise<ProductReviewsSettings> {
-    const res = await adminClient.request<{ data: ProductReviewsSettings }>(
-      'PATCH',
-      '/product_reviews/settings',
-      { body: { settings } }
-    )
-    return res.data
-  },
+    action: 'approve' | 'reject' | 'hide' | 'unhide' | 'mark_spam' | 'restore',
+    moderatorNote?: string,
+  ) =>
+    adminClient.request<Review>('POST', `/reviews/${id}/${action}`, {
+      body: moderatorNote?.trim() ? { moderator_note: moderatorNote.trim() } : undefined,
+    }),
+  bulk: (ids: string[], actionType: ReviewBulkAction, moderatorNote?: string) =>
+    adminClient.request<{ data: { count: number; action_type: string } }>('POST', '/reviews/bulk', {
+      body: {
+        ids,
+        action_type: actionType,
+        ...(moderatorNote?.trim() ? { moderator_note: moderatorNote.trim() } : {}),
+      },
+    }),
+  deleteMedia: (id: string, mediaId: string) =>
+    adminClient.request<Review>('DELETE', `/reviews/${id}/images/${mediaId}`),
+  delete: (id: string) => adminClient.request<void>('DELETE', `/reviews/${id}`),
+  getSettings: () => adminClient.request<{ data: ReviewSettings }>('GET', '/reviews/settings'),
+  updateSettings: (settings: Partial<ReviewSettings>) =>
+    adminClient.request<{ data: ReviewSettings }>('PATCH', '/reviews/settings', {
+      body: { settings },
+    }),
+  questions: (page: number) =>
+    adminClient.request<Page<Question>>('GET', '/review_questions', {
+      params: { page, limit: 25 },
+    }),
+  question: (id: string) => adminClient.request<Question>('GET', `/review_questions/${id}`),
+  createQuestion: (body: object) =>
+    adminClient.request<Question>('POST', '/review_questions', { body }),
+  updateQuestion: (id: string, body: object) =>
+    adminClient.request<Question>('PATCH', `/review_questions/${id}`, { body }),
+  deleteQuestion: (id: string) => adminClient.request<void>('DELETE', `/review_questions/${id}`),
+  choices: (resource: 'products' | 'categories', page: number, search: string) =>
+    adminClient.request<Page<Choice>>('GET', `/${resource}`, {
+      params: { page, limit: 50, 'q[search]': search || undefined },
+    }),
+  product: (id: string) => adminClient.request<Choice>('GET', `/products/${id}`),
 }

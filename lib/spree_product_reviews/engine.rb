@@ -1,78 +1,55 @@
-# frozen_string_literal: true
-
-require 'rails/engine'
-
 module SpreeProductReviews
   class Engine < Rails::Engine
     require 'spree/core'
     isolate_namespace Spree
     engine_name 'spree_product_reviews'
 
-    initializer 'spree_product_reviews.inflections', before: :set_autoload_paths do
-      Rails.autoloaders.each do |autoloader|
-        autoloader.inflector.inflect('spree_product_reviews' => 'SpreeProductReviews')
-      end
-    end
-
-    initializer 'spree_product_reviews.permissions' do
-      if defined?(Spree) && Spree.respond_to?(:permissions) && Spree.permissions.respond_to?(:register_scope)
-        Spree.permissions.register_scope(:product_reviews, group: :catalog, resources: -> { [Spree::ProductReview] })
-      end
-    end
-
-    initializer 'spree_product_reviews.permitted_attributes' do
-      if defined?(Spree::Product) && Spree::Product.respond_to?(:additional_permitted_attributes)
-        unless Spree::Product.additional_permitted_attributes.include?(:reviews_allowed)
-          Spree::Product.additional_permitted_attributes << :reviews_allowed
-        end
-      end
-    end
-
-    config.after_initialize do
-      if defined?(Spree) && Spree.respond_to?(:integrations)
-        Spree.integrations << 'SpreeProductReviews::Integration' unless Spree.integrations.include?('SpreeProductReviews::Integration')
-      end
-    end
-
-    initializer 'spree_product_reviews.request_size_limit', after: :load_config_initializers do
-      begin
-        require 'spree/api/middleware/request_size_limit'
-        module ::SpreeProductReviews
-          module RequestSizeLimitExtension
-            REVIEW_SUBMISSION_PATH = %r{\A/api/v3/store/products/[^/]+/product_reviews/?\z}
-            MAX_REVIEW_UPLOAD_SIZE = 64.megabytes
-
-            def max_body_size(env)
-              if env['REQUEST_METHOD'] == 'POST' && REVIEW_SUBMISSION_PATH.match?(env['PATH_INFO'].to_s)
-                return MAX_REVIEW_UPLOAD_SIZE
-              end
-
-              super
-            end
-
-            def file_upload?(env)
-              super || (env['REQUEST_METHOD'] == 'POST' && REVIEW_SUBMISSION_PATH.match?(env['PATH_INFO'].to_s))
-            end
-          end
-        end
-        ::Spree::Api::Middleware::RequestSizeLimit.prepend(::SpreeProductReviews::RequestSizeLimitExtension)
-      rescue LoadError => e
-        Rails.logger.warn("[SpreeProductReviews] Could not load RequestSizeLimit: #{e.message}")
-      end
-    end
+    config.paths.add 'app/subscribers', eager_load: true
 
     config.generators do |g|
       g.test_framework :rspec
     end
 
+    initializer 'spree_product_reviews.environment', before: :load_config_initializers do |_app|
+      SpreeProductReviews::Config = SpreeProductReviews::Configuration.new
+    end
+
+    # Allow cross-origin ActiveStorage direct uploads & media streaming from
+    # external storefronts without requiring app-level CORS workarounds.
+    initializer 'spree_product_reviews.active_storage_cors', after: :load_config_initializers do |app|
+      next unless defined?(Rack::Cors)
+
+      app.config.middleware.insert_before 0, Rack::Cors do
+        allow do
+          origins '*'
+          resource '/rails/active_storage/*',
+                   headers: :any,
+                   methods: [:get, :put, :post, :head, :options]
+        end
+      end
+    rescue StandardError => e
+      if defined?(Rails)
+        Rails.logger.warn("[SpreeProductReviews] ActiveStorage CORS middleware setup skipped: #{e.message}")
+      end
+    end
+
+    config.after_initialize do
+      require_dependency root.join('app/subscribers/spree/review_purchase_subscriber').to_s
+
+      unless Spree.subscribers.include?(Spree::ReviewPurchaseSubscriber)
+        Spree.subscribers << Spree::ReviewPurchaseSubscriber
+      end
+    end
+
     config.to_prepare do
-      Dir.glob(File.join(File.dirname(__FILE__), '../../app/models/**/*_decorator*.rb')) do |c|
-        load(c)
+      unless Object.const_defined?('Spree::ProductReview')
+        Spree.const_set(:ProductReview, Spree::Review)
       end
 
-      if defined?(Spree) && Spree.respond_to?(:permissions) && Spree.permissions.respond_to?(:register_scope)
-        Spree.permissions.register_scope(:product_reviews, group: :catalog, resources: -> { [Spree::ProductReview] })
-      end
+      require_dependency SpreeProductReviews::Engine.root.join('app/models/spree_product_reviews/product_decorator').to_s
+      require_dependency SpreeProductReviews::Engine.root.join('app/serializers/spree_product_reviews/product_serializer_decorator').to_s
+      require_dependency SpreeProductReviews::Engine.root.join('app/serializers/spree_product_reviews/line_item_serializer_decorator').to_s
+      require_dependency SpreeProductReviews::Engine.root.join('app/controllers/spree_product_reviews/store_products_controller_decorator').to_s
     end
   end
 end

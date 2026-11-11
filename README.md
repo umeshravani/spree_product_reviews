@@ -1,179 +1,118 @@
 # Spree Product Reviews 6
 
-[![Spree Commerce](https://img.shields.io/badge/Spree_Commerce-6.0.1-red.svg)](https://spreecommerce.org)
+[![Gem Version](https://img.shields.io/badge/gem-6.1.0-red.svg)](https://github.com/umeshravani/spree_product_reviews)
+[![Dashboard Plugin](https://img.shields.io/badge/%40umeshravani%2Fspree--product--reviews--dashboard-2.0.0-black.svg)](packages/dashboard/package.json)
+[![Storefront Package](https://img.shields.io/badge/%40umeshravani%2Fspree--product--reviews--storefront-2.0.0-black.svg)](packages/storefront/package.json)
+[![Spree Commerce](https://img.shields.io/badge/Spree_Commerce-6.x-red.svg)](https://spreecommerce.org)
 [![Rails](https://img.shields.io/badge/Rails-8.1-CC0000.svg)](https://rubyonrails.org)
-[![Ruby](https://img.shields.io/badge/Ruby-3.4-red.svg)](https://www.ruby-lang.org)
-[![React](https://img.shields.io/badge/React-19.0-61DAFB.svg)](https://react.dev)
-[![Next.js](https://img.shields.io/badge/Next.js-App_Router-black.svg)](https://nextjs.org)
+[![React](https://img.shields.io/badge/React-18%20%2F%2019-61DAFB.svg)](https://react.dev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A standalone, production-grade Product Reviews and Ratings platform engineered natively for **Spree Commerce 6.0.1**, **Rails 8.1**, and modern **React 19 / Next.js App Router** storefronts.
-
-> **Important Notice:** The companion packages `@umeshravani/spree-product-reviews-dashboard` and `@umeshravani/spree-product-reviews-storefront` are currently in **Developer Preview / Release Hardening** on branch `spree-6` and are **not yet published on the public npm registry or RubyGems**. They should be installed via Git repository reference, commit SHA, or locally packaged tarballs (`.tgz`).
+A production-grade Product Reviews, Ratings, Dynamic Q&A, Photo/Video Uploads, and Gift Card Rewards suite engineered natively for **Spree Commerce 6**, **Rails 8.1**, **@spree/dashboard**, and **React / Next.js App Router** storefronts.
 
 ---
 
 ## Architecture Overview
 
-Spree Product Reviews 6 is composed of three decoupled, independently installable modules:
-
 ```
-spree_product_reviews/
-├── app/                  # Rails Engine: Store API V3 & Admin API V3 controllers, models, serializers
-├── db/migrate/           # Idempotent database migrations for Spree 6
-├── lib/                  # Engine registration, preferences configuration, size-limit middleware
+spree_product_reviews/ (gem v6.1.0)
+├── app/                     # Rails Engine: Store API v3, Admin API v3, Models, Serializers, Services
+├── config/routes.rb         # Store + Admin v3 endpoints + v6.0 compatibility route aliases
+├── db/migrate/              # Idempotent v6.1 schema + automatic v6.0 -> v6.1 data & media upgrade
+├── lib/                     # Engine, Configuration, Install Generator, Rake tasks
+├── spec/                    # Comprehensive RSpec suite (models, API v3, upgrade migration, rewards)
 ├── packages/
-│   ├── dashboard/        # Companion React Admin Dashboard Plugin (@spree/dashboard)
-│   └── storefront/       # Companion React 19 / Next.js App Router UI Suite (@spree/sdk)
-└── docs/                 # Comprehensive documentation suite
+│   ├── dashboard/           # @umeshravani/spree-product-reviews-dashboard@2.0.0
+│   └── storefront/          # @umeshravani/spree-product-reviews-storefront@2.0.0
+└── docs/                    # Setup, Upgrade, Dashboard, Storefront, Configuration & API guides
 ```
 
-### Core Architecture Highlights
+### Key Features
 
-1. **Zero Core Modifications:**
-   - 100% plug-and-play. Does not modify or monkey-patch Spree core files or host application files.
-2. **Modern Spree 6 Identity Model:**
-   - Connects reviews directly to `Spree::Customer` (`customer_id`) while safely preserving legacy `user_id` records.
-3. **Native React Dashboard Integration:**
-   - Registers via official `defineDashboardPlugin` contracts in Spree 6 React Dashboard (`@spree/dashboard`) with real-time pending review badge, photo moderation, staff notes, and audit history.
-4. **Multi-Step Wizard & Single-Page Review Modals:**
-   - Choose between a 4-step guided wizard (Star Rating -> Media Upload with Discount Incentives -> Detailed Feedback -> Confirmation) or a clean single-page submission flow with sentence-cased labels and inline login.
-5. **Incentivized Reviews & Automatic Gift Card Rewards:**
-   - Automatically issues native `Spree::GiftCard` rewards into customer accounts upon approval of reviews featuring customer photos or videos, redeemable at checkout.
-6. **Production Summary Breakdown & PDP Star Header:**
-   - Permanent distribution track bars with gold star score (`★ 4.9`), star breakdown rows (5-to-1), and `ProductRatingHeader` (`★★★★★ 4.9/5 1,500+ reviews`) with smooth scrolling to `#reviews`.
-7. **React 19 & Next.js App Router Storefront:**
-   - Modular, mobile-responsive UI components with server-rendered Google Search Central compliant JSON-LD structured data.
-8. **Production Anti-Spam & Security Pipeline:**
-   - Customer & IP rate limiting, duplicate submission detection, salted SHA256 IP hashing (`ip_hash`), XSS sanitization, 5MB image limits, and community abuse reporting.
+1. **Zero Core Modifications & Automatic v6.0 -> v6.1 Upgrade**
+   - Uses clean `Module#prepend` decorators for `Spree::Product`, `Spree::Api::V3::ProductSerializer`, `Spree::Api::V3::LineItemSerializer`, and `Spree::Api::V3::Store::ProductsController` (eager-loading `:review_summaries`).
+   - Idempotent migrations safely migrate existing `6.0.0` `spree_product_reviews` tables, Active Storage blobs, votes, reports, and moderation audits without data loss.
+2. **Dedicated React Admin Dashboard (`Reviews` Navigation Group)**
+   - Top-level **Reviews** sidebar group (`16x16` Lucide `UserStar` icon) with **Reviews**, **Questions**, and **Settings**.
+   - Spree-native toolbar with search, Filters popover, multi-select Status dropdown (`Approved`, `Pending`, `Rejected`, `Spam`, `Hidden`, `Flagged`), sorting, and batch moderation (**Set status...**, **Approve**, **Reject**, **Mark as spam**, **Delete**).
+   - Full photo + playable video gallery, moderation history timeline, customer abuse reports, and editable **Questions** (`single_select`, `multi_select`, `scale`, `boolean`, `text`).
+   - Three-tab **Settings** (`General`, `Settings`, `Customisation`) including **Appearance** color controls for PDP header stars, bottom review stars, **Product card stars**, and **Verified Purchase tick**.
+3. **Storefront Product Card Stars + PDP Reviews & Rewards**
+   - **`<ProductCardRating />`**: Drop compact star ratings with review counts `(N)` onto `/products` cards, `/cart` line items, `/checkout` summary items, and `CartDrawer` slide-over items — automatically fed zero-query from `ProductSerializer` & `LineItemSerializer` or batched via `/api/v3/store/products/review_summaries`.
+   - **`<ProductRatingHeader />`** & **`<ProductReviewsSection />`**: Live breakdown histogram, photo/video filters, Q&A answer chips, clickable Verified Purchase checkmark + modal, `80x128` media lightbox, Multi-Step Wizard & Single-Page submission flows, policy-controlled review editing, and automatic `Spree::GiftCard` rewards on approval of photo/video reviews.
+   - **`<ProductReviewsJsonLd />`**: Google Search Central compliant structured `Product` + `AggregateRating` + `Review` schema.
 
 ---
 
 ## Quickstart
 
-### 1. Backend Engine Installation
+### 1. Backend Engine (`spree_product_reviews` v6.1.0)
 
-Add the extension to your Spree 6 application's `Gemfile` pinned to an exact, reviewed commit SHA:
+Add to `server/Gemfile`:
 
 ```ruby
-# Initial deployment: pin to reviewed Git commit SHA (RubyGems release pending)
-gem 'spree_product_reviews', github: 'umeshravani/spree_product_reviews', ref: 'e8b743ffe394476537c045b4bbc2b13bc57d8094'
+gem 'spree_product_reviews', github: 'umeshravani/spree_product_reviews', tag: 'v6.1.0'
 ```
 
-Install and run migrations:
+Install & migrate:
 
 ```bash
 pnpm spree exec bundle install
-pnpm spree rails spree_product_reviews:install:migrations
+pnpm spree exec bin/rails railties:install:migrations FROM=spree_product_reviews
 pnpm spree migrate
+pnpm spree restart
 ```
 
-### 2. Admin Dashboard Plugin Installation
-
-In `apps/dashboard`:
+Or run the interactive install generator:
 
 ```bash
-pnpm add file:/path/to/spree_product_reviews/packages/dashboard/umeshravani-spree-product-reviews-dashboard-1.0.0.tgz
+pnpm spree generate spree_product_reviews:install --migrate
 ```
 
-In `apps/dashboard/src/plugins.ts`:
+### 2. Admin Dashboard Plugin (`@umeshravani/spree-product-reviews-dashboard` v2.0.0)
 
-```typescript
-import { reviewsPlugin } from '@umeshravani/spree-product-reviews-dashboard'
-
-export const plugins = [
-  reviewsPlugin(),
-]
-```
-
-### 3. Storefront Companion Installation
-
-In `apps/storefront`:
+Pack or reference the tarball from `packages/dashboard`:
 
 ```bash
-pnpm add file:/path/to/spree_product_reviews/packages/storefront/umeshravani-spree-product-reviews-storefront-1.0.0.tgz
+cd packages/dashboard && pnpm pack --pack-destination /path/to/spree-app/apps/dashboard/vendor/packages
+cd /path/to/spree-app/apps/dashboard
+pnpm add ./vendor/packages/umeshravani-spree-product-reviews-dashboard-2.0.0.tgz
 ```
 
-Render on your product detail page (`app/products/[slug]/page.tsx`):
+`@spree/dashboard/vite` auto-discovers the plugin via `"spree": { "dashboard": { "plugin": true } }`, or register it explicitly in `apps/dashboard/src/plugins.ts`:
 
-```tsx
-import {
-  ProductReviewsSection,
-  ProductReviewsJsonLd,
-  createReviewsClient,
-} from '@umeshravani/spree-product-reviews-storefront'
+```ts
+import { reviewsDashboardPlugin } from "@umeshravani/spree-product-reviews-dashboard";
 
-export default async function ProductPage({ params }: { params: { slug: string } }) {
-  const { slug } = params
-  const apiHost = process.env.NEXT_PUBLIC_SPREE_API_HOST || 'http://localhost:3000'
-
-  const client = createReviewsClient({ apiHost })
-  const { data: reviews, meta } = await client.list(slug).catch(() => ({
-    data: [],
-    meta: { total_count: 0, average_rating: 0, review_count: 0, rating_distribution: {} },
-  }))
-
-  const productMetadata = {
-    name: 'Sample Product',
-    sku: 'SAMPLE-SKU',
-    url: `https://store.example.com/products/${slug}`,
-    offers: {
-      price: '29.99',
-      priceCurrency: 'USD',
-      availability: 'https://schema.org/InStock',
-    },
-  }
-
-  return (
-    <div>
-      {/* Server-Rendered Google SEO JSON-LD */}
-      <ProductReviewsJsonLd
-        product={productMetadata}
-        reviews={reviews}
-        meta={meta}
-      />
-
-      {/* Hydrated Interactive Reviews Section */}
-      <ProductReviewsSection
-        productId={slug}
-        productName={productMetadata.name}
-        apiHost={apiHost}
-        initialData={{ reviews, meta }}
-      />
-    </div>
-  )
-}
+export const plugins = [reviewsDashboardPlugin()];
 ```
+
+### 3. Storefront Components (`@umeshravani/spree-product-reviews-storefront` v2.0.0)
+
+```bash
+cd packages/storefront && pnpm build && pnpm pack --pack-destination /path/to/storefront/vendor/packages
+cd /path/to/storefront
+pnpm add file:vendor/packages/umeshravani-spree-product-reviews-storefront-2.0.0.tgz
+```
+
+Follow [docs/storefront.md](docs/storefront.md) for configuring `next.config.ts`, Tailwind v4 `@source`, PDP widgets, and adding `<ProductCardRating />` to **Product Cards (`/products`)**, **Cart (`/cart`)**, **Cart Drawer**, and **Checkout (`/checkout`)**.
 
 ---
 
-## Documentation Suite
+## Documentation
 
 | Guide | Description |
 |---|---|
-| [Installation & Setup](docs/installation.md) | Comprehensive installation and setup for Engine, Dashboard, and Storefront |
-| [Configuration Reference](docs/configuration.md) | Centralized initializer settings, rate limits, thresholds, and defaults |
-| [Admin Dashboard Guide](docs/dashboard.md) | Moderation queues, image removal, audit trails, and permissions |
-| [Storefront Companion Guide](docs/storefront.md) | Next.js App Router components, props reference, and headless hook |
-| [Security & Privacy](docs/security-and-privacy.md) | IP hashing, rate limits, spam heuristics, XSS, and upload validation |
-| [Upgrading from Spree 5](docs/upgrading.md) | Step-by-step upgrade guide and legacy customer data migration task |
-| [Disabling & Uninstalling](docs/disabling-and-uninstalling.md) | Safe deactivation and clean uninstallation without data loss |
-| [Compatibility Matrix](docs/compatibility.md) | Supported Spree, Ruby, Rails, React, Next.js, and DB versions |
-| [Screenshots Inventory](docs/screenshots.md) | Inventory of visual verification screenshots across desktop and mobile |
-| [Changelog](CHANGELOG.md) | Version history and release notes |
-
----
-
-## Security Audit & Compliance
-
-- **XSS Prevention:** HTML and script tags stripped from all review inputs before validation.
-- **Privacy Safeguards:** IP addresses masked and hashed via salted SHA256; raw IPs and emails never serialized publicly.
-- **Scaped Middleware:** Body size expansion to 25 MB strictly scoped to `%r{\A/api/v3/store/products/[^/]+/product_reviews/?\z}`.
-- **Upload Hardening:** MIME whitelist (JPEG, PNG, WebP), 5MB size limit, EXIF metadata stripped.
-- **IDOR Protection:** Ownership verified on updates/deletions; verified purchaser status strictly calculated server-side from completed Spree orders.
+| [Installation & Setup](docs/installation.md) | Engine, Dashboard Plugin, Storefront Package, Direct Upload CORS |
+| [Upgrading from v6.0 to v6.1](docs/upgrading.md) | Automatic legacy table & media upgrade, compatibility aliases |
+| [Configuration Reference](docs/configuration.md) | `SpreeProductReviews::Config` initializer & Admin Settings keys |
+| [Admin Dashboard Guide](docs/dashboard.md) | `Reviews` nav, moderation, `Questions`, `Settings` & `Appearance` |
+| [Storefront Integration Guide](docs/storefront.md) | Product Card stars (`/products`, `/cart`, `/checkout`, `CartDrawer`), PDP & SEO |
+| [API Reference (v3)](docs/api-reference.md) | Store API v3 & Admin API v3 endpoints and payloads |
+| [Changelog](CHANGELOG.md) | Version release history |
 
 ---
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+Released under the [MIT License](LICENSE).

@@ -1,277 +1,328 @@
+import { computeFileMd5Base64 } from "./md5.js";
 import type {
-  CreateReviewPayload,
-  ProductReview,
+  CreateReviewInput,
+  ProductCardSummary,
+  ReportReviewInput,
+  ReviewEligibilityResponse,
+  ReviewFiltersResponse,
+  ReviewItem,
   ReviewListQuery,
-  ReviewListResponse,
-  ReviewsClientConfig,
-  UpdateReviewPayload,
-} from './types'
+  ReviewQuestion,
+  ReviewStoreSettings,
+  ReviewSummary,
+  ReviewsListResponse,
+  UpdateReviewInput,
+} from "./types.js";
 
-export class StoreReviewsClient {
-  private baseUrl: string
-  private fetchFn: typeof fetch
-  private getAuthToken?: () => string | null | Promise<string | null>
-  private defaultHeaders: Record<string, string>
+export interface ReviewsClientOptions {
+  baseUrl?: string;
+  headers?: Record<string, string>;
+  fetchFn?: typeof fetch;
+}
 
-  constructor(config: ReviewsClientConfig = {}) {
-    const rawUrl = config.baseUrl || config.apiHost || ''
-    this.baseUrl = rawUrl.replace(/\/$/, '')
+const sharedSettingsRequests = new Map<string, Promise<ReviewStoreSettings>>();
+
+export function clearSharedSettingsCache(): void {
+  sharedSettingsRequests.clear();
+}
+
+export class ProductReviewsClient {
+  private baseUrl: string;
+  private defaultHeaders: Record<string, string>;
+  private fetchFn: typeof fetch;
+  private hasCustomFetch: boolean;
+
+  constructor(options: ReviewsClientOptions = {}) {
+    this.baseUrl = (options.baseUrl || "").replace(/\/$/, "");
+    this.defaultHeaders = { ...(options.headers ?? {}) };
+    this.hasCustomFetch = Boolean(options.fetchFn);
     this.fetchFn = (input: RequestInfo | URL, init?: RequestInit) => {
-      if (config.fetchFn) {
-        return config.fetchFn(input, init)
+      if (options.fetchFn) {
+        return options.fetchFn(input, init);
       }
-      return globalThis.fetch(input, init)
-    }
-    this.getAuthToken = config.getAuthToken
-    this.defaultHeaders = { ...(config.headers ?? {}) }
-
-    if (config.bearerToken) {
-      this.defaultHeaders['Authorization'] = `Bearer ${config.bearerToken}`
-      this.defaultHeaders['X-Spree-Token'] = config.bearerToken
-    }
+      return globalThis.fetch(input, init);
+    };
   }
 
-  private async getHeaders(extra: Record<string, string> = {}): Promise<Headers> {
-    const headers = new Headers(this.defaultHeaders)
-    for (const [k, v] of Object.entries(extra)) {
-      headers.set(k, v)
+  private async request<T>(path: string, init: RequestInit = {}): Promise<T> {
+    const url = `${this.baseUrl}${path}`;
+    const headers = new Headers(this.defaultHeaders);
+    headers.set("Accept", "application/json");
+    if (init.headers) {
+      const extra = new Headers(init.headers);
+      extra.forEach((value, key) => {
+        headers.set(key, value);
+      });
     }
 
-    if (this.getAuthToken) {
-      const token = await this.getAuthToken()
-      if (token) {
-        if (!headers.has('Authorization')) {
-          headers.set('Authorization', `Bearer ${token}`)
-        }
-        if (!headers.has('X-Spree-Token')) {
-          headers.set('X-Spree-Token', token)
-        }
-      }
-    }
+    const res = await this.fetchFn(url, {
+      ...init,
+      method: init.method ?? "GET",
+      headers,
+    });
+    const data = await res.json().catch(() => ({}));
 
-    return headers
-  }
-
-  /**
-   * Fetch approved reviews and rating breakdown for a product
-   */
-  async list(productId: string, query: ReviewListQuery = {}): Promise<ReviewListResponse> {
-    const params = new URLSearchParams()
-    if (query.page) params.set('page', String(query.page))
-    if (query.per_page) params.set('per_page', String(query.per_page))
-    if (query.rating) params.set('rating', String(query.rating))
-    if (query.sort) {
-      const sortParam = query.sort === 'most_recent' ? 'newest' : query.sort
-      params.set('sort', sortParam)
-    }
-
-    const qs = params.toString()
-    const url = `${this.baseUrl}/api/v3/store/products/${encodeURIComponent(productId)}/product_reviews${qs ? `?${qs}` : ''}`
-    const headers = await this.getHeaders({ Accept: 'application/json' })
-
-    const res = await this.fetchFn(url, { method: 'GET', headers })
     if (!res.ok) {
-      const errorData = await res.json().catch(() => ({}))
-      throw new Error(errorData.message || `Failed to fetch reviews: HTTP ${res.status}`)
+      const message =
+        data?.error?.message ||
+        data?.message ||
+        (Array.isArray(data?.errors) ? data.errors.join(", ") : null) ||
+        `Request failed: HTTP ${res.status}`;
+      const error = new Error(message) as Error & {
+        status?: number;
+        code?: string;
+        details?: Record<string, unknown>;
+      };
+      error.status = res.status;
+      error.code = data?.error?.code;
+      error.details = data?.error?.details;
+      throw error;
     }
 
-    return res.json()
+    return data as T;
   }
 
-  async listReviews(productId: string, query: ReviewListQuery = {}): Promise<ReviewListResponse> {
-    return this.list(productId, query)
+  async getSettings(): Promise<ReviewStoreSettings> {
+    const res = await this.request<{ data: ReviewStoreSettings }>(
+      "/api/v3/store/reviews/settings",
+    );
+    return res.data;
   }
 
-  /**
-   * Submit a new customer review (supports multipart for image attachments)
-   */
-  async create(productId: string, payload: CreateReviewPayload): Promise<{ data: ProductReview; meta: { message: string } }> {
-    const url = `${this.baseUrl}/api/v3/store/products/${encodeURIComponent(productId)}/product_reviews`
-    let body: BodyInit
-    const headers = await this.getHeaders({ Accept: 'application/json' })
+  async getSharedSettings(): Promise<ReviewStoreSettings> {
+    if (this.hasCustomFetch) {
+      return this.getSettings();
+    }
 
-    if (payload.images && payload.images.length > 0) {
-      const formData = new FormData()
-      formData.append('product_review[rating]', String(payload.rating))
-      formData.append('product_review[title]', payload.title)
-      formData.append('product_review[review]', payload.review)
-      if (payload.name) formData.append('product_review[name]', payload.name)
-      if (payload.show_identifier !== undefined) {
-        formData.append('product_review[show_identifier]', String(payload.show_identifier))
+    const existing = sharedSettingsRequests.get(this.baseUrl);
+    if (existing) {
+      return existing;
+    }
+
+    const requestPromise = this.getSettings().catch((err) => {
+      sharedSettingsRequests.delete(this.baseUrl);
+      throw err;
+    });
+    sharedSettingsRequests.set(this.baseUrl, requestPromise);
+    return requestPromise;
+  }
+
+  async getBatchSummaries(
+    productIds: string[],
+  ): Promise<Record<string, ProductCardSummary>> {
+    const uniqueIds = Array.from(
+      new Set(productIds.map((id) => id.trim()).filter(Boolean)),
+    ).slice(0, 100);
+    if (uniqueIds.length === 0) return {};
+
+    const params = new URLSearchParams();
+    params.set("product_ids", uniqueIds.join(","));
+    const res = await this.request<{
+      data: Record<string, ProductCardSummary>;
+    }>(`/api/v3/store/products/review_summaries?${params.toString()}`);
+    return res.data ?? {};
+  }
+
+  async getSummary(
+    productId: string,
+    options: { verified_purchase?: boolean } = {},
+  ): Promise<ReviewSummary> {
+    const params = new URLSearchParams();
+    if (options.verified_purchase) {
+      params.set("verified_purchase", "true");
+    }
+    const qs = params.toString();
+    return this.request<ReviewSummary>(
+      `/api/v3/store/products/${encodeURIComponent(productId)}/reviews/summary${qs ? `?${qs}` : ""}`,
+    );
+  }
+
+  async getFilters(productId: string): Promise<ReviewFiltersResponse> {
+    return this.request<ReviewFiltersResponse>(
+      `/api/v3/store/products/${encodeURIComponent(productId)}/reviews/filters`,
+    );
+  }
+
+  async getQuestions(productId: string): Promise<{ data: ReviewQuestion[] }> {
+    return this.request<{ data: ReviewQuestion[] }>(
+      `/api/v3/store/products/${encodeURIComponent(productId)}/reviews/questions`,
+    );
+  }
+
+  async getEligibility(
+    productId: string,
+    options: { variant_id?: string; order_id?: string } = {},
+  ): Promise<ReviewEligibilityResponse> {
+    const params = new URLSearchParams();
+    if (options.variant_id) params.set("variant_id", options.variant_id);
+    if (options.order_id) params.set("order_id", options.order_id);
+    const qs = params.toString();
+    return this.request<ReviewEligibilityResponse>(
+      `/api/v3/store/products/${encodeURIComponent(productId)}/reviews/eligibility${qs ? `?${qs}` : ""}`,
+    );
+  }
+
+  async list(
+    productId: string,
+    query: ReviewListQuery = {},
+  ): Promise<ReviewsListResponse> {
+    const params = new URLSearchParams();
+    if (query.page) params.set("page", String(query.page));
+    if (query.limit) params.set("limit", String(query.limit));
+    if (query.sort) params.set("sort", query.sort);
+    if (query.with_images) params.set("with_images", "true");
+    if (query.with_videos) params.set("with_videos", "true");
+    if (query.verified_purchase) params.set("verified_purchase", "true");
+
+    if (query.rating !== undefined) {
+      const ratings = Array.isArray(query.rating)
+        ? query.rating
+        : [query.rating];
+      if (ratings.length > 0) {
+        params.set("rating", ratings.join(","));
       }
-      for (const file of payload.images) {
-        formData.append('product_review[images][]', file)
+    }
+
+    if (query.answers) {
+      for (const [key, val] of Object.entries(query.answers)) {
+        const values = Array.isArray(val) ? val : [val];
+        const clean = values.filter(Boolean);
+        if (clean.length > 0) {
+          params.set(`answers[${key}]`, clean.join(","));
+        }
       }
-      body = formData
-    } else {
-      headers.set('Content-Type', 'application/json')
-      body = JSON.stringify({
-        product_review: {
-          rating: payload.rating,
-          title: payload.title,
-          review: payload.review,
-          name: payload.name,
-          show_identifier: payload.show_identifier,
+    }
+
+    const qs = params.toString();
+    return this.request<ReviewsListResponse>(
+      `/api/v3/store/products/${encodeURIComponent(productId)}/reviews${qs ? `?${qs}` : ""}`,
+    );
+  }
+
+  async createDirectUpload(file: File): Promise<{
+    direct_upload: { url: string; headers: Record<string, string> };
+    signed_id: string;
+    media_type?: "image" | "video";
+  }> {
+    const checksum = await computeFileMd5Base64(file);
+    return this.request("/api/v3/store/review_media/direct_uploads", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        blob: {
+          filename: file.name,
+          byte_size: file.size,
+          checksum,
+          content_type: file.type,
         },
-      })
+      }),
+    });
+  }
+
+  async uploadMedia(
+    file: File,
+    position = 0,
+    alt = "",
+  ): Promise<{ signed_id: string; alt: string; position: number }> {
+    const { direct_upload, signed_id } = await this.createDirectUpload(file);
+
+    let uploadUrl = direct_upload.url;
+    if (uploadUrl.startsWith("/") && this.baseUrl) {
+      uploadUrl = `${this.baseUrl}${uploadUrl}`;
     }
 
-    const res = await this.fetchFn(url, { method: 'POST', headers, body })
-    const json = await res.json().catch(() => ({}))
-
-    if (!res.ok) {
-      const errMsg = json.errors?.join(', ') || json.message || `Failed to submit review: HTTP ${res.status}`
-      throw new Error(errMsg)
+    const putHeaders = new Headers(direct_upload.headers || {});
+    if (!putHeaders.has("Content-Type") && file.type) {
+      putHeaders.set("Content-Type", file.type);
     }
 
-    return json
-  }
+    const putRes = await this.fetchFn(uploadUrl, {
+      method: "PUT",
+      headers: putHeaders,
+      body: file,
+    });
 
-  async createReview(productId: string, payload: CreateReviewPayload): Promise<{ data: ProductReview; meta: { message: string } }> {
-    return this.create(productId, payload)
-  }
-
-  /**
-   * Edit a previously submitted review by owner
-   */
-  async update(productId: string, reviewId: string, payload: UpdateReviewPayload): Promise<{ data: ProductReview }> {
-    const url = `${this.baseUrl}/api/v3/store/products/${encodeURIComponent(productId)}/product_reviews/${encodeURIComponent(reviewId)}`
-    const headers = await this.getHeaders({
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    })
-
-    const res = await this.fetchFn(url, {
-      method: 'PATCH',
-      headers,
-      body: JSON.stringify({ product_review: payload }),
-    })
-
-    const json = await res.json().catch(() => ({}))
-    if (!res.ok) {
-      throw new Error(json.message || `Failed to update review: HTTP ${res.status}`)
+    if (!putRes.ok) {
+      throw new Error(
+        `Failed to upload file "${file.name}" (HTTP ${putRes.status})`,
+      );
     }
 
-    return json
+    return { signed_id, alt, position };
   }
 
-  async updateReview(productId: string, reviewId: string, payload: UpdateReviewPayload): Promise<{ data: ProductReview }> {
-    return this.update(productId, reviewId, payload)
+  async uploadImage(
+    file: File,
+    position = 0,
+    alt = "",
+  ): Promise<{ signed_id: string; alt: string; position: number }> {
+    return this.uploadMedia(file, position, alt);
   }
 
-  /**
-   * Withdraw (soft-delete) review by owner
-   */
-  async withdraw(productId: string, reviewId: string): Promise<void> {
-    const url = `${this.baseUrl}/api/v3/store/products/${encodeURIComponent(productId)}/product_reviews/${encodeURIComponent(reviewId)}`
-    const headers = await this.getHeaders({ Accept: 'application/json' })
-
-    const res = await this.fetchFn(url, { method: 'DELETE', headers })
-    if (!res.ok && res.status !== 204) {
-      const json = await res.json().catch(() => ({}))
-      throw new Error(json.message || `Failed to withdraw review: HTTP ${res.status}`)
-    }
+  async create(
+    productId: string,
+    payload: CreateReviewInput,
+  ): Promise<ReviewItem> {
+    return this.request<ReviewItem>(
+      `/api/v3/store/products/${encodeURIComponent(productId)}/reviews`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      },
+    );
   }
 
-  async withdrawReview(productId: string, reviewId: string): Promise<void> {
-    return this.withdraw(productId, reviewId)
+  async update(
+    productId: string,
+    reviewId: string,
+    payload: UpdateReviewInput,
+  ): Promise<ReviewItem> {
+    return this.request<ReviewItem>(
+      `/api/v3/store/products/${encodeURIComponent(productId)}/reviews/${encodeURIComponent(reviewId)}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      },
+    );
   }
 
-  /**
-   * Cast a helpful or unhelpful vote on a review.
-   * Resolves both nested and direct route conventions.
-   */
-  async vote(reviewId: string, helpful = true, productId?: string): Promise<{ data: ProductReview; meta: { message: string } }> {
-    const url = productId
-      ? `${this.baseUrl}/api/v3/store/products/${encodeURIComponent(productId)}/product_reviews/${encodeURIComponent(reviewId)}/vote`
-      : `${this.baseUrl}/api/v3/store/product_reviews/${encodeURIComponent(reviewId)}/vote`
-
-    const headers = await this.getHeaders({
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    })
-
-    const res = await this.fetchFn(url, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ helpful }),
-    })
-
-    const json = await res.json().catch(() => ({}))
-    if (!res.ok) {
-      throw new Error(json.message || `Failed to record vote: HTTP ${res.status}`)
-    }
-
-    return json
+  async vote(
+    reviewId: string,
+    vote: "helpful" | "not_helpful",
+  ): Promise<ReviewItem> {
+    return this.request<ReviewItem>(
+      `/api/v3/store/reviews/${encodeURIComponent(reviewId)}/helpful_votes`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vote }),
+      },
+    );
   }
 
-  async voteReview(reviewId: string, helpful = true, productId?: string): Promise<{ data: ProductReview; meta: { message: string } }> {
-    return this.vote(reviewId, helpful, productId)
-  }
-
-  /**
-   * Report an inappropriate or spam review
-   */
-  async report(reviewId: string, reason: string, details?: string, productId?: string): Promise<{ meta: { message: string } }> {
-    const url = productId
-      ? `${this.baseUrl}/api/v3/store/products/${encodeURIComponent(productId)}/product_reviews/${encodeURIComponent(reviewId)}/report`
-      : `${this.baseUrl}/api/v3/store/product_reviews/${encodeURIComponent(reviewId)}/report`
-
-    const headers = await this.getHeaders({
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    })
-
-    const res = await this.fetchFn(url, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ reason, details }),
-    })
-
-    const json = await res.json().catch(() => ({}))
-    if (!res.ok) {
-      throw new Error(json.message || `Failed to report review: HTTP ${res.status}`)
-    }
-
-    return json
-  }
-
-  async reportReview(reviewId: string, reason: string, details?: string, productId?: string): Promise<{ meta: { message: string } }> {
-    return this.report(reviewId, reason, details, productId)
-  }
-
-  /**
-   * Submit an appeal for a rejected or flagged review
-   */
-  async appeal(reviewId: string, reason: string, productId?: string): Promise<{ meta: { message: string } }> {
-    const url = productId
-      ? `${this.baseUrl}/api/v3/store/products/${encodeURIComponent(productId)}/product_reviews/${encodeURIComponent(reviewId)}/appeal`
-      : `${this.baseUrl}/api/v3/store/product_reviews/${encodeURIComponent(reviewId)}/appeal`
-
-    const headers = await this.getHeaders({
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    })
-
-    const res = await this.fetchFn(url, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ reason }),
-    })
-
-    const json = await res.json().catch(() => ({}))
-    if (!res.ok) {
-      throw new Error(json.message || `Failed to submit appeal: HTTP ${res.status}`)
-    }
-
-    return json
-  }
-
-  async appealReview(reviewId: string, reason: string, productId?: string): Promise<{ meta: { message: string } }> {
-    return this.appeal(reviewId, reason, productId)
+  async report(
+    reviewId: string,
+    payload: ReportReviewInput,
+  ): Promise<{ reported: boolean; flagged_count: number }> {
+    return this.request<{ reported: boolean; flagged_count: number }>(
+      `/api/v3/store/reviews/${encodeURIComponent(reviewId)}/reports`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      },
+    );
   }
 }
 
-export function createReviewsClient(config?: ReviewsClientConfig): StoreReviewsClient {
-  return new StoreReviewsClient(config)
+export function createProductReviewsClient(
+  options: ReviewsClientOptions = {},
+): ProductReviewsClient {
+  return new ProductReviewsClient(options);
 }
+
+export const CommunityReviewsClient = ProductReviewsClient;
+export type CommunityReviewsClient = ProductReviewsClient;
+export const createCommunityReviewsClient = createProductReviewsClient;

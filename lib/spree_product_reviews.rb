@@ -1,21 +1,27 @@
-# frozen_string_literal: true
-
-require 'spree_core'
+require 'spree'
+require 'spree_product_reviews/engine'
 require 'spree_product_reviews/version'
 require 'spree_product_reviews/configuration'
-require 'spree_product_reviews/image_sanitizer'
-require 'spree_product_reviews/legacy_user_migrator'
-require 'spree_product_reviews/engine'
 
 module SpreeProductReviews
-  class << self
-    def configuration
-      @configuration ||= Configuration.new
-    end
-    alias config configuration
+  mattr_accessor :queue
 
-    def configure
-      yield(configuration)
-    end
+  def self.queue
+    @@queue ||= Spree.queues.default
+  end
+
+  def self.configuration
+    Config
+  end
+
+  def self.config
+    Config
+  end
+
+  def self.configure
+    yield(Config)
   end
 end
+
+# Backwards-compatible namespace alias for code referencing SpreeReviews directly.
+SpreeReviews = SpreeProductReviews unless defined?(SpreeReviews)

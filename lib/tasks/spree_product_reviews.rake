@@ -1,48 +1,54 @@
-# frozen_string_literal: true
-
 namespace :spree_product_reviews do
-  desc 'Deterministically maps legacy Spree 5 user_id on reviews to Spree 6 customer_id using email matching. Set DRY_RUN=1 to preview.'
-  task reconcile_legacy_users: :environment do
-    dry_run = ENV['DRY_RUN'].to_s == '1' || ENV['DRY_RUN'].to_s.casecmp('true').zero?
-    puts "Starting Spree Product Reviews legacy user reconciliation (dry_run: #{dry_run})..."
+  desc 'Backfill legacy review order and variant links from shipped purchases'
+  task backfill_review_purchase_links: :environment do
+    dry_run = ActiveModel::Type::Boolean.new.cast(ENV.fetch('DRY_RUN', false))
+    updated_count = 0
+    skipped_count = 0
 
-    result = SpreeProductReviews::LegacyUserMigrator.migrate!(verbose: true, dry_run: dry_run)
-
-    puts '------------------------------------------------------------'
-    puts "Reconciliation Results:"
-    puts "  Successfully mapped: #{result[:mapped]}"
-    puts "  Unmatched (preserved): #{result[:unmatched]}"
-    if result[:unmatched_details].any?
-      puts "  Unmatched review details:"
-      result[:unmatched_details].each do |detail|
-        puts "    - Review ##{detail[:review_id]}: User ##{detail[:user_id]} (#{detail[:email] || 'no email'}) -> #{detail[:reason]}"
+    Spree::ReviewPurchaseAttribution.backfill_scope.find_each do |review|
+      if dry_run
+        target = Spree::ReviewPurchaseAttribution.new(review).target
+        target.present? ? updated_count += 1 : skipped_count += 1
+        next
       end
+
+      Spree::ReviewPurchaseAttribution.new(review).call ? updated_count += 1 : skipped_count += 1
     end
-    puts '------------------------------------------------------------'
+
+    action = dry_run ? 'would update' : 'updated'
+    puts "spree_product_reviews:backfill_review_purchase_links #{action} #{updated_count} reviews, skipped #{skipped_count} reviews"
   end
 
-  desc 'Alias for reconcile_legacy_users'
-  task migrate_legacy_users: :reconcile_legacy_users
-
-  desc 'Recalculates average_rating and review_count on spree_products from approved reviews'
-  task recalculate_ratings: :environment do
-    puts 'Starting product review aggregate recalculation...'
+  desc 'Refresh review verified_purchase flags from current order and return state'
+  task refresh_verified_purchase: :environment do
+    dry_run = ActiveModel::Type::Boolean.new.cast(ENV.fetch('DRY_RUN', false))
     updated_count = 0
-    Spree::Product.find_each do |product|
-      reviews = product.reviews.approved
-      count = reviews.count
-      avg = count.positive? ? (reviews.sum(:rating).to_f / count).round(2) : 0.0
+    unchanged_count = 0
 
-      attrs = {}
-      attrs[:average_rating] = avg if product.has_attribute?(:average_rating)
-      attrs[:review_count] = count if product.has_attribute?(:review_count)
+    Spree::ReviewVerifiedPurchaseStatus.refresh_scope.find_each do |review|
+      sync = Spree::ReviewVerifiedPurchaseStatus.new(review)
 
-      if attrs.any?
-        product.update_columns(attrs)
+      if sync.changed?
         updated_count += 1
+        sync.call unless dry_run
+      else
+        unchanged_count += 1
       end
     end
-    puts "Successfully recalculated rating aggregates for #{updated_count} products."
+
+    action = dry_run ? 'would update' : 'updated'
+    puts "spree_product_reviews:refresh_verified_purchase #{action} #{updated_count} reviews, unchanged #{unchanged_count} reviews"
+  end
+
+  desc 'Recalculate materialized product review rating summaries for all products'
+  task recalculate_ratings: :environment do
+    count = 0
+    Spree::Review.not_discarded.distinct.pluck(:product_id, :store_id).each do |product_id, store_id|
+      next if product_id.blank? || store_id.blank?
+
+      Spree::ProductReviewSummary.recalculate!(product_id: product_id, store_id: store_id)
+      count += 1
+    end
+    puts "spree_product_reviews:recalculate_ratings updated #{count} product summaries"
   end
 end
-

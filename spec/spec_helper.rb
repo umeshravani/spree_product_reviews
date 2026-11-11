@@ -1,15 +1,19 @@
-# frozen_string_literal: true
+# Configure Rails Environment
+unless defined?(Rails) && Rails.application
+  ENV['RAILS_ENV'] = 'test'
 
-require 'active_support/all'
+  require 'dotenv/load'
 
-RSpec.configure do |config|
-  config.expect_with :rspec do |expectations|
-    expectations.include_chain_clauses_in_custom_matcher_descriptions = true
-  end
+  dummy_env = File.expand_path('../dummy/config/environment.rb', __FILE__)
+  require(File.exist?(dummy_env) ? dummy_env : File.expand_path('config/environment', Dir.pwd))
 
-  config.mock_with :rspec do |mocks|
-    mocks.verify_partial_doubles = true
-  end
-
-  config.order = :random
+  require 'spree_dev_tools/rspec/spec_helper'
 end
+
+require 'spree/api/testing_support/factories'
+require 'spree/api/testing_support/v3/base'
+require 'spree_product_reviews/factories' unless FactoryBot.factories.registered?(:review)
+
+# Requires supporting ruby files with custom matchers and macros, etc,
+# in spec/support/ and its subdirectories.
+Dir[File.join(File.dirname(__FILE__), 'support/**/*.rb')].sort.each { |f| require f }

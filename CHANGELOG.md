@@ -1,45 +1,36 @@
 # Changelog
 
-All notable changes to `spree_product_reviews` are documented in this file.
+All notable changes to `spree_product_reviews` and its companion npm packages are documented in this file.
+
+## [6.1.0] - 2026-11-12
+Companion packages:
+- `@umeshravani/spree-product-reviews-dashboard@2.0.0`
+- `@umeshravani/spree-product-reviews-storefront@2.0.0`
+
+### Major Feature, UI/UX & Compatibility Release
+
+#### Backend Engine (`spree_product_reviews` `6.1.0`)
+- **Non-Destructive Upgrade from `6.0.0`:** Added idempotent migrations (`20261112000001` & `20261112000002`) that cleanly upgrade legacy `spree_product_reviews` tables, `ActiveStorage::Attachment` media records -> `Spree::ReviewMedia`, `spree_review_votes.helpful` -> `vote`, `spree_review_reports`, `spree_review_moderation_audits`, recalculates `Spree::ProductReviewSummary`, and preserves `spree_legacy_product_reviews`.
+- **Compatibility Modules & Routes:** Added `SpreeReviews = SpreeProductReviews`, `Spree::ProductReview = Spree::Review`, v1 `SpreeProductReviews::Config` aliases (`max_images_upload`, `max_image_size_mb`, `max_video_size_mb`, `review_status_default`, etc.), and backwards-compatible `/api/v3/store/products/:product_id/product_reviews` + `/api/v3/*/product_reviews/*` endpoints.
+- **Zero-N+1 Product & LineItem Serialization:** Added `SpreeProductReviews::ProductSerializerDecorator`, `SpreeProductReviews::LineItemSerializerDecorator`, and `SpreeProductReviews::StoreProductsControllerDecorator` so `Product` and `LineItem` JSON payloads automatically include `average_rating`, `reviews_count`, and `product_id`.
+- **Batch Summary Endpoint:** Added `GET /api/v3/store/products/review_summaries?product_ids=...` (up to 100 IDs per request).
+- **Dynamic Q&A, Video Uploads & Rewards:** Added `Spree::ReviewQuestion`, `Spree::ReviewQuestionOption`, `Spree::ReviewAnswer`, `Spree::ReviewMedia` (images + `video/mp4`, `video/quicktime`, `video/webm`, `video/ogg` direct upload), automated `Spree::GiftCard` rewards upon media review approval, and granular customer edit policies (`allow_edit_rating`, `allow_edit_title`, `allow_edit_body`, `allow_edit_remove_media`, `allow_edit_add_media`).
+- **Appearance Customization Settings:** Added `product_card_star_color` and `verified_badge_color` alongside `title_star_color`, `bottom_star_color`, `title_rating_format`, and `title_reviews_label`.
+
+#### Admin Dashboard (`@umeshravani/spree-product-reviews-dashboard` `2.0.0`)
+- **Dedicated `Reviews` Navigation Group:** Top-level `Reviews` sidebar section with crisp `16x16` Lucide `UserStar` icon (`Reviews`, `Questions`, `Settings`).
+- **Spree-Native Reviews Table:** Compact list toolbar with Search, Filters popover, multi-select Status dropdown with live counts & dots, Sorting, and multi-row bulk bar (`Set review status` modal, `Approve`, `Reject`, `Mark as spam`, `Delete`).
+- **Questions UI Revamp:** Renamed `Review questions` -> `Questions` and aligned `/review-questions/new` and `/review-questions/:id` with native `ResourceLayout`, `PageHeader` back arrow icon button, sidebar `Visibility & Behavior` `Switch` controls, and Lucide action buttons.
+- **Settings & Appearance Tab:** Reorganized into **General**, **Settings**, and **Customisation** (`Appearance` card with live preview for Product Title Rating, Product Card Stars, Review Section & Verified Tick Color).
+
+#### Storefront (`@umeshravani/spree-product-reviews-storefront` `2.0.0`)
+- **`<ProductCardRating />`:** Compact star + rating count component for product grids (`/products`), cart page (`/cart`), slide-out cart drawer (`CartDrawer`), and checkout summary (`/checkout`), with shared settings deduplication and automatic batch fallback.
+- **Verified Purchase Badge Color & Format Support:** Custom `verified_badge_color` for clickable Verified Purchase checkmarks, `title_rating_format` / `title_reviews_label` support in `<ProductRatingHeader />`, `{percentage}` interpolation in reward prompts, and policy-controlled review editing in `<ReviewSubmissionModal />`.
+- **Clean Accessibility & Test Compatibility:** `StarRating` supports `decorative` mode inside `<ProductCardRating />` so `role="img"` never conflicts with existing product thumbnail tests while preserving screen-reader labels.
+
+---
 
 ## [6.0.0] - 2026-10-31
 
-### Major Architecture Upgrade for Spree Commerce 6
-
-#### Backend Engine (`spree_product_reviews`)
-- **Rails 8 & Spree 6 Support:** Re-architected engine to run natively on Spree 6.0.1, Rails 8.1, and Ruby 3.4.
-- **Identity Model Modernization:** Replaced legacy `user_id` with Spree 6 `customer_id` (`Spree::Customer`), retaining `user_id` as optional foreign key.
-- **Spree 5 Migration Task:** Added `spree_product_reviews:reconcile_legacy_users` (and alias `migrate_legacy_users`) with `DRY_RUN=1` preview mode and explicit identity mapping to prevent blind ID collisions.
-- **Ratings Recalculation Task:** Added `spree_product_reviews:recalculate_ratings` to sync product rating aggregates from approved reviews.
-- **Store API V3 Endpoints:** Added REST endpoints under `/api/v3/store/products/:product_id/product_reviews` (list, create, update, withdraw, vote, report, appeal).
-- **Admin API V3 Endpoints:** Added moderation endpoints under `/api/v3/admin/product_reviews` (list, counts, approve, reject, spam, restore, hide, unhide, dismiss_reports, remove_image, discard).
-- **Advanced Anti-Spam & Abuse Safeguards:**
-  - Salted SHA256 IP hashing (`ip_hash`) and IP masking for customer privacy.
-  - Rate limiting by customer (`customer_rate_limit_per_hour`) and IP (`ip_rate_limit_per_hour`).
-  - Rolling duplicate review detection (`duplicate_detection_window_hours`).
-  - Spam scoring heuristics for suspicious links (+50), blocked words (+40), and excessive character repetition (+30).
-  - Customer review abuse reporting (`Spree::ReviewReport`) with unique reporter validation (`customer_id` and `ip_hash`).
-  - **Anti-Brigading Immunity:** Verified purchaser reviews and high-reputation reviews are safeguarded against automated suppression campaigns.
-  - **Fail-Closed EXIF GPS Scrubbing:** Enforces `SpreeProductReviews::ImageSanitizer` to strip geolocation coordinates and camera hardware identifiers from uploaded customer photos prior to Active Storage persistence; rejects upload if image processor is unavailable or corrupted.
-  - **Store Boundary Isolation:** Scopes direct review lookups and actions to `current_store.products`.
-  - **Global Killswitch:** Enforces HTTP 403 Forbidden across all Store API endpoints when `config.enabled = false` without altering database records.
-  - Customer appeal workflow (`appeal!`).
-  - HTML/XSS sanitization on `title`, `review`, and `name`.
-- **Eager Loading Optimization:** Eager loaded `:images_attachments`, `:images_blobs`, `:customer`, and `:votes` to eliminate N+1 database queries.
-- **Request Size Limiting:** Strictly scoped request body size expansion to the review submission endpoint regex `%r{\A/api/v3/store/products/[^/]+/product_reviews/?\z}`.
-
-#### React Admin Dashboard Plugin (`@umeshravani/spree-product-reviews-dashboard`)
-- **Developer Preview:** Standalone npm package compatible with `@spree/dashboard`.
-- **Native Sidebar & Badge:** Real-time badge counter indicating pending moderation count.
-- **Full Moderation Screens:** Tabbed interface for Pending, Approved, Flagged, Spam, and Rejected reviews.
-- **Review Inspector & Photo Moderation:** Individual image deletion without affecting review text.
-- **Audit Log Inspector:** Complete view of moderation history and staff notes.
-- **Product Details Widget:** Slot widget embedded on Product Edit screen.
-
-#### React 19 / Next.js Storefront Companion (`@umeshravani/spree-product-reviews-storefront`)
-- **Next.js App Router Compatible:** Full support for React 19 and Next.js 15/16 App Router.
-- **Server-Side Rendered SEO Structured Data:** `<ProductReviewsJsonLd />` emitting Google Search Central compliant `schema.org/Product` and `AggregateRating` data without rating inflation.
-- **Interactive UI Components:** `<ProductReviewsSection />`, `<ProductReviewsSummary />`, `<ProductReviewsList />`, `<ReviewCard />`, `<StarRating />`, `<ReviewSubmissionModal />`, `<ReviewEditModal />`, `<ImageLightbox />`.
-- **Headless Hook & API Client:** `useProductReviews` hook and `StoreReviewsClient` class.
-- **Accessible & Mobile Responsive:** ARIA roles, keyboard navigation, and responsive layouts across desktop and mobile.
-
+### Initial Spree 6 Architecture Release
+- Initial `spree_product_reviews` Rails 8 / Spree 6 engine, Store & Admin API v3 endpoints, `@umeshravani/spree-product-reviews-dashboard@1.x`, and `@umeshravani/spree-product-reviews-storefront@1.x`.

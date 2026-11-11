@@ -1,105 +1,54 @@
-# frozen_string_literal: true
-
 module Spree
-  class ReviewReport < (defined?(Spree.base_class) ? Spree.base_class : (defined?(Spree::Base) ? Spree::Base : ActiveRecord::Base))
+  class ReviewReport < Spree.base_class
     self.table_name = 'spree_review_reports'
 
-    REASONS = %w[spam harassment inappropriate misleading other].freeze
-    STATUSES = %w[pending reviewed dismissed].freeze
+    has_prefix_id :rrep
 
-    belongs_to :review, class_name: 'Spree::ProductReview'
-    belongs_to :customer, class_name: (defined?(Spree.customer_class) && Spree.customer_class ? Spree.customer_class.to_s : 'Spree::Customer'), optional: true
+    REASONS = %w[spam inappropriate misleading off_topic abusive other].freeze
 
-    validates :reason, presence: true, inclusion: { in: REASONS }
-    validates :details, length: { maximum: 1000 }
-    validates :status, inclusion: { in: STATUSES }
-    validates :customer_id, uniqueness: { scope: :review_id, message: 'You have already reported this review' }, if: -> { customer_id.present? }
-    validates :ip_hash, uniqueness: { scope: :review_id, message: 'This network has already reported this review' }, if: -> { customer_id.blank? && ip_hash.present? }
+    belongs_to :review, class_name: 'Spree::Review', inverse_of: :reports
+    belongs_to :customer, class_name: Spree.customer_class.to_s, optional: true
 
-    scope :pending, -> { where(status: 'pending') }
-    scope :reviewed, -> { where(status: 'reviewed') }
-    scope :dismissed, -> { where(status: 'dismissed') }
-    scope :newest, -> { order(created_at: :desc) }
+    validates :review, presence: true
+    validates :reason, presence: true
+    validate :prevent_duplicate_report, on: :create
 
-    after_create :increment_review_flagged_count
-
-    def dismiss!(moderator: nil, note: nil)
-      update!(
-        status: 'dismissed',
-        moderated_at: Time.current,
-        moderator_name: moderator_display_name(moderator),
-        moderator_note: note
-      )
-    end
-
-    def resolve!(moderator: nil, note: nil)
-      update!(
-        status: 'reviewed',
-        moderated_at: Time.current,
-        moderator_name: moderator_display_name(moderator),
-        moderator_note: note
-      )
-    end
+    after_create :increment_review_flagged_count!
 
     private
 
-    def increment_review_flagged_count
-      return unless review
+    def prevent_duplicate_report
+      return if review.blank?
 
-      review.with_lock do
-        # Count DISTINCT unique reporters (customers or IP hashes) among non-dismissed reports
-        unique_customers = review.reports.where.not(status: 'dismissed').where.not(customer_id: nil).distinct.count(:customer_id)
-        unique_ips = review.reports.where.not(status: 'dismissed').where(customer_id: nil).where.not(ip_hash: nil).distinct.count(:ip_hash)
-        unique_reporters_count = unique_customers + unique_ips
-
-        review.update_columns(flagged_count: unique_reporters_count)
-
-        threshold = begin
-                      SpreeProductReviews.config.report_moderation_threshold
-                    rescue StandardError
-                      3
-                    end
-        threshold = 3 if threshold.nil? || threshold <= 0
-
-        # Anti-brigading and authenticity safeguards:
-        # Prevent coordinated smear campaigns from taking down legitimate reviews.
-        # Reviews that are verified purchases or have established helpfulness are flagged with priority
-        # for human staff review rather than being automatically suppressed.
-        is_verified = review.verified_purchaser?
-        has_high_reputation = (review.helpful_count || 0) >= 3
-
-        if unique_reporters_count >= threshold && review.approved?
-          if is_verified || has_high_reputation
-            # Retain live but flag for priority review in the moderation queue
-            review.record_audit!(
-              action: :flagged_priority_review,
-              moderator: 'System',
-              note: "Flagged by #{unique_reporters_count} unique reporters. Retained live due to verified purchaser / high reputation safeguard pending human review."
-            )
-          else
-            # Unverified or low-reputation review: auto-hide pending moderation
-            review.update_columns(approved: false, hidden: true)
-            review.record_audit!(
-              action: :auto_flagged,
-              moderator: 'System',
-              note: "Automatically hidden after reaching report threshold (#{unique_reporters_count} distinct reporters)"
-            )
-            review.recalculate_product_rating
-          end
+      if customer_id.present?
+        if review.reports.where(customer_id: customer_id).exists?
+          errors.add(:base, 'You have already reported this review.')
         end
+      elsif ip_hash.present? && review.reports.where(ip_hash: ip_hash).exists?
+        errors.add(:base, 'This review has already been reported from your network.')
       end
-    rescue StandardError => e
-      Rails.logger.error("[SpreeProductReviews] Error updating report count: #{e.message}")
     end
 
-    def moderator_display_name(moderator)
-      return 'System' if moderator.nil?
-      return moderator.name if moderator.respond_to?(:name) && moderator.name.present?
-      return moderator.email if moderator.respond_to?(:email) && moderator.email.present?
-      return "User##{moderator.id}" if moderator.respond_to?(:id)
+    def increment_review_flagged_count!
+      review.with_lock do
+        new_count = review.reports.count
+        threshold = Spree::ReviewSetting.for_store(review.store)[:report_moderation_threshold].to_i
+        threshold = 3 if threshold <= 0
 
-      moderator.to_s
+        updates = { flagged_count: new_count }
+        if new_count >= threshold && review.status == 'approved' && !review.hidden?
+          updates[:hidden] = true
+          updates[:status] = 'hidden'
+          updates[:moderated_at] = Time.current
+          updates[:moderator_name] = 'System (Report Threshold)'
+          updates[:moderator_note] = "Auto-hidden after reaching #{new_count} customer reports."
+          review.update_columns(updates)
+          review.record_audit!(action: :auto_hidden, note: updates[:moderator_note])
+          review.recalculate_summary_safely!
+        else
+          review.update_column(:flagged_count, new_count)
+        end
+      end
     end
   end
 end
-

@@ -1,18 +1,18 @@
 {
   "compilerOptions": {
     "target": "ES2022",
+    "ignoreDeprecations": "6.0",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
+    "types": ["vite/client"],
+    "skipLibCheck": true,
     "moduleResolution": "bundler",
+    "verbatimModuleSyntax": true,
+    "noEmit": true,
     "jsx": "react-jsx",
     "strict": true,
-    "skipLibCheck": true,
-    "esModuleInterop": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "types": ["vite/client"],
-    "declaration": true,
-    "outDir": "./dist"
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
   },
-  "include": ["src/**/*"],
-  "exclude": ["src/routes/**/*", "node_modules", "dist"]
+  "include": ["src"]
 }

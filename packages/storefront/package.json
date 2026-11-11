@@ -1,8 +1,7 @@
 {
   "name": "@umeshravani/spree-product-reviews-storefront",
-  "version": "1.1.0",
-  "description": "Reusable React 19 and Next.js App Router companion package for Spree 6 Product Reviews",
-  "license": "MIT",
+  "version": "2.0.0",
+  "description": "Production storefront components and Store API client for Spree Product Reviews",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -11,35 +10,28 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
-    },
-    "./package.json": "./package.json"
+    }
   },
   "files": [
     "dist",
-    "src",
-    "README.md",
-    "LICENSE"
+    "src"
   ],
-  "peerDependencies": {
-    "react": "^18.0.0 || ^19.0.0",
-    "react-dom": "^18.0.0 || ^19.0.0",
-    "lucide-react": "^0.400.0 || ^1.0.0"
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
-  "peerDependenciesMeta": {
-    "@spree/sdk": {
-      "optional": true
-    },
-    "lucide-react": {
-      "optional": true
-    }
+  "peerDependencies": {
+    "lucide-react": ">=0.400.0",
+    "react": ">=18.0.0 <20.0.0",
+    "react-dom": ">=18.0.0 <20.0.0"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "typescript": "^5.0.0"
-  },
-  "scripts": {
-    "typecheck": "tsc --noEmit",
-    "build": "tsc"
+    "lucide-react": "^0.577.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "typescript": "^5.7.0"
   }
 }
+
