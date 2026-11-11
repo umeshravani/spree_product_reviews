@@ -36,6 +36,24 @@ transpilePackages: ["@spree/sdk", "@umeshravani/spree-product-reviews-storefront
 
 ### 1. Product Listing / Collection Cards (`src/components/products/ProductCard.tsx`)
 
+If your storefront passes a sparse `fields:` array when fetching product listings (for example `PRODUCT_CARD_FIELDS` in `src/lib/data/cached.ts`), include `"average_rating"` and `"reviews_count"` in that array so Spree returns rating aggregates directly on SSR without waiting for client batching:
+
+```ts
+export const PRODUCT_CARD_FIELDS = [
+  "id",
+  "name",
+  "slug",
+  "thumbnail_url",
+  "purchasable",
+  "default_variant_id",
+  "price",
+  "original_price",
+  "categories",
+  "average_rating",
+  "reviews_count",
+];
+```
+
 Render `<ProductCardRating item={product} size="xs" className="mt-1.5" />` right below the product title:
 
 ```tsx
