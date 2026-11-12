@@ -36,9 +36,16 @@ class UpgradeLegacySpreeProductReviews < ActiveRecord::Migration[7.2]
   def prepare_shared_tables_from_v1
     if table_exists?(:spree_review_votes) && column_exists?(:spree_review_votes, :helpful)
       if column_exists?(:spree_review_votes, :vote)
+        helpful_col = connection.columns(:spree_review_votes).find { |c| c.name == 'helpful' }
+        truthy_sql = if helpful_col&.type == :boolean
+                       "helpful = #{connection.quoted_true}"
+                     else
+                       'helpful = 1'
+                     end
+
         execute <<~SQL.squish
           UPDATE spree_review_votes
-          SET vote = CASE WHEN helpful = true OR helpful = 1 THEN 'helpful' ELSE 'not_helpful' END
+          SET vote = CASE WHEN #{truthy_sql} THEN 'helpful' ELSE 'not_helpful' END
           WHERE vote IS NULL OR vote = ''
         SQL
       end
@@ -81,7 +88,8 @@ class UpgradeLegacySpreeProductReviews < ActiveRecord::Migration[7.2]
         )
       end
 
-      execute('ALTER TABLE spree_review_moderation_audits ALTER COLUMN metadata TYPE json USING NULLIF(metadata, \'\')::json')
+      change_column_default(:spree_review_moderation_audits, :metadata, nil) unless col.default.nil?
+      execute('ALTER TABLE spree_review_moderation_audits ALTER COLUMN metadata TYPE json USING NULLIF(BTRIM(metadata), \'\')::json')
     else
       change_column :spree_review_moderation_audits, :metadata, :json
     end
@@ -250,6 +258,7 @@ class UpgradeLegacySpreeProductReviews < ActiveRecord::Migration[7.2]
 
     TargetReviewRecord.where(discarded_at: nil).distinct.pluck(:product_id, :store_id).each do |product_id, store_id|
       next if product_id.blank? || store_id.blank?
+      next unless Spree::Product.exists?(id: product_id) && Spree::Store.exists?(id: store_id)
 
       Spree::ProductReviewSummary.recalculate!(product_id: product_id, store_id: store_id)
     end
