@@ -72,6 +72,16 @@ module SpreeProductReviews
     preference :title_rating_format, :string, default: '({rating}) {count} reviews'
     preference :title_reviews_label, :string, default: 'reviews'
 
+    # Schema.org Structured Data / Rich Snippets (JSON-LD)
+    preference :schema_markup_enabled, :boolean, default: true
+    preference :schema_include_reviews, :boolean, default: true
+    preference :schema_include_aggregate_rating, :boolean, default: true
+    preference :schema_include_offers, :boolean, default: true
+    preference :schema_show_shipping, :boolean, default: true
+    preference :schema_price_valid_days, :integer, default: 30
+    preference :schema_max_reviews_count, :integer, default: 10
+    preference :schema_item_condition, :string, default: 'NewCondition'
+
     # Legacy v1 (6.0.0) & preferred_* compatibility accessors
     alias_method :max_images_upload, :max_images_per_review
     alias_method :max_images_upload=, :max_images_per_review=

@@ -1,4 +1,4 @@
-import type { ReviewItem, ReviewSummary } from "./types.js";
+import type { ReviewItem, ReviewStoreSettings, ReviewSummary } from "./types.js";
 
 export interface ProductOfferSchemaInput {
   price: string | number;
@@ -7,6 +7,7 @@ export interface ProductOfferSchemaInput {
   url?: string;
   itemCondition?: string;
   priceValidUntil?: string;
+  shippingDetails?: Record<string, unknown>;
 }
 
 export interface ProductReviewsJsonLdProps {
@@ -23,12 +24,14 @@ export interface ProductReviewsJsonLdProps {
   };
   summary?: Pick<ReviewSummary, "average_rating" | "reviews_count"> | null;
   reviews?: ReviewItem[];
+  settings?: Partial<ReviewStoreSettings> | null;
 }
 
 export function buildProductReviewsJsonLdSchema({
   product,
   summary,
   reviews = [],
+  settings,
 }: ProductReviewsJsonLdProps): Record<string, unknown> {
   const count = summary?.reviews_count ?? 0;
   const average = Number(summary?.average_rating ?? 0);
@@ -62,16 +65,39 @@ export function buildProductReviewsJsonLdSchema({
     };
   }
 
-  if (product.offers) {
+  const includeOffers = settings?.schema_include_offers !== false;
+  if (includeOffers && product.offers) {
+    const condition =
+      settings?.schema_item_condition || "NewCondition";
+    const fullConditionUrl = condition.startsWith("http")
+      ? condition
+      : `https://schema.org/${condition}`;
+
     const normalizeOffer = (offer: ProductOfferSchemaInput) => ({
       "@type": "Offer",
       url: offer.url || product.url,
       priceCurrency: offer.priceCurrency,
       price: String(offer.price),
       availability: offer.availability || "https://schema.org/InStock",
-      ...(offer.itemCondition ? { itemCondition: offer.itemCondition } : {}),
+      itemCondition: offer.itemCondition || fullConditionUrl,
       ...(offer.priceValidUntil
         ? { priceValidUntil: offer.priceValidUntil }
+        : {}),
+      ...(settings?.schema_show_shipping !== false
+        ? {
+            shippingDetails: offer.shippingDetails || {
+              "@type": "OfferShippingDetails",
+              shippingRate: {
+                "@type": "MonetaryAmount",
+                value: "0.00",
+                currency: offer.priceCurrency,
+              },
+              shippingDestination: {
+                "@type": "DefinedRegion",
+                addressCountry: "IN",
+              },
+            },
+          }
         : {}),
     });
 
@@ -80,7 +106,9 @@ export function buildProductReviewsJsonLdSchema({
       : normalizeOffer(product.offers);
   }
 
-  if (count > 0 && average > 0) {
+  const includeAggregate =
+    settings?.schema_include_aggregate_rating !== false;
+  if (includeAggregate && count > 0 && average > 0) {
     data.aggregateRating = {
       "@type": "AggregateRating",
       ratingValue: Number(average.toFixed(2)),
@@ -91,33 +119,41 @@ export function buildProductReviewsJsonLdSchema({
     };
   }
 
-  const publishedReviews = reviews
-    .filter((r) => !r.status || r.status === "approved")
-    .slice(0, 10);
+  const includeReviews = settings?.schema_include_reviews !== false;
+  if (includeReviews) {
+    const maxReviews = settings?.schema_max_reviews_count || 10;
+    const publishedReviews = reviews
+      .filter((r) => !r.status || r.status === "approved")
+      .slice(0, maxReviews);
 
-  if (publishedReviews.length > 0) {
-    data.review = publishedReviews.map((r) => ({
-      "@type": "Review",
-      ...(r.title ? { name: r.title } : {}),
-      ...(r.body ? { reviewBody: r.body } : {}),
-      datePublished: r.created_at,
-      author: {
-        "@type": "Person",
-        name: r.reviewer_display_name || "Verified Customer",
-      },
-      reviewRating: {
-        "@type": "Rating",
-        ratingValue: r.rating,
-        bestRating: 5,
-        worstRating: 1,
-      },
-    }));
+    if (publishedReviews.length > 0) {
+      data.review = publishedReviews.map((r) => ({
+        "@type": "Review",
+        ...(r.title ? { name: r.title } : {}),
+        ...(r.body ? { reviewBody: r.body } : {}),
+        datePublished: r.created_at,
+        author: {
+          "@type": "Person",
+          name: r.reviewer_display_name || "Verified Customer",
+        },
+        reviewRating: {
+          "@type": "Rating",
+          ratingValue: r.rating,
+          bestRating: 5,
+          worstRating: 1,
+        },
+      }));
+    }
   }
 
   return data;
 }
 
 export function ProductReviewsJsonLd(props: ProductReviewsJsonLdProps) {
+  if (props.settings?.schema_markup_enabled === false) {
+    return null;
+  }
+
   const data = buildProductReviewsJsonLdSchema(props);
   const serialized = JSON.stringify(data).replaceAll("<", "\\u003c");
 

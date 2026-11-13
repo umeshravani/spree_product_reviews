@@ -173,6 +173,14 @@ export interface ReviewStoreSettings {
   verified_badge_color?: string;
   title_rating_format: string;
   title_reviews_label: string;
+  schema_markup_enabled?: boolean;
+  schema_include_reviews?: boolean;
+  schema_include_aggregate_rating?: boolean;
+  schema_include_offers?: boolean;
+  schema_show_shipping?: boolean;
+  schema_price_valid_days?: number;
+  schema_max_reviews_count?: number;
+  schema_item_condition?: string;
 }
 
 export interface ReviewEligibilityResponse {

@@ -731,15 +731,21 @@ export function ReviewsPage({ storeId }: RouteProps) {
                       )}
                       <td className="px-4 py-3 min-w-48">
                         <div className="flex items-center gap-3">
-                          <Thumbnail
-                            src={review.product_thumbnail_url}
-                            alt={review.product_name || 'Product'}
-                            size="md"
-                          />
+                          <AppLink
+                            storeId={storeId}
+                            path={`reviews/${review.id}`}
+                            className="block"
+                          >
+                            <Thumbnail
+                              src={review.product_thumbnail_url}
+                              alt={review.product_name || 'Product'}
+                              size="md"
+                            />
+                          </AppLink>
                           <div className="min-w-0">
                             <AppLink
                               storeId={storeId}
-                              path={`products/${review.product_id}`}
+                              path={`reviews/${review.id}`}
                               className="block max-w-44 truncate font-medium hover:underline"
                             >
                               {review.product_name || 'Product'}

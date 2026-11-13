@@ -119,7 +119,7 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
           [
             { id: 'general', label: 'General' },
             { id: 'settings', label: 'Settings' },
-            { id: 'customisation', label: 'Customisation' },
+            { id: 'customisation', label: 'Appearance' },
           ] as const
         ).map((tab) => {
           const selected = activeTab === tab.id
@@ -934,6 +934,198 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                     <span className="font-medium">Aarav P.</span>
                     <VerifiedCheckIcon color={draft.verified_badge_color || '#000000'} />
                   </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Search Engine Snippet &amp; Schema Markup</CardTitle>
+              <CardDescription>
+                Configure Schema.org Product structured data (JSON-LD) for Google Rich Snippets,
+                star ratings, price, stock, and delivery badges in Google Search.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <SettingToggle
+                id="schema-enabled"
+                label="Enable Schema.org Rich Snippets (JSON-LD)"
+                description="Inject structured data markup on product pages to qualify for rich Google search cards."
+                checked={draft.schema_markup_enabled ?? true}
+                disabled={!canEdit}
+                onChange={(val) => updateField('schema_markup_enabled', val)}
+              />
+              <SettingToggle
+                id="schema-include-rating"
+                label="Include Aggregate Rating"
+                description="Show overall average score and total review count as rich stars in search snippets."
+                checked={draft.schema_include_aggregate_rating ?? true}
+                disabled={!canEdit || draft.schema_markup_enabled === false}
+                onChange={(val) => updateField('schema_include_aggregate_rating', val)}
+              />
+              <SettingToggle
+                id="schema-include-reviews"
+                label="Include Customer Reviews"
+                description="Embed top approved review titles, bodies, and ratings inside structured data."
+                checked={draft.schema_include_reviews ?? true}
+                disabled={!canEdit || draft.schema_markup_enabled === false}
+                onChange={(val) => updateField('schema_include_reviews', val)}
+              />
+              <SettingToggle
+                id="schema-include-offers"
+                label="Include Pricing &amp; Stock Availability"
+                description="Expose product price, currency, and real-time inventory status in Google Shopping &amp; Search."
+                checked={draft.schema_include_offers ?? true}
+                disabled={!canEdit || draft.schema_markup_enabled === false}
+                onChange={(val) => updateField('schema_include_offers', val)}
+              />
+              <SettingToggle
+                id="schema-show-shipping"
+                label="Include Delivery &amp; Shipping Indicator"
+                description="Add free delivery / standard shipping metadata to Google Search offers."
+                checked={draft.schema_show_shipping ?? true}
+                disabled={!canEdit || draft.schema_markup_enabled === false}
+                onChange={(val) => updateField('schema_show_shipping', val)}
+              />
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Price Validity (Days)</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={365}
+                    disabled={!canEdit || draft.schema_markup_enabled === false}
+                    value={draft.schema_price_valid_days ?? 30}
+                    onChange={(e) =>
+                      updateField('schema_price_valid_days', Number(e.target.value) || 30)
+                    }
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Days until offer price expiration.
+                  </p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Item Condition</Label>
+                  <NativeSelect
+                    disabled={!canEdit || draft.schema_markup_enabled === false}
+                    value={draft.schema_item_condition || 'NewCondition'}
+                    onChange={(e) => updateField('schema_item_condition', e.target.value)}
+                  >
+                    <option value="NewCondition">New (Brand New)</option>
+                    <option value="RefurbishedCondition">Refurbished</option>
+                    <option value="UsedCondition">Used</option>
+                    <option value="DamagedCondition">Damaged</option>
+                  </NativeSelect>
+                  <p className="text-[11px] text-muted-foreground">
+                    Schema.org condition specification.
+                  </p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Max Reviews in Schema</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={50}
+                    disabled={!canEdit || draft.schema_markup_enabled === false}
+                    value={draft.schema_max_reviews_count ?? 10}
+                    onChange={(e) =>
+                      updateField('schema_max_reviews_count', Number(e.target.value) || 10)
+                    }
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Number of approved reviews in payload.
+                  </p>
+                </div>
+              </div>
+
+              {/* Live Google Search Snippet Preview */}
+              <div className="rounded-lg border bg-background p-5 shadow-xs space-y-3">
+                <div className="flex items-center justify-between border-b pb-2">
+                  <div className="flex items-center gap-2">
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                        fill="#4285F4"
+                      />
+                      <path
+                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                        fill="#34A853"
+                      />
+                      <path
+                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                        fill="#FBBC05"
+                      />
+                      <path
+                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                        fill="#EA4335"
+                      />
+                    </svg>
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Google Search Result Snippet Preview
+                    </span>
+                  </div>
+                  {draft.schema_markup_enabled === false ? (
+                    <span className="text-xs font-medium text-amber-600 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded">
+                      Structured Data Disabled
+                    </span>
+                  ) : (
+                    <span className="text-xs font-medium text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded">
+                      Rich Snippet Active
+                    </span>
+                  )}
+                </div>
+
+                <div className="font-sans max-w-xl space-y-1 text-left">
+                  {/* Google search URL / breadcrumb */}
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <span className="font-medium text-foreground">Your Store</span>
+                    <span>›</span>
+                    <span>products</span>
+                    <span>›</span>
+                    <span className="truncate">handcrafted-wall-art-test</span>
+                  </div>
+
+                  {/* Title Link */}
+                  <div className="text-base text-blue-600 dark:text-blue-400 font-medium hover:underline cursor-pointer">
+                    Handcrafted Wall Art Test - Premium Canvas Artwork
+                  </div>
+
+                  {/* Rich Snippet Details Line */}
+                  {draft.schema_markup_enabled !== false && (
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground py-0.5">
+                      {draft.schema_include_aggregate_rating !== false && (
+                        <div className="flex items-center gap-1 font-medium text-foreground">
+                          <span style={{ color: draft.title_star_color || '#FBBF24' }}>
+                            ★★★★★
+                          </span>
+                          <span>Rating: 4.8 · ‎120 reviews</span>
+                        </div>
+                      )}
+                      {draft.schema_include_offers !== false && (
+                        <>
+                          <span>·</span>
+                          <span className="font-medium text-foreground">₹2,900.00</span>
+                          <span>·</span>
+                          <span className="text-emerald-700 dark:text-emerald-400 font-medium">
+                            In stock
+                          </span>
+                        </>
+                      )}
+                      {draft.schema_show_shipping !== false && (
+                        <>
+                          <span>·</span>
+                          <span className="text-muted-foreground">Free delivery</span>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Snippet Description */}
+                  <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                    Handcrafted premium quality wall art with detailed textures and rich colors. Read verified customer reviews and ratings, see customer photos, and shop online with fast delivery.
+                  </p>
                 </div>
               </div>
             </CardContent>

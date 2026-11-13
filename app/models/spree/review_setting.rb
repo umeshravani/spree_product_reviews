@@ -21,6 +21,11 @@ module Spree
       rewards_enabled
       photo_reward_enabled
       video_reward_enabled
+      schema_markup_enabled
+      schema_include_reviews
+      schema_include_aggregate_rating
+      schema_include_offers
+      schema_show_shipping
     ].freeze
 
     INTEGER_KEYS = %i[
@@ -33,6 +38,8 @@ module Spree
       duplicate_detection_window_hours
       photo_reward_percentage
       video_reward_percentage
+      schema_price_valid_days
+      schema_max_reviews_count
     ].freeze
 
     DECIMAL_KEYS = %i[
@@ -65,6 +72,7 @@ module Spree
       verified_badge_color
       title_rating_format
       title_reviews_label
+      schema_item_condition
     ].freeze
 
     ALL_KEYS = (BOOLEAN_KEYS + INTEGER_KEYS + DECIMAL_KEYS + STRING_KEYS).freeze
@@ -113,6 +121,14 @@ module Spree
       verified_badge_color
       title_rating_format
       title_reviews_label
+      schema_markup_enabled
+      schema_include_reviews
+      schema_include_aggregate_rating
+      schema_include_offers
+      schema_show_shipping
+      schema_price_valid_days
+      schema_max_reviews_count
+      schema_item_condition
     ].freeze
 
     ALIASES = {
