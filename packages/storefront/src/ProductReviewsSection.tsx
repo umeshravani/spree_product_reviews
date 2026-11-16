@@ -2,9 +2,12 @@
 
 import {
   AlertCircle,
+  BadgeCheck,
+  Camera,
   ChevronLeft,
   ChevronRight,
   SlidersHorizontal,
+  Video,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ProductReviewsClient } from "./client.js";
@@ -262,12 +265,13 @@ export function ProductReviewsSection({
               setPage(1);
               setWithImages((prev) => !prev);
             }}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition cursor-pointer ${
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition cursor-pointer ${
               withImages
                 ? "bg-black text-white border-black"
                 : "bg-white text-neutral-700 border-neutral-300 hover:bg-neutral-50"
             }`}
           >
+            <Camera className="w-3.5 h-3.5" />
             With photos
           </button>
 
@@ -278,12 +282,13 @@ export function ProductReviewsSection({
                 setPage(1);
                 setWithVideos((prev) => !prev);
               }}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium border transition cursor-pointer ${
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition cursor-pointer ${
                 withVideos
                   ? "bg-black text-white border-black"
                   : "bg-white text-neutral-700 border-neutral-300 hover:bg-neutral-50"
               }`}
             >
+              <Video className="w-3.5 h-3.5" />
               With videos
             </button>
           )}
@@ -294,12 +299,13 @@ export function ProductReviewsSection({
               setPage(1);
               setVerifiedOnly((prev) => !prev);
             }}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium border transition cursor-pointer ${
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition cursor-pointer ${
               verifiedOnly
                 ? "bg-black text-white border-black"
                 : "bg-white text-neutral-700 border-neutral-300 hover:bg-neutral-50"
             }`}
           >
+            <BadgeCheck className="w-3.5 h-3.5" />
             Verified purchase
           </button>
 
