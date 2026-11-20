@@ -86,6 +86,33 @@ export function ProductRatingHeader({
     }
   };
 
+  const isSingleStar = settings?.title_rating_display_style === "single_star";
+
+  if (isSingleStar) {
+    return (
+      <div className={`mt-2.5 flex items-center gap-1.5 ${className}`}>
+        <span className="text-sm font-bold text-gray-900 leading-none tabular-nums">
+          {formattedAverage}
+        </span>
+        <svg
+          className="w-4 h-4 shrink-0"
+          style={{ color: starColor, fill: starColor }}
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+        </svg>
+        <button
+          type="button"
+          onClick={handleClick}
+          className="text-sm font-medium leading-none text-gray-600 hover:text-gray-900 hover:underline cursor-pointer ml-0.5"
+        >
+          {formattedCustomText || (count > 0 ? `${count} ${reviewsLabel}` : `0 ${reviewsLabel}`)}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className={`mt-2.5 flex items-center gap-2 ${className}`}>
       <StarRating

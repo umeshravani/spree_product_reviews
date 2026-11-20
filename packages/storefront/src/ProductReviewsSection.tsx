@@ -124,30 +124,44 @@ export function ProductReviewsSection({
   const fetchMetadata = useCallback(async () => {
     try {
       void fetchProductQuestions();
-      const [summaryRes, filtersRes, questionsRes, eligibilityRes] =
-        await Promise.all([
-          client.getSummary(productId),
-          client.getFilters(productId),
-          client.getQuestions(productId),
-          client.getEligibility(productId, {
-            variant_id: variantId || undefined,
-          }),
-        ]);
+      const results = await Promise.allSettled([
+        client.getSummary(productId),
+        client.getFilters(productId),
+        client.getQuestions(productId),
+        client.getEligibility(productId, {
+          variant_id: variantId || undefined,
+        }),
+        client.getSettings(),
+      ]);
 
-      setSummary(summaryRes);
-      if (filtersRes.filters) setFilters(filtersRes.filters);
-      if (filtersRes.sort_options?.length) {
-        setSortOptions(filtersRes.sort_options);
+      const [summaryRes, filtersRes, questionsRes, eligibilityRes, settingsRes] =
+        results;
+
+      if (summaryRes.status === "fulfilled") {
+        setSummary(summaryRes.value);
       }
-      if (questionsRes.data) setQuestions(questionsRes.data);
-      setEligibility(eligibilityRes);
-      if (eligibilityRes.settings) {
-        setSettings(eligibilityRes.settings);
+      if (filtersRes.status === "fulfilled") {
+        if (filtersRes.value.filters) setFilters(filtersRes.value.filters);
+        if (filtersRes.value.sort_options?.length) {
+          setSortOptions(filtersRes.value.sort_options);
+        }
+      }
+      if (questionsRes.status === "fulfilled" && questionsRes.value.data) {
+        setQuestions(questionsRes.value.data);
+      }
+      if (eligibilityRes.status === "fulfilled") {
+        setEligibility(eligibilityRes.value);
+        if (eligibilityRes.value.settings) {
+          setSettings(eligibilityRes.value.settings);
+        }
+      }
+      if (settingsRes.status === "fulfilled" && settingsRes.value) {
+        setSettings((prev) => ({ ...settingsRes.value, ...(prev || {}) }));
       }
     } catch (err) {
       console.error("[ProductReviewsSection] Metadata error:", err);
     }
-  }, [client, productId, variantId]);
+  }, [client, productId, variantId, fetchProductQuestions]);
 
   const fetchReviews = useCallback(async () => {
     setLoading(true);

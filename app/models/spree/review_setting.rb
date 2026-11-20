@@ -80,6 +80,7 @@ module Spree
       bottom_star_color
       product_card_star_color
       product_card_format
+      title_rating_display_style
       verified_badge_color
       title_rating_format
       title_reviews_label
@@ -156,6 +157,7 @@ module Spree
       bottom_star_color
       product_card_star_color
       product_card_format
+      title_rating_display_style
       verified_badge_color
       title_rating_format
       title_reviews_label

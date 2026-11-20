@@ -7,12 +7,18 @@ import {
   CardHeader,
   CardTitle,
   Checkbox,
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
   Input,
   Label,
   ResourceLayout,
   RowActions,
+  SearchInput,
   Skeleton,
   StatusBadge,
+  StatusDot,
   Switch,
   Thumbnail,
   toastManager,
@@ -21,6 +27,7 @@ import {
 import {
   CheckCircle2Icon,
   CheckIcon,
+  ChevronDownIcon,
   PencilIcon,
   PlusIcon,
   SearchIcon,
@@ -89,7 +96,6 @@ function CustomerQuestionsSection({ storeId }: { storeId: string }) {
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState<string>('all')
   const [search, setSearch] = useState('')
-  const [searchInput, setSearchInput] = useState('')
   const [selectedIds, setSelectedIds] = useState<string[]>([])
 
   const [replyingQuestion, setReplyingQuestion] = useState<ProductQuestion | null>(null)
@@ -223,13 +229,6 @@ function CustomerQuestionsSection({ storeId }: { storeId: string }) {
     bulkMutation.mutate({ ids: selectedIds, action })
   }
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setPage(1)
-    setSearch(searchInput)
-    setSelectedIds([])
-  }
-
   const meta = query.data?.meta
 
   return (
@@ -240,100 +239,109 @@ function CustomerQuestionsSection({ storeId }: { storeId: string }) {
         subtitle="Manage customer inquiries asked on product pages, publish verified answers, and moderate questions."
       />
 
-      {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-        <div className="inline-flex rounded-lg border bg-muted/40 p-1 text-xs">
-          {[
-            { id: 'all', label: 'All' },
-            { id: 'pending', label: `Pending (${meta?.pending_count ?? 0})` },
-            { id: 'answered', label: `Answered (${meta?.answered_count ?? 0})` },
-            { id: 'rejected', label: 'Rejected' },
-          ].map((f) => (
-            <button
-              key={f.id}
+      {/* Filter and Search Bar matching Spree-native toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+          <SearchInput
+            value={search}
+            onValueChange={(nextValue) => {
+              setSearch(nextValue)
+              setPage(1)
+              setSelectedIds([])
+            }}
+            placeholder="Search questions or author..."
+            clearLabel="Clear"
+            className="h-[2.125rem] w-[240px] bg-card text-sm"
+          />
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                aria-label="Filter by status"
+                className="h-[2.125rem] gap-2 bg-card text-xs font-normal"
+              >
+                <StatusDot
+                  status={status}
+                  tone={
+                    status === 'answered'
+                      ? 'success'
+                      : status === 'pending'
+                        ? 'warning'
+                        : status === 'rejected'
+                          ? 'destructive'
+                          : 'neutral'
+                  }
+                  className="size-2.5"
+                />
+                <span className="text-muted-foreground font-normal">Status</span>
+                <span className="font-medium capitalize">{status === 'all' ? 'All' : status}</span>
+                <ChevronDownIcon className="size-3.5 text-muted-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              {[
+                { id: 'all', label: 'All', count: undefined, tone: 'neutral' as const },
+                {
+                  id: 'pending',
+                  label: 'Pending',
+                  count: meta?.pending_count,
+                  tone: 'warning' as const,
+                },
+                {
+                  id: 'answered',
+                  label: 'Answered',
+                  count: meta?.answered_count,
+                  tone: 'success' as const,
+                },
+                {
+                  id: 'rejected',
+                  label: 'Rejected',
+                  count: undefined,
+                  tone: 'destructive' as const,
+                },
+              ].map((opt) => (
+                <DropdownMenuCheckboxItem
+                  key={opt.id}
+                  checked={status === opt.id}
+                  onCheckedChange={() => {
+                    setStatus(opt.id)
+                    setPage(1)
+                    setSelectedIds([])
+                  }}
+                >
+                  <StatusDot status={opt.id} tone={opt.tone} />
+                  <span className="flex-1 truncate">{opt.label}</span>
+                  {typeof opt.count === 'number' && (
+                    <span className="ml-auto text-xs text-muted-foreground tabular-nums">
+                      {opt.count}
+                    </span>
+                  )}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {(status !== 'all' || search) && (
+            <Button
               type="button"
+              size="sm"
+              variant="ghost"
+              className="h-[2.125rem] text-xs text-muted-foreground"
               onClick={() => {
+                setStatus('all')
+                setSearch('')
                 setPage(1)
-                setStatus(f.id)
                 setSelectedIds([])
               }}
-              className={`px-3 py-1.5 rounded-md font-semibold cursor-pointer transition-colors ${
-                status === f.id
-                  ? 'bg-background text-foreground shadow-xs'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
             >
-              {f.label}
-            </button>
-          ))}
+              Clear filters
+            </Button>
+          )}
         </div>
-
-        <form onSubmit={handleSearchSubmit} className="relative flex-1 sm:max-w-xs">
-          <Input
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Search questions or author..."
-            className="pr-8 text-xs h-9"
-          />
-          <button
-            type="submit"
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-          >
-            <SearchIcon className="size-3.5" />
-          </button>
-        </form>
       </div>
-
-      {/* Bulk Actions Floating/Pinned Bar */}
-      {selectedIds.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/60 px-4 py-2.5 text-sm animate-in fade-in duration-150">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-foreground">
-              {selectedIds.length} selected
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSelectedIds([])}
-              className="h-7 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
-            >
-              Deselect all
-            </Button>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => void handleBulkAction('answered')}
-              disabled={bulkMutation.isPending}
-              className="h-8 gap-1.5 text-xs font-semibold cursor-pointer text-emerald-600 dark:text-emerald-400 border-emerald-600/30 hover:bg-emerald-500/10"
-            >
-              <CheckCircle2Icon className="size-3.5" />
-              Mark Answered
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => void handleBulkAction('rejected')}
-              disabled={bulkMutation.isPending}
-              className="h-8 gap-1.5 text-xs font-semibold cursor-pointer text-amber-600 dark:text-amber-400 border-amber-600/30 hover:bg-amber-500/10"
-            >
-              <XCircleIcon className="size-3.5" />
-              Reject
-            </Button>
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={() => void handleBulkAction('delete')}
-              disabled={bulkMutation.isPending}
-              className="h-8 gap-1.5 text-xs font-semibold cursor-pointer"
-            >
-              <Trash2Icon className="size-3.5" />
-              Delete
-            </Button>
-          </div>
-        </div>
-      )}
 
       {query.isPending ? (
         <Skeleton className="h-48 w-full" />
@@ -344,25 +352,88 @@ function CustomerQuestionsSection({ storeId }: { storeId: string }) {
           <div className="overflow-x-auto rounded-lg border bg-card">
             <table className="w-full text-left text-sm">
               <thead className="bg-muted/40">
-                <tr>
-                  <th className="w-10 px-4 py-3">
-                    <Checkbox
-                      checked={allChecked}
-                      indeterminate={someChecked}
-                      onCheckedChange={(val) => toggleAllRows(Boolean(val))}
-                      aria-label="Select all questions"
-                    />
-                  </th>
-                  <th className="px-4 py-3 font-medium whitespace-nowrap">Product</th>
-                  <th className="px-4 py-3 font-medium whitespace-nowrap">Customer</th>
-                  <th className="px-4 py-3 font-medium">Question</th>
-                  <th className="px-4 py-3 font-medium">Store Reply</th>
-                  <th className="px-4 py-3 font-medium whitespace-nowrap">Status</th>
-                  <th className="px-4 py-3 font-medium whitespace-nowrap">Date</th>
-                  <th className="w-16 px-4 py-3 text-right font-medium whitespace-nowrap">
-                    Actions
-                  </th>
-                </tr>
+                {selectedIds.length > 0 ? (
+                  <tr>
+                    <th className="w-10 px-4 py-2.5 align-middle">
+                      <Checkbox
+                        checked={allChecked}
+                        indeterminate={someChecked}
+                        onCheckedChange={(val) => toggleAllRows(Boolean(val))}
+                        aria-label="Select all questions"
+                      />
+                    </th>
+                    <th colSpan={7} className="px-2 py-2 align-middle font-normal">
+                      <div className="flex flex-wrap items-center gap-1">
+                        <span className="whitespace-nowrap px-1.5 text-sm font-medium tabular-nums">
+                          {selectedIds.length} selected
+                        </span>
+                        <div className="mx-1 h-5 w-px bg-border" aria-hidden="true" />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={bulkMutation.isPending}
+                          className="h-7 gap-1.5 px-2 text-xs font-medium whitespace-nowrap text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
+                          onClick={() => void handleBulkAction('answered')}
+                        >
+                          <CheckCircle2Icon className="size-3.5" />
+                          Mark Answered
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={bulkMutation.isPending}
+                          className="h-7 gap-1.5 px-2 text-xs font-medium whitespace-nowrap text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
+                          onClick={() => void handleBulkAction('rejected')}
+                        >
+                          <XCircleIcon className="size-3.5" />
+                          Reject
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={bulkMutation.isPending}
+                          className="h-7 gap-1.5 px-2 text-xs font-medium whitespace-nowrap text-destructive hover:bg-destructive/10"
+                          onClick={() => void handleBulkAction('delete')}
+                        >
+                          <Trash2Icon className="size-3.5" />
+                          Delete
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="ml-auto h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                          onClick={() => setSelectedIds([])}
+                        >
+                          Deselect all
+                        </Button>
+                      </div>
+                    </th>
+                  </tr>
+                ) : (
+                  <tr>
+                    <th className="w-10 px-4 py-3">
+                      <Checkbox
+                        checked={allChecked}
+                        indeterminate={someChecked}
+                        onCheckedChange={(val) => toggleAllRows(Boolean(val))}
+                        aria-label="Select all questions"
+                      />
+                    </th>
+                    <th className="px-4 py-3 font-medium whitespace-nowrap">Product</th>
+                    <th className="px-4 py-3 font-medium whitespace-nowrap">Customer</th>
+                    <th className="px-4 py-3 font-medium">Question</th>
+                    <th className="px-4 py-3 font-medium">Store Reply</th>
+                    <th className="px-4 py-3 font-medium whitespace-nowrap">Status</th>
+                    <th className="px-4 py-3 font-medium whitespace-nowrap">Date</th>
+                    <th className="w-20 px-4 py-3 text-right font-medium whitespace-nowrap">
+                      Actions
+                    </th>
+                  </tr>
+                )}
               </thead>
               <tbody>
                 {questions.map((q) => {
@@ -454,13 +525,13 @@ function CustomerQuestionsSection({ storeId }: { storeId: string }) {
                       <td className="px-4 py-3 whitespace-nowrap text-xs text-muted-foreground tabular-nums">
                         {new Date(q.created_at).toLocaleDateString()}
                       </td>
-                      <td className="w-16 px-4 py-3 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-1.5">
+                      <td className="w-20 px-4 py-3 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1">
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => handleOpenReply(q)}
-                            className="h-7 text-xs font-semibold cursor-pointer px-2"
+                            className="h-7 text-xs font-semibold cursor-pointer px-2.5"
                           >
                             Reply
                           </Button>
@@ -470,6 +541,7 @@ function CustomerQuestionsSection({ storeId }: { storeId: string }) {
                             onClick={() => void handleDelete(q)}
                             disabled={deleteMutation.isPending}
                             className="h-7 size-7 p-0 text-muted-foreground hover:text-destructive cursor-pointer"
+                            title="Delete question"
                           >
                             <Trash2Icon className="size-3.5" />
                           </Button>

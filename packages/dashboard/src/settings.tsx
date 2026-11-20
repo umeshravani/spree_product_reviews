@@ -1,19 +1,14 @@
 import { PageHeader, SettingsSection, usePermissions, useStore } from '@spree/dashboard-core'
 import {
-  Badge,
   Button,
-  Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
   Input,
   Label,
   Skeleton,
   Switch,
-  Textarea,
 } from '@spree/dashboard-ui'
 import {
+  ChevronRightIcon,
   FileTextIcon,
   GiftIcon,
   ImageIcon,
@@ -30,7 +25,7 @@ import { useEffect, useState } from 'react'
 import { reviewsClient } from './client'
 import { StarDisplay, VerifiedCheckIcon } from './components'
 import type { RouteProps } from './shared'
-import { ErrorMessage, NativeSelect } from './shared'
+import { AppLink, ErrorMessage, NativeSelect } from './shared'
 import type { ReviewSettings } from './types'
 
 type SettingsTab = 'general' | 'settings' | 'customisation' | 'marketing'
@@ -43,19 +38,14 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>('general')
   const [draft, setDraft] = useState<ReviewSettings | null>(null)
   const [savedBanner, setSavedBanner] = useState(false)
-  const [editingTemplateKey, setEditingTemplateKey] = useState<string | null>(null)
 
   // Retrieve store email branding
   let storeName = 'Artolika.Inc'
-  let supportEmail = 'support@example.com'
-  let senderEmail = 'no-reply@example.com'
 
   try {
     const storeContext = useStore()
     if (storeContext?.store) {
       if (storeContext.store.name) storeName = storeContext.store.name
-      if (storeContext.store.customer_support_email) supportEmail = storeContext.store.customer_support_email
-      if (storeContext.store.mail_from_address) senderEmail = storeContext.store.mail_from_address
     }
   } catch {
     // Outside store provider context fallback
@@ -114,27 +104,6 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
 
   const isMultiStep = (draft.modal_mode || 'multi') === 'multi'
   const rewardsEnabled = draft.rewards_enabled ?? true
-
-  const selectedTemplate = REVIEW_EMAIL_DEFINITIONS.find((t) => t.key === editingTemplateKey)
-
-  if (selectedTemplate && draft) {
-    return (
-      <div className="flex flex-col gap-6 w-full max-w-none">
-        <EmailTemplateCustomizerView
-          template={selectedTemplate}
-          draft={draft}
-          canEdit={canEdit}
-          storeName={storeName}
-          supportEmail={supportEmail}
-          senderEmail={senderEmail}
-          onBack={() => setEditingTemplateKey(null)}
-          updateField={updateField}
-          onSave={() => saveMutation.mutate(draft)}
-          isSaving={saveMutation.isPending}
-        />
-      </div>
-    )
-  }
 
   return (
     <div className="flex flex-col gap-6 w-full max-w-5xl">
@@ -403,13 +372,13 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                 <Label htmlFor="review-spam-words" className="text-sm font-medium">
                   Blocked Keywords &amp; Spam Terms
                 </Label>
-                <Textarea
+                <textarea
                   id="review-spam-words"
                   placeholder="e.g. buy now, discount code, casino (comma separated)"
                   disabled={!canEdit}
                   value={draft.spam_words || ''}
-                  onChange={(e) => updateField('spam_words', e.target.value)}
-                  className="h-20 resize-none"
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => updateField('spam_words', e.target.value)}
+                  className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 h-20 resize-none"
                 />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -935,7 +904,21 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-medium">Card Rating Format</Label>
+                    <Label htmlFor="product-header-format" className="text-xs font-medium">Product Header Rating Format</Label>
+                    <NativeSelect
+                      id="product-header-format"
+                      disabled={!canEdit}
+                      value={draft.title_rating_display_style || 'stars_count'}
+                      onChange={(e) =>
+                        updateField('title_rating_display_style', e.target.value as 'stars_count' | 'single_star')
+                      }
+                    >
+                      <option value="stars_count">Five stars & review count (★★★★★ (5.0) 1 reviews)</option>
+                      <option value="single_star">Single star & score (5.0 ★ 1 reviews)</option>
+                    </NativeSelect>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="product-card-format" className="text-xs font-medium">Card Rating Format</Label>
                     <NativeSelect
                       id="product-card-format"
                       disabled={!canEdit}
@@ -948,7 +931,7 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                       <option value="single_star">Single star & score (4.8 ★ (120))</option>
                     </NativeSelect>
                   </div>
-                  <div className="flex items-center justify-between sm:justify-start gap-4 pt-4 sm:pt-6">
+                  <div className="flex items-center justify-between sm:justify-start gap-4 pt-2 sm:col-span-2">
                     <Switch
                       id="card-show-count"
                       disabled={!canEdit}
@@ -969,13 +952,37 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                 <div className="flex flex-wrap items-center gap-8">
                   <div className="flex items-center gap-2 text-sm">
                     <span className="text-muted-foreground">Header:</span>
-                    <StarDisplay rating={5} size="md" color={draft.title_star_color || '#FBBF24'} />
-                    <span className="font-medium">
-                      {(draft.title_rating_format || '({rating}) {count} reviews')
-                        .replace('{rating}', '4.9')
-                        .replace('{count}', '120')
-                        .replace('reviews', draft.title_reviews_label || 'reviews')}
-                    </span>
+                    {draft.title_rating_display_style === 'single_star' ? (
+                      <div className="flex items-center gap-1 font-semibold text-foreground">
+                        <span>5.0</span>
+                        <svg
+                          className="w-4 h-4 shrink-0"
+                          style={{
+                            color: draft.title_star_color || '#FBBF24',
+                            fill: draft.title_star_color || '#FBBF24',
+                          }}
+                          viewBox="0 0 24 24"
+                        >
+                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                        </svg>
+                        <span className="text-xs text-muted-foreground font-normal">
+                          {(draft.title_rating_format || '({rating}) {count} reviews')
+                            .replace('{rating}', '5.0')
+                            .replace('{count}', '1')
+                            .replace('reviews', draft.title_reviews_label || 'reviews')}
+                        </span>
+                      </div>
+                    ) : (
+                      <>
+                        <StarDisplay rating={5} size="md" color={draft.title_star_color || '#FBBF24'} />
+                        <span className="font-medium">
+                          {(draft.title_rating_format || '({rating}) {count} reviews')
+                            .replace('{rating}', '4.9')
+                            .replace('{count}', '120')
+                            .replace('reviews', draft.title_reviews_label || 'reviews')}
+                        </span>
+                      </>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 text-sm">
                     <span className="text-muted-foreground">Product card:</span>
@@ -1330,8 +1337,8 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
               </div>
 
               {/* Live Google Search Snippet Preview */}
-              <div className="rounded-lg border bg-background p-5 shadow-xs space-y-3">
-                <div className="flex items-center justify-between border-b pb-2">
+              <div className="rounded-lg border bg-[#202124] text-[#bdc1c6] p-5 shadow-xs space-y-3 font-sans">
+                <div className="flex items-center justify-between border-b border-[#3c4043] pb-2">
                   <div className="flex items-center gap-2">
                     <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none">
                       <path
@@ -1351,92 +1358,118 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                         fill="#EA4335"
                       />
                     </svg>
-                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-[#9aa0a6]">
                       Google Search Result Snippet Preview
                     </span>
                   </div>
                   {draft.schema_markup_enabled === false ? (
-                    <span className="text-xs font-medium text-amber-600 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded">
+                    <span className="text-xs font-medium text-amber-400 bg-amber-950/40 px-2 py-0.5 rounded">
                       Structured Data Disabled
                     </span>
                   ) : (
-                    <span className="text-xs font-medium text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded">
+                    <span className="text-xs font-medium text-emerald-400 bg-emerald-950/40 px-2 py-0.5 rounded">
                       Rich Snippet Active
                     </span>
                   )}
                 </div>
 
-                <div className="font-sans max-w-xl space-y-1 text-left">
-                  {/* Google search URL / breadcrumb */}
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <span className="font-medium text-foreground">Your Store</span>
-                    <span>›</span>
-                    <span>products</span>
-                    <span>›</span>
-                    <span className="truncate">lorem-ipsum-product</span>
+                {/* Google Search Card matching media_1795205891099_c3012959.png */}
+                <div className="pt-1 space-y-1">
+                  {/* Top Line: Favicon circle + Site name + URL breadcrumbs + ⋮ */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="size-7 rounded-full bg-white flex items-center justify-center shrink-0 shadow-xs">
+                        <span className="text-xs font-bold text-neutral-900">
+                          {storeName.slice(0, 1).toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="min-w-0 flex flex-col justify-center">
+                        <span className="text-sm font-medium text-[#e8eaed] leading-tight truncate">
+                          {storeName}
+                        </span>
+                        <div className="text-xs text-[#bdc1c6] leading-tight truncate flex items-center gap-1">
+                          <span>https://example-store.com</span>
+                          <span>›</span>
+                          <span>Collections</span>
+                          <span>›</span>
+                          <span className="truncate">lorem-ipsum-art</span>
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      aria-label="More options"
+                      className="text-[#bdc1c6] hover:text-white p-1 text-sm font-bold leading-none cursor-default"
+                    >
+                      ⋮
+                    </button>
                   </div>
 
-                  {/* Title Link */}
-                  <div className="text-base text-blue-600 dark:text-blue-400 font-medium hover:underline cursor-pointer">
-                    Lorem Ipsum Dolor - Premium Store Collection
-                  </div>
+                  {/* Side-by-Side Flex: Left content + Right Centered Thumbnail */}
+                  <div className="flex items-center justify-between gap-4 pt-1">
+                    <div className="min-w-0 flex-1 space-y-1">
+                      {/* Title link in Google blue */}
+                      <div className="text-lg sm:text-[20px] text-[#8ab4f8] font-normal leading-snug hover:underline cursor-pointer">
+                        Lorem Ipsum Dolor - Premium Handcrafted Wall Art
+                      </div>
 
-                  {/* Rich Snippet Details Line */}
-                  {draft.schema_markup_enabled !== false && (
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground py-0.5">
-                      {draft.schema_include_aggregate_rating !== false && (
-                        <div className="flex items-center gap-1 font-medium text-foreground">
-                          <span style={{ color: draft.title_star_color || '#FBBF24' }}>
-                            ★
-                          </span>
-                          <span>4.1 · ‎1.5K reviews</span>
+                      {/* Meta Description */}
+                      <p className="text-xs sm:text-sm text-[#bdc1c6] leading-relaxed line-clamp-2 m-0">
+                        Jeweled with a 2.4cm thick aluminum frame; Pixel-perfect direct printing on Acrylic; Acrylic Chemical treatment before printing; Super HD print output 1200 ...{' '}
+                        <span className="text-[#8ab4f8] hover:underline cursor-pointer">Read more</span>
+                      </p>
+
+                      {/* Rich Snippet Data Row below Meta Description */}
+                      {draft.schema_markup_enabled !== false && (
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs sm:text-sm text-[#bdc1c6] pt-1">
+                          {draft.schema_include_aggregate_rating !== false && (
+                            <>
+                              <div className="inline-flex items-center gap-1 font-medium text-[#e8eaed]">
+                                <span>4.8</span>
+                                <span style={{ color: draft.title_star_color || '#FBBF24' }}>
+                                  ★
+                                </span>
+                                <span>store rating (1.5K)</span>
+                              </div>
+                              <span>·</span>
+                            </>
+                          )}
+                          {draft.schema_include_offers !== false && (
+                            <>
+                              <span className="font-semibold text-[#e8eaed]">
+                                ₹2,900.00 to ₹7,599.00
+                              </span>
+                              <span>·</span>
+                              <span className="inline-flex items-center gap-1 font-medium text-emerald-400">
+                                <span className="inline-block size-1.5 rounded-full bg-emerald-400" />
+                                In stock
+                              </span>
+                            </>
+                          )}
+                          {draft.schema_show_shipping !== false && (
+                            <>
+                              <span>·</span>
+                              <span>Free delivery</span>
+                            </>
+                          )}
+                          {draft.schema_show_returns !== false && (
+                            <>
+                              <span>·</span>
+                              <span>{draft.schema_return_days ?? 7}-day returns</span>
+                            </>
+                          )}
                         </div>
                       )}
-                      {draft.schema_include_offers !== false && (
-                        <>
-                          <span>·</span>
-                          <span className="font-medium text-foreground">₹2,900.00</span>
-                          <span>·</span>
-                          <span className="inline-flex items-center gap-1 font-medium text-emerald-700 dark:text-emerald-400">
-                            <span className="inline-block size-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400" />
-                            In stock
-                          </span>
-                        </>
-                      )}
-                      {draft.schema_show_shipping !== false && (
-                        <>
-                          <span>·</span>
-                          <span className="text-muted-foreground">Free delivery</span>
-                        </>
-                      )}
-                      {draft.schema_show_returns !== false && (
-                        <>
-                          <span>·</span>
-                          <span className="text-muted-foreground">
-                            {draft.schema_return_days ?? 7}-day returns
-                          </span>
-                        </>
-                      )}
                     </div>
-                  )}
 
-                  {/* Snippet Description with Thumbnail Image on Right */}
-                  <div className="flex items-start justify-between gap-4 pt-1">
-                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed flex-1 m-0">
-                      Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.
-                    </p>
-                    <div className="size-16 sm:size-20 rounded-lg overflow-hidden border border-border bg-muted/40 shrink-0 shadow-xs flex items-center justify-center">
-                      <svg
-                        className="size-8 text-muted-foreground/40"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                      >
-                        <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
-                        <circle cx="9" cy="9" r="2" />
-                        <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
-                      </svg>
+                    {/* Centered Thumbnail Image on Right */}
+                    <div className="size-20 sm:size-24 rounded-2xl overflow-hidden bg-[#303134] border border-[#3c4043] shrink-0 shadow-md flex items-center justify-center self-center">
+                      <div className="w-full h-full bg-linear-to-br from-amber-700/40 via-amber-900/60 to-neutral-900 flex flex-col items-center justify-center p-2 text-center">
+                        <ImageIcon className="size-6 text-[#bdc1c6]/70 mb-1" />
+                        <span className="text-[10px] text-[#bdc1c6]/80 font-medium leading-none">
+                          Product Art
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1451,9 +1484,7 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
           draft={draft}
           canEdit={canEdit}
           updateField={updateField}
-          onSave={() => saveMutation.mutate(draft)}
-          isSaving={saveMutation.isPending}
-          onEditTemplate={(key) => setEditingTemplateKey(key)}
+          storeId={storeId}
         />
       )}
     </div>
@@ -1650,582 +1681,18 @@ const REVIEW_EMAIL_DEFINITIONS: ReviewEmailTemplateDefinition[] = [
   },
 ]
 
-const SAMPLE_PREVIEW_DATA = {
-  store: {
-    name: 'Artolika.Inc',
-    url: 'https://thewallx.com',
-    customer_support_email: 'care@thewallx.com',
-    mail_from_address: 'no-reply@thewallx.com',
-  },
-  review: {
-    author_name: 'Aarav P.',
-    product_name: 'Handcrafted Wall Art Test',
-    rating: 5,
-    title: 'Stunning Canvas Artwork',
-    body: 'The craftsmanship on this canvas is exceptional! Textures and rich colors look even better in person.',
-    product_url: 'https://thewallx.com/products/handcrafted-wall-art-test',
-    moderator_note: 'Contains promotional links or spam patterns.',
-  },
-  product: {
-    name: 'Handcrafted Wall Art Test',
-    url: 'https://thewallx.com/products/handcrafted-wall-art-test',
-  },
-}
-
-function interpolateVariables(
-  text: string,
-  storeName?: string,
-  supportEmail?: string,
-  fromEmail?: string,
-): string {
-  if (!text) return ''
-  const sName = storeName || SAMPLE_PREVIEW_DATA.store.name
-  const supEmail = supportEmail || SAMPLE_PREVIEW_DATA.store.customer_support_email
-  const frmEmail = fromEmail || SAMPLE_PREVIEW_DATA.store.mail_from_address
-  const rev = SAMPLE_PREVIEW_DATA.review
-  const prod = SAMPLE_PREVIEW_DATA.product
-
-  return text
-    .replace(/\{\{\s*store\.name\s*\}\}/g, sName)
-    .replace(/\{\{\s*store\.url\s*\}\}/g, SAMPLE_PREVIEW_DATA.store.url)
-    .replace(/\{\{\s*store\.customer_support_email\s*\}\}/g, supEmail)
-    .replace(/\{\{\s*store\.mail_from_address\s*\}\}/g, frmEmail)
-    .replace(/\{\{\s*review\.product_name\s*\}\}/g, rev.product_name)
-    .replace(/\{\{\s*review\.author_name\s*\}\}/g, rev.author_name)
-    .replace(/\{\{\s*review\.rating\s*\}\}/g, String(rev.rating))
-    .replace(/\{\{\s*review\.title\s*\}\}/g, rev.title)
-    .replace(/\{\{\s*review\.body\s*\}\}/g, rev.body)
-    .replace(/\{\{\s*review\.product_url\s*\}\}/g, rev.product_url)
-    .replace(/\{\{\s*review\.moderator_note\s*\}\}/g, rev.moderator_note)
-    .replace(/\{\{\s*product\.name\s*\}\}/g, prod.name)
-    .replace(/\{\{\s*product\.url\s*\}\}/g, prod.url)
-    .replace(/\{%\s*if\s+resend\s*%\}.*?\{%\s*endif\s*%\}/g, '')
-    .replace(/\{%\s*if\s+review\.moderator_note\s*!=\s*blank\s*%\}([\s\S]*?)\{%\s*endif\s*%\}/g, '$1')
-}
-
-function parseMjmlElements(content: string) {
-  let heading = ''
-  let greeting = ''
-  let lead = ''
-  let bodyQuote = ''
-  let buttonText = ''
-  let buttonHref = ''
-  let note = ''
-
-  const headingMatch = content.match(/<mj-text[^>]*mj-class=["']heading["'][^>]*>([\s\S]*?)<\/mj-text>/i)
-  if (headingMatch) heading = headingMatch[1].replace(/<\/?[^>]+(>|$)/g, '').trim()
-
-  const greetingMatch = content.match(/<mj-text[^>]*mj-class=["']greeting["'][^>]*>([\s\S]*?)<\/mj-text>/i)
-  if (greetingMatch) greeting = greetingMatch[1].replace(/<\/?[^>]+(>|$)/g, '').trim()
-
-  const leadMatch = content.match(/<mj-text[^>]*mj-class=["']lead["'][^>]*>([\s\S]*?)<\/mj-text>/i)
-  if (leadMatch) lead = leadMatch[1].replace(/<\/?[^>]+(>|$)/g, '').trim()
-
-  const bodyMatch = content.match(/<mj-text[^>]*mj-class=["']body["'][^>]*>([\s\S]*?)<\/mj-text>/i)
-  if (bodyMatch) bodyQuote = bodyMatch[1].replace(/<\/?[^>]+(>|$)/g, '').trim()
-
-  const buttonMatch = content.match(/<mj-button[^>]*href=["']([^"']*)["'][^>]*>([\s\S]*?)<\/mj-button>/i)
-  if (buttonMatch) {
-    buttonHref = buttonMatch[1]
-    buttonText = buttonMatch[2].replace(/<\/?[^>]+(>|$)/g, '').trim()
-  }
-
-  const noteMatch = content.match(/<mj-text[^>]*mj-class=["']note["'][^>]*>([\s\S]*?)<\/mj-text>/i)
-  if (noteMatch) note = noteMatch[1].replace(/<\/?[^>]+(>|$)/g, '').trim()
-
-  return { heading, greeting, lead, bodyQuote, buttonText, buttonHref, note }
-}
-
-function EmailLivePreviewCard({
-  template,
-  subject,
-  body,
-  starColor,
-  storeName,
-  supportEmail,
-  senderEmail,
-  mode,
-  device,
-}: {
-  template: ReviewEmailTemplateDefinition
-  subject: string
-  body: string
-  starColor: string
-  storeName: string
-  supportEmail: string
-  senderEmail: string
-  mode: 'email' | 'text'
-  device: 'desktop' | 'mobile'
-}) {
-  const interpolatedSubject = interpolateVariables(subject, storeName, supportEmail, senderEmail)
-  const interpolatedBody = interpolateVariables(body, storeName, supportEmail, senderEmail)
-  const parsed = parseMjmlElements(interpolatedBody)
-  const isReviewTemplate = template.key === 'review_posted' || template.key === 'review_approved'
-
-  return (
-    <div className="space-y-3">
-      {/* Subject Line Bar */}
-      <div className="rounded-lg bg-muted/40 border px-3.5 py-2.5 flex items-center gap-2 text-xs">
-        <span className="font-semibold text-muted-foreground shrink-0 uppercase tracking-wider text-[10px]">
-          Subject:
-        </span>
-        <span className="font-medium text-foreground truncate">{interpolatedSubject}</span>
-      </div>
-
-      {mode === 'text' ? (
-        <div className="rounded-xl border bg-muted/20 p-5 font-mono text-xs text-foreground whitespace-pre-wrap leading-relaxed max-h-[460px] overflow-y-auto">
-          {`Subject: ${interpolatedSubject}\n\n`}
-          {`${storeName.toUpperCase()}\n----------------------------------------\n\n`}
-          {parsed.heading ? `${parsed.heading}\n\n` : ''}
-          {parsed.greeting ? `${parsed.greeting}\n\n` : ''}
-          {parsed.lead ? `${parsed.lead}\n\n` : ''}
-          {parsed.bodyQuote ? `"${parsed.bodyQuote}"\n\n` : ''}
-          {parsed.buttonText ? `[ ${parsed.buttonText} ] -> ${parsed.buttonHref || 'https://thewallx.com'}\n\n` : ''}
-          {parsed.note ? `${parsed.note}\n\n` : ''}
-          {`----------------------------------------\n© 2026 ${storeName}. All rights reserved.\nSupport: ${supportEmail}`}
-        </div>
-      ) : (
-        <div className="rounded-xl border bg-neutral-100 dark:bg-neutral-950 p-4 sm:p-6 flex justify-center overflow-x-auto min-h-[420px]">
-          <div
-            className={`transition-all duration-200 bg-white dark:bg-neutral-900 border border-neutral-200/90 dark:border-neutral-800 shadow-md ${
-              device === 'mobile'
-                ? 'w-[320px] rounded-3xl p-4 border-4 border-neutral-700 shadow-xl'
-                : 'w-full max-w-[500px] rounded-xl p-6'
-            }`}
-          >
-            {/* Email Header */}
-            <div className="border-b border-neutral-200/80 dark:border-neutral-800 pb-3 flex items-center justify-between">
-              <span className="text-xs font-black tracking-widest uppercase text-neutral-900 dark:text-white">
-                {storeName}
-              </span>
-              <span className="text-[10px] text-neutral-400 font-mono">Storefront Email</span>
-            </div>
-
-            {/* Email Body */}
-            <div className="py-5 space-y-3.5">
-              {parsed.heading && (
-                <h4 className="text-base font-bold text-neutral-900 dark:text-white m-0 leading-snug">
-                  {parsed.heading}
-                </h4>
-              )}
-
-              {parsed.greeting && (
-                <p className="text-xs font-semibold text-neutral-800 dark:text-neutral-200 m-0">
-                  {parsed.greeting}
-                </p>
-              )}
-
-              {parsed.lead && (
-                <p className="text-xs text-neutral-700 dark:text-neutral-300 leading-relaxed m-0">
-                  {parsed.lead}
-                </p>
-              )}
-
-              {isReviewTemplate && (
-                <div className="flex items-center gap-1 py-1">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <svg
-                      key={star}
-                      className="w-4 h-4 shrink-0"
-                      style={{ color: starColor, fill: starColor }}
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                    </svg>
-                  ))}
-                  <span className="text-[11px] font-semibold text-neutral-500 ml-1">5.0 / 5</span>
-                </div>
-              )}
-
-              {parsed.bodyQuote && (
-                <div className="rounded-lg bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200/60 dark:border-neutral-700/60 p-3 italic text-xs text-neutral-800 dark:text-neutral-200 leading-relaxed">
-                  "{parsed.bodyQuote}"
-                </div>
-              )}
-
-              {parsed.buttonText && (
-                <div className="pt-2">
-                  <div className="inline-block px-4 py-2 bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 text-xs font-semibold rounded-lg shadow-xs hover:opacity-95 cursor-default">
-                    {parsed.buttonText}
-                  </div>
-                </div>
-              )}
-
-              {parsed.note && (
-                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 m-0 pt-1 leading-relaxed">
-                  {parsed.note}
-                </p>
-              )}
-            </div>
-
-            {/* Email Footer */}
-            <div className="border-t border-neutral-200/80 dark:border-neutral-800 pt-3 text-[10px] text-neutral-400 space-y-1">
-              <p className="m-0">© 2026 {storeName}. All rights reserved.</p>
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
-                <span>Support: {supportEmail}</span>
-                <span>•</span>
-                <span>From: {senderEmail}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function EmailTemplateCustomizerView({
-  template,
-  draft,
-  canEdit,
-  storeName,
-  supportEmail,
-  senderEmail,
-  onBack,
-  updateField,
-  onSave,
-  isSaving,
-}: {
-  template: ReviewEmailTemplateDefinition
-  draft: ReviewSettings
-  canEdit: boolean
-  storeName: string
-  supportEmail: string
-  senderEmail: string
-  onBack: () => void
-  updateField: <K extends keyof ReviewSettings>(key: K, value: ReviewSettings[K]) => void
-  onSave: () => void
-  isSaving: boolean
-}) {
-  const currentSubject = (draft[template.subjectField] as string) || template.defaultSubject
-  const currentBody = (draft[template.bodyField] as string) || template.defaultBody
-  const isCustomized = Boolean(draft[template.subjectField] || draft[template.bodyField])
-
-  const [previewMode, setPreviewMode] = useState<'email' | 'text'>('email')
-  const [deviceMode, setDeviceMode] = useState<'desktop' | 'mobile'>('desktop')
-  const starColor = draft.bottom_star_color || '#FBBF24'
-  const bodyLines = (currentBody || template.defaultBody || '').split('\n')
-
-  const handleResetToDefault = () => {
-    updateField(template.subjectField, '' as any)
-    updateField(template.bodyField, '' as any)
-  }
-
-  const handleInsertVariable = (varName: string) => {
-    const existing = currentBody || template.defaultBody
-    updateField(template.bodyField, (existing + ` ${varName}`) as any)
-  }
-
-  return (
-    <div className="space-y-6">
-      {/* Editor Subheader */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b pb-4">
-        <div className="flex items-center gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onBack}
-            className="h-8 gap-1.5 text-xs font-semibold cursor-pointer"
-          >
-            ← Back to templates
-          </Button>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-lg font-bold tracking-tight text-foreground m-0">
-                {template.name}
-              </h3>
-              {isCustomized ? (
-                <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[10px] font-semibold uppercase">
-                  Customized
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="text-[10px] uppercase font-normal text-muted-foreground">
-                  Default template
-                </Badge>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground mt-0.5">{template.description}</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 self-end sm:self-auto">
-          {isCustomized && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={!canEdit || isSaving}
-              onClick={handleResetToDefault}
-              className="h-8 text-xs cursor-pointer text-muted-foreground hover:text-foreground"
-            >
-              Reset to default
-            </Button>
-          )}
-          <Button
-            type="button"
-            size="sm"
-            disabled={!canEdit || isSaving}
-            onClick={onSave}
-            className="h-8 text-xs font-semibold cursor-pointer"
-          >
-            {isSaving ? 'Saving...' : 'Save changes'}
-          </Button>
-        </div>
-      </div>
-
-      {/* 2-Column Split: Editor (Left) & Preview (Right) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-        {/* Left: Template Editor */}
-        <div className="space-y-5">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-bold">Email Subject</CardTitle>
-              <CardDescription className="text-xs">
-                Subject line rendered in the customer's inbox.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Input
-                disabled={!canEdit}
-                value={currentSubject}
-                onChange={(e) => updateField(template.subjectField, e.target.value as any)}
-                placeholder={template.defaultSubject}
-                className="font-mono text-xs sm:text-sm"
-              />
-              <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                <span className="text-[11px] text-muted-foreground mr-1">Insert:</span>
-                {template.variables.slice(0, 4).map((v) => (
-                  <button
-                    key={v.name}
-                    type="button"
-                    disabled={!canEdit}
-                    onClick={() => {
-                      updateField(template.subjectField, `${currentSubject} ${v.name}` as any)
-                    }}
-                    className="inline-flex items-center px-1.5 py-0.5 rounded bg-muted/60 hover:bg-muted text-[11px] font-mono text-foreground/80 cursor-pointer transition-colors"
-                  >
-                    {v.name}
-                  </button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-sm font-bold">Template Content</CardTitle>
-                  <CardDescription className="text-xs">
-                    Liquid markup and MJML email elements.
-                  </CardDescription>
-                </div>
-                <span className="text-[10px] font-mono text-muted-foreground uppercase bg-muted/60 px-2 py-0.5 rounded">
-                  MJML / Liquid
-                </span>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex border rounded-lg bg-card overflow-hidden focus-within:ring-1 focus-within:ring-primary">
-                <div className="select-none bg-muted/40 px-2.5 py-3 text-right font-mono text-[11px] text-muted-foreground/60 border-r border-border leading-relaxed min-w-[2.5rem]">
-                  {bodyLines.map((_, i) => (
-                    <div key={i}>{i + 1}</div>
-                  ))}
-                </div>
-                <Textarea
-                  disabled={!canEdit}
-                  rows={Math.max(16, bodyLines.length)}
-                  value={currentBody}
-                  onChange={(e) => updateField(template.bodyField, e.target.value as any)}
-                  placeholder={template.defaultBody}
-                  className="font-mono text-xs bg-transparent border-0 rounded-none p-3 w-full focus:outline-none focus:ring-0 leading-relaxed resize-y"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Variables Reference */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Available Dynamic Variables
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="divide-y divide-border text-xs">
-                {template.variables.map((v) => (
-                  <div
-                    key={v.name}
-                    className="flex items-center justify-between px-4 py-2 hover:bg-muted/20 transition-colors"
-                  >
-                    <div className="space-y-0.5">
-                      <code className="text-[11px] font-bold text-foreground bg-muted/50 px-1 py-0.5 rounded">
-                        {v.name}
-                      </code>
-                      <p className="text-[11px] text-muted-foreground">{v.desc}</p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 text-[10px] px-2 text-primary hover:text-primary cursor-pointer"
-                      onClick={() => handleInsertVariable(v.name)}
-                    >
-                      + Insert
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Right: Live Working Preview */}
-        <div className="space-y-4">
-          <Card>
-            <CardHeader className="pb-3 border-b">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div>
-                  <CardTitle className="text-sm font-bold">Live Customer Preview</CardTitle>
-                  <CardDescription className="text-xs">
-                    Real-time rendering using store email branding &amp; sample data.
-                  </CardDescription>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  {/* Mode Switcher */}
-                  <div className="inline-flex rounded-lg border bg-muted/30 p-0.5 text-xs">
-                    <button
-                      type="button"
-                      onClick={() => setPreviewMode('email')}
-                      className={`px-2.5 py-1 rounded-md text-xs font-semibold cursor-pointer transition-colors ${
-                        previewMode === 'email'
-                          ? 'bg-background text-foreground shadow-xs'
-                          : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      Email
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPreviewMode('text')}
-                      className={`px-2.5 py-1 rounded-md text-xs font-semibold cursor-pointer transition-colors ${
-                        previewMode === 'text'
-                          ? 'bg-background text-foreground shadow-xs'
-                          : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      Plain text
-                    </button>
-                  </div>
-
-                  {/* Device Switcher */}
-                  <div className="inline-flex rounded-lg border bg-muted/30 p-0.5 text-xs">
-                    <button
-                      type="button"
-                      onClick={() => setDeviceMode('desktop')}
-                      title="Desktop view"
-                      className={`p-1.5 rounded-md cursor-pointer transition-colors ${
-                        deviceMode === 'desktop'
-                          ? 'bg-background text-foreground shadow-xs'
-                          : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      <svg
-                        className="size-4"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <rect width="20" height="14" x="2" y="3" rx="2" />
-                        <line x1="8" x2="16" y1="21" y2="21" />
-                        <line x1="12" x2="12" y1="17" y2="21" />
-                      </svg>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDeviceMode('mobile')}
-                      title="Mobile view"
-                      className={`p-1.5 rounded-md cursor-pointer transition-colors ${
-                        deviceMode === 'mobile'
-                          ? 'bg-background text-foreground shadow-xs'
-                          : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      <svg
-                        className="size-4"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <rect width="14" height="20" x="5" y="2" rx="2" ry="2" />
-                        <line x1="12" x2="12.01" y1="18" y2="18" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-4">
-              <EmailLivePreviewCard
-                template={template}
-                subject={currentSubject}
-                body={currentBody}
-                starColor={starColor}
-                storeName={storeName}
-                supportEmail={supportEmail}
-                senderEmail={senderEmail}
-                mode={previewMode}
-                device={deviceMode}
-              />
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 function ReviewMarketingSettingsTab({
   draft,
   canEdit,
   updateField,
-  onSave: _onSave,
-  isSaving: _isSaving,
-  onEditTemplate,
+  storeId,
 }: {
   draft: ReviewSettings
   canEdit: boolean
   updateField: <K extends keyof ReviewSettings>(key: K, value: ReviewSettings[K]) => void
-  onSave: () => void
-  isSaving: boolean
-  onEditTemplate: (key: string) => void
+  storeId: string
 }) {
-  const [previewModalTemplate, setPreviewModalTemplate] = useState<ReviewEmailTemplateDefinition | null>(null)
   const emailsEnabled = draft.send_review_emails_to_customers !== false
-
-  // Retrieve store email branding from @spree/dashboard-core
-  let storeName = 'Artolika.Inc'
-  let supportEmail = 'support@example.com'
-  let senderEmail = 'no-reply@example.com'
-
-  try {
-    const storeContext = useStore()
-    if (storeContext?.store) {
-      if (storeContext.store.name) storeName = storeContext.store.name
-      if (storeContext.store.customer_support_email) supportEmail = storeContext.store.customer_support_email
-      if (storeContext.store.mail_from_address) senderEmail = storeContext.store.mail_from_address
-    }
-  } catch {
-    // Outside store provider context fallback
-  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -2307,125 +1774,49 @@ function ReviewMarketingSettingsTab({
       <SettingsSection
         title="Email Templates"
         icon={<FileTextIcon />}
-        description="Customize email subjects and message contents directly inside Review Settings with instant live preview."
+        description="Edit the emails customers receive. Changes are saved and reach customers only when published."
       >
         <CardContent className="p-0">
+          <div className="border-b px-6 py-3 bg-muted/20">
+            <h4 className="text-sm font-semibold text-foreground m-0">Customer emails</h4>
+            <p className="text-xs text-muted-foreground m-0 mt-0.5">
+              Each email a customer can receive regarding reviews.
+            </p>
+          </div>
           <ul className="divide-y divide-border">
             {REVIEW_EMAIL_DEFINITIONS.map((tmpl) => {
               const currentSubject = (draft[tmpl.subjectField] as string) || tmpl.defaultSubject
-              const isCustomized = Boolean(draft[tmpl.subjectField] || draft[tmpl.bodyField])
+              const isCustomized = Boolean(draft[tmpl.subjectField])
 
               return (
-                <li
-                  key={tmpl.id}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 hover:bg-muted/30 transition-colors"
-                >
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-sm text-foreground">{tmpl.name}</span>
-                      {isCustomized ? (
-                        <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[10px] font-semibold uppercase py-0 px-1.5">
-                          Customized
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-[10px] font-normal uppercase py-0 px-1.5">
-                          Default
-                        </Badge>
-                      )}
+                <li key={tmpl.id}>
+                  <AppLink
+                    storeId={storeId}
+                    path={`settings/emails/templates/${tmpl.id}`}
+                    className="flex items-center justify-between gap-4 px-6 py-4 hover:bg-muted/30 transition-colors group cursor-pointer"
+                  >
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <div className="font-medium text-sm text-foreground group-hover:text-primary transition-colors">
+                        {tmpl.name}
+                      </div>
+                      <p className="text-xs font-mono text-muted-foreground line-clamp-1">
+                        {currentSubject}
+                      </p>
                     </div>
-                    <p className="text-xs text-muted-foreground">{tmpl.description}</p>
-                    <p className="text-xs font-mono text-muted-foreground/80 line-clamp-1">{currentSubject}</p>
-                  </div>
 
-                  <div className="flex items-center gap-2 shrink-0 pt-2 sm:pt-0">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-8 text-xs cursor-pointer"
-                      onClick={() => setPreviewModalTemplate(tmpl)}
-                    >
-                      Quick Preview
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      className="h-8 text-xs font-semibold cursor-pointer"
-                      onClick={() => onEditTemplate(tmpl.key)}
-                    >
-                      Customize Template
-                    </Button>
-                  </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="text-xs text-muted-foreground bg-muted/60 border border-border px-2 py-0.5 rounded font-normal">
+                        {isCustomized ? 'Customized' : 'Default'}
+                      </span>
+                      <ChevronRightIcon className="size-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+                    </div>
+                  </AppLink>
                 </li>
               )
             })}
           </ul>
         </CardContent>
       </SettingsSection>
-
-      {/* Quick Preview Modal */}
-      {previewModalTemplate && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4"
-        >
-          <div className="fixed inset-0" onClick={() => setPreviewModalTemplate(null)} />
-          <div className="relative z-10 w-full max-w-2xl rounded-xl bg-card border shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="px-5 py-3.5 border-b flex items-center justify-between bg-muted/40">
-              <div>
-                <h4 className="text-sm font-bold text-foreground m-0">{previewModalTemplate.name}</h4>
-                <p className="text-xs text-muted-foreground m-0 font-mono mt-0.5">{previewModalTemplate.id}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setPreviewModalTemplate(null)}
-                className="text-muted-foreground hover:text-foreground p-1 rounded-md text-sm cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="p-5 overflow-y-auto">
-              <EmailLivePreviewCard
-                template={previewModalTemplate}
-                subject={
-                  (draft[previewModalTemplate.subjectField] as string) || previewModalTemplate.defaultSubject
-                }
-                body={
-                  (draft[previewModalTemplate.bodyField] as string) || previewModalTemplate.defaultBody
-                }
-                starColor={draft.bottom_star_color || '#FBBF24'}
-                storeName={storeName}
-                supportEmail={supportEmail}
-                senderEmail={senderEmail}
-                mode="email"
-                device="desktop"
-              />
-            </div>
-
-            <div className="px-5 py-3 border-t bg-muted/20 flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Preview mode using store branding</span>
-              <div className="flex items-center gap-2">
-                <Button size="sm" variant="outline" onClick={() => setPreviewModalTemplate(null)}>
-                  Close
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    const k = previewModalTemplate.key
-                    setPreviewModalTemplate(null)
-                    onEditTemplate(k)
-                  }}
-                  className="h-8 text-xs font-semibold cursor-pointer"
-                >
-                  Customize Template
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

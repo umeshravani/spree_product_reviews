@@ -172,6 +172,7 @@ export interface ReviewStoreSettings {
   product_card_star_color?: string;
   product_card_format?: 'stars_count' | 'single_star';
   product_card_show_count?: boolean;
+  title_rating_display_style?: 'stars_count' | 'single_star';
   verified_badge_color?: string;
   title_rating_format: string;
   title_reviews_label: string;

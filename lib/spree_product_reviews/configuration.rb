@@ -70,6 +70,7 @@ module SpreeProductReviews
     preference :product_card_star_color, :string, default: '#FBBF24'
     preference :product_card_format, :string, default: 'stars_count'
     preference :product_card_show_count, :boolean, default: true
+    preference :title_rating_display_style, :string, default: 'stars_count'
     preference :verified_badge_color, :string, default: '#000000'
     preference :title_rating_format, :string, default: '({rating}) {count} reviews'
     preference :title_reviews_label, :string, default: 'reviews'
