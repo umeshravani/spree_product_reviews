@@ -126,6 +126,8 @@ import { ProductCardRating } from "@umeshravani/spree-product-reviews-storefront
 | `productId` | `string` | `undefined` | Explicit product ID when not using `item`. |
 | `initialAverage` | `number \| string \| null` | `0` | Initial average rating override. |
 | `initialCount` | `number \| string \| null` | `0` | Initial review count override. |
+| `format` | `'stars_count' \| 'single_star'` | Store setting `product_card_format` (fallback `'stars_count'`) | `'stars_count'` displays 5 stars + review count; `'single_star'` displays rating number + single star (e.g. `4.8 ★ (12)`). |
+| `showCount` | `boolean` | Store setting `product_card_show_count` (fallback `true`) | Whether to show the review count `(N)` next to the stars. |
 | `starColor` | `string` | Store setting `product_card_star_color` (fallback `#FBBF24`) | Override star hex color. |
 | `size` | `'xs' \| 'sm'` | `'xs'` | Compact `'xs'` (`14px`) for cards/drawers, `'sm'` (`16px`) for larger cards. |
 | `showAverage` | `boolean` | `false` | Show `4.9 (12)` instead of `(12)`. |
@@ -166,14 +168,55 @@ import { ProductReviewsSection } from "@umeshravani/spree-product-reviews-storef
 ```
 
 Includes:
-- Rating summary & clickable breakdown bars
+- **Redesigned 3-Column Reviews Summary**:
+  - **Left**: Large score (e.g. `4.9`), 5-star rating graphic, and total review count (`Based on X reviews`).
+  - **Middle**: Star distribution breakdown progress bars (5 down to 1 stars) with single-star icons and click-to-filter capability.
+  - **Right**: Vertical divider separating breakdown from stacked action pill buttons:
+    - `Write a review`: Outline pill button triggering `ReviewSubmissionModal`.
+    - `Ask a Question`: Filled dark pill button triggering `AskQuestionModal`.
+- **Ask a Question Modal (`AskQuestionModal`)**:
+  - Modal dialog allowing customers to submit questions about the product.
+  - Includes Name, Email, and Question textarea with validation, loading states, and success confirmation.
+  - Automatically submits to `POST /api/v3/store/products/:product_id/reviews/ask_question`.
 - **With photos**, **With videos**, **Verified purchase**, and dynamic **Review Question** filters
 - Sort dropdown (`Most recent`, `Highest rating`, `Lowest rating`, `Most helpful`)
 - **Verified Purchase Check & Modal**: Renders a clickable verified checkmark colored by `verified_badge_color` beside the reviewer's name for verified buyers that opens an informational **Verified Purchase** modal
 - 2-column review cards with `80x128` portrait photo & playable video thumbnails, lightbox viewer (`ImageLightbox`), helpful/not-helpful voting, customer review reporting, and author reward badge
 - **ReviewSubmissionModal**: Responsive sizing (`540px` desktop modal, full mobile sheet), supporting **Multi-Step Wizard** (`modal_mode === 'multi'`), **Single-Page Form** (`modal_mode === 'single'`), `{percentage}` substitution in incentive cards, and **Update Your Review** mode prefilled with existing review fields governed by Admin edit settings
 
-### 3. Structured SEO Data (`ProductReviewsJsonLd`)
+### 3. Customer Inquiry Dialog (`AskQuestionModal`)
+
+You can also use `<AskQuestionModal />` independently anywhere on your product page (e.g. Help Center / Consultation section):
+
+```tsx
+import { useState } from "react";
+import { AskQuestionModal } from "@umeshravani/spree-product-reviews-storefront";
+
+export function ProductHelpSection({ product }: { product: Product }) {
+  const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false);
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setIsQuestionModalOpen(true)}
+        className="text-sm font-medium underline"
+      >
+        Ask a question
+      </button>
+
+      <AskQuestionModal
+        isOpen={isQuestionModalOpen}
+        onClose={() => setIsQuestionModalOpen(false)}
+        productId={product.id}
+        productName={product.name}
+      />
+    </>
+  );
+}
+```
+
+### 4. Structured SEO Data (`ProductReviewsJsonLd`)
 
 Render a single unified `Product` JSON-LD schema in your Server Component product page combining `offers`, `brand`, `aggregateRating`, and up to 10 published `review` items for Google Search Rich Results:
 

@@ -95,6 +95,20 @@ module Spree
     before_update :evaluate_spam_signals, if: :should_evaluate_spam_on_update?
     after_commit :recalculate_product_review_summary
     after_commit :issue_review_reward_if_eligible!, on: [:create, :update]
+    after_create_commit :notify_posted
+    after_destroy_commit :notify_deleted
+
+    def recipient_email
+      customer&.email || order&.email || (metadata.is_a?(Hash) && (metadata['email'] || metadata['reviewer_email'])) || nil
+    end
+
+    def notify_posted
+      Spree::ReviewNotifications.deliver(:posted, self)
+    end
+
+    def notify_deleted
+      Spree::ReviewNotifications.deliver(:deleted, self)
+    end
 
     def self.with_answer(question_key:, values:)
       values = Array(values).reject { |value| value.nil? || (value.respond_to?(:empty?) && value.empty?) }
@@ -162,6 +176,7 @@ module Spree
       )
       record_audit!(action: :approve, moderator: moderator, note: note)
       issue_review_reward_if_eligible!
+      Spree::ReviewNotifications.deliver(:approved, self)
       true
     end
 
@@ -175,6 +190,7 @@ module Spree
         moderator_note: note
       )
       record_audit!(action: :reject, moderator: moderator, note: note)
+      Spree::ReviewNotifications.deliver(:rejected, self)
       true
     end
 
@@ -213,6 +229,7 @@ module Spree
         moderator_note: note
       )
       record_audit!(action: :spam, moderator: moderator, note: note)
+      Spree::ReviewNotifications.deliver(:spam, self)
       true
     end
 

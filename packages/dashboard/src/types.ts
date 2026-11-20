@@ -139,9 +139,18 @@ export interface ReviewSettings {
   title_star_color: string
   bottom_star_color: string
   product_card_star_color?: string
+  product_card_format?: 'stars_count' | 'single_star'
+  product_card_show_count?: boolean
   verified_badge_color?: string
   title_rating_format: string
   title_reviews_label: string
+  send_review_emails_to_customers?: boolean
+  send_review_posted_email?: boolean
+  send_review_approved_email?: boolean
+  send_review_rejected_email?: boolean
+  send_review_spam_email?: boolean
+  send_review_deleted_email?: boolean
+  send_solicit_review_email?: boolean
   schema_markup_enabled?: boolean
   schema_include_reviews?: boolean
   schema_include_aggregate_rating?: boolean

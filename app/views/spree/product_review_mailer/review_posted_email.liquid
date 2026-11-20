@@ -1,0 +1,13 @@
+---
+subject: "{{ store.name }} - Thank you for reviewing {{ review.product_name }}"
+---
+<mj-section>
+  <mj-column css-class="hero">
+    <mj-text mj-class="heading">Thank you for your feedback!</mj-text>
+    <mj-text mj-class="greeting">Hello {{ review.author_name }},</mj-text>
+    <mj-text mj-class="lead">We have received your {{ review.rating }}-star review for <strong>{{ review.product_name }}</strong>.</mj-text>
+    <mj-text mj-class="body">"{{ review.body }}"</mj-text>
+    <mj-button href="{{ review.product_url }}">View Product</mj-button>
+    <mj-text mj-class="note">Your review will be visible once reviewed by our moderation team.</mj-text>
+  </mj-column>
+</mj-section>

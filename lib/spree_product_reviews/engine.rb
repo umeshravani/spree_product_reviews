@@ -39,6 +39,20 @@ module SpreeProductReviews
       unless Spree.subscribers.include?(Spree::ReviewPurchaseSubscriber)
         Spree.subscribers << Spree::ReviewPurchaseSubscriber
       end
+
+      if Spree.respond_to?(:editable_email_templates) && Spree.editable_email_templates
+        sample_class = 'Spree::Emails::Samples::ProductReview'
+        [
+          'spree/product_review_mailer/review_posted_email',
+          'spree/product_review_mailer/review_approved_email',
+          'spree/product_review_mailer/review_rejected_email',
+          'spree/product_review_mailer/review_spam_email',
+          'spree/product_review_mailer/review_deleted_email',
+          'spree/product_review_mailer/solicit_review_email'
+        ].each do |template_key|
+          Spree.editable_email_templates.register(template_key, kind: :email, sample: sample_class)
+        end
+      end
     end
 
     config.to_prepare do

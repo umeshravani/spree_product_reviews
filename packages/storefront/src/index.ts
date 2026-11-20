@@ -7,6 +7,10 @@ export {
   type ReviewsClientOptions,
 } from "./client.js";
 export {
+  AskQuestionModal,
+  type AskQuestionModalProps,
+} from "./AskQuestionModal.js";
+export {
   ImageLightbox,
   type ImageLightboxProps,
   isVideoItem,

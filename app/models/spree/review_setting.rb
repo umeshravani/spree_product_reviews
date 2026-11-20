@@ -21,6 +21,14 @@ module Spree
       rewards_enabled
       photo_reward_enabled
       video_reward_enabled
+      product_card_show_count
+      send_review_emails_to_customers
+      send_review_posted_email
+      send_review_approved_email
+      send_review_rejected_email
+      send_review_spam_email
+      send_review_deleted_email
+      send_solicit_review_email
       schema_markup_enabled
       schema_include_reviews
       schema_include_aggregate_rating
@@ -69,6 +77,7 @@ module Spree
       title_star_color
       bottom_star_color
       product_card_star_color
+      product_card_format
       verified_badge_color
       title_rating_format
       title_reviews_label
@@ -95,6 +104,14 @@ module Spree
       modal_mode
       rewards_enabled
       photo_reward_enabled
+      product_card_show_count
+      send_review_emails_to_customers
+      send_review_posted_email
+      send_review_approved_email
+      send_review_rejected_email
+      send_review_spam_email
+      send_review_deleted_email
+      send_solicit_review_email
       photo_reward_percentage
       photo_reward_amount
       photo_reward_promotion_id
@@ -118,6 +135,7 @@ module Spree
       title_star_color
       bottom_star_color
       product_card_star_color
+      product_card_format
       verified_badge_color
       title_rating_format
       title_reviews_label

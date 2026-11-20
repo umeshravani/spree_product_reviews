@@ -80,6 +80,8 @@ Values saved via the Admin Dashboard (`/api/v3/admin/reviews/settings`) persist 
 |---|---|---|---|
 | `title_star_color` | String | `'#FBBF24'` | Hex color for stars in `ProductRatingHeader` on PDPs. |
 | `product_card_star_color` | String | `'#FBBF24'` | Hex color for stars in `ProductCardRating` across `/products`, `/cart`, `CartDrawer`, and `/checkout`. |
+| `product_card_format` | String | `'stars_count'` | Display format for product card rating: `'stars_count'` (5 stars + count) or `'single_star'` (e.g. `4.8 ★ (12)`). |
+| `product_card_show_count` | Boolean | `true` | Show review count `(N)` next to stars on product cards. |
 | `bottom_star_color` | String | `'#FBBF24'` | Hex color for stars and breakdown bars in `ReviewsSummary`, `ReviewCard`, and the review modal. |
 | `verified_badge_color` | String | `'#000000'` | Hex fill color for the Verified Purchase checkmark badge next to reviewer names and in its dialog. |
 | `title_rating_format` | String | `'({rating}) {count} reviews'` | Format template for PDP header rating (`{rating}`, `{count}`). |
@@ -93,3 +95,16 @@ Values saved via the Admin Dashboard (`/api/v3/admin/reviews/settings`) persist 
 | `step3_placeholder` | String | `'Share your experience'` | Step 3 review textarea placeholder. |
 | `step4_title` | String | `'Thank you for posting!'` | Step 4 confirmation heading. |
 | `step4_subtitle` | String | `'Your feedback helps others make better choices.'` | Step 4 confirmation subheading. |
+
+### Marketing Tab (Customer Email Notifications)
+Configured under **Reviews -> Settings -> Marketing**. All templates are registered natively into Spree 6's Liquid/MJML template registry (`Spree.editable_email_templates`) and can be edited in Spree's native email editor (`/$storeId/settings/emails/templates/$templateId`).
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `send_review_emails_to_customers` | Boolean | `true` | Master switch to enable/disable automated review emails sent to customers. |
+| `send_review_posted_email` | Boolean | `true` | Sends confirmation email upon review submission (`product_review_mailer/review_posted_email`). |
+| `send_review_approved_email` | Boolean | `true` | Sends notification email when a review is approved by staff (`product_review_mailer/review_approved_email`). |
+| `send_review_rejected_email` | Boolean | `true` | Sends email notifying customer of rejected review (`product_review_mailer/review_rejected_email`). |
+| `send_review_spam_email` | Boolean | `true` | Sends notification email when a review is flagged as spam (`product_review_mailer/review_spam_email`). |
+| `send_review_deleted_email` | Boolean | `true` | Sends notification email when a review is deleted (`product_review_mailer/review_deleted_email`). |
+| `send_solicit_review_email` | Boolean | `true` | Sends post-purchase review collection email to buyers (`product_review_mailer/solicit_review_email`). |

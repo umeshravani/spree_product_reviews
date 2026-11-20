@@ -1,6 +1,6 @@
 # Spree Product Reviews 6
 
-[![Gem Version](https://img.shields.io/badge/gem-6.1.0-red.svg)](https://github.com/umeshravani/spree_product_reviews)
+[![Gem Version](https://img.shields.io/badge/gem-6.1.1-red.svg)](https://github.com/umeshravani/spree_product_reviews)
 [![Dashboard Plugin](https://img.shields.io/badge/%40umeshravani%2Fspree--product--reviews--dashboard-2.0.0-black.svg)](packages/dashboard/package.json)
 [![Storefront Package](https://img.shields.io/badge/%40umeshravani%2Fspree--product--reviews--storefront-2.0.0-black.svg)](packages/storefront/package.json)
 [![Spree Commerce](https://img.shields.io/badge/Spree_Commerce-6.x-red.svg)](https://spreecommerce.org)
@@ -36,10 +36,10 @@ spree_product_reviews/ (gem v6.1.0)
    - Top-level **Reviews** sidebar group (`16x16` Lucide `UserStar` icon) with **Reviews**, **Questions**, and **Settings**.
    - Spree-native toolbar with search, Filters popover, multi-select Status dropdown (`Approved`, `Pending`, `Rejected`, `Spam`, `Hidden`, `Flagged`), sorting, and batch moderation (**Set status...**, **Approve**, **Reject**, **Mark as spam**, **Delete**).
    - Full photo + playable video gallery, moderation history timeline, customer abuse reports, and editable **Questions** (`single_select`, `multi_select`, `scale`, `boolean`, `text`).
-   - Three-tab **Settings** (`General`, `Settings`, `Customisation`) including **Appearance** color controls for PDP header stars, bottom review stars, **Product card stars**, and **Verified Purchase tick**.
-3. **Storefront Product Card Stars + PDP Reviews & Rewards**
-   - **`<ProductCardRating />`**: Drop compact star ratings with review counts `(N)` onto `/products` cards, `/cart` line items, `/checkout` summary items, and `CartDrawer` slide-over items — automatically fed zero-query from `ProductSerializer` & `LineItemSerializer` or batched via `/api/v3/store/products/review_summaries`.
-   - **`<ProductRatingHeader />`** & **`<ProductReviewsSection />`**: Live breakdown histogram, photo/video filters, Q&A answer chips, clickable Verified Purchase checkmark + modal, `80x128` media lightbox, Multi-Step Wizard & Single-Page submission flows, policy-controlled review editing, and automatic `Spree::GiftCard` rewards on approval of photo/video reviews.
+   - Four-tab **Settings** (`General`, `Settings`, `Appearance`, `Marketing`) including **Product card style** (`stars_count` vs `single_star`), color controls, and **Marketing review lifecycle emails** natively integrated into Spree 6 Liquid/MJML editable email templates.
+3. **Storefront Product Card Stars + PDP Reviews, Q&A & Rewards**
+   - **`<ProductCardRating />`**: Drop compact star ratings with review counts `(N)` or single-star score (`4.8 ★`) onto `/products` cards, `/cart` line items, `/checkout` summary items, and `CartDrawer` slide-over items — automatically fed zero-query from `ProductSerializer` & `LineItemSerializer` or batched via `/api/v3/store/products/review_summaries`.
+   - **`<ProductRatingHeader />`**, **`<ProductReviewsSection />`** & **`<AskQuestionModal />`**: Modern 3-column rating summary, breakdown histogram, customer product inquiries, photo/video filters, Q&A answer chips, clickable Verified Purchase checkmark + modal, `80x128` media lightbox, Multi-Step Wizard & Single-Page submission flows, policy-controlled review editing, and automatic `Spree::GiftCard` rewards on approval of photo/video reviews.
    - **`<ProductReviewsJsonLd />`**: Google Search Central compliant structured `Product` + `AggregateRating` + `Review` schema.
 
 ---

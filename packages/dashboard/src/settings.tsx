@@ -1,5 +1,6 @@
 import { PageHeader, usePermissions } from '@spree/dashboard-core'
 import {
+  Badge,
   Button,
   Card,
   CardContent,
@@ -12,6 +13,7 @@ import {
   Switch,
   Textarea,
 } from '@spree/dashboard-ui'
+import { Link } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { reviewsClient } from './client'
@@ -20,7 +22,7 @@ import type { RouteProps } from './shared'
 import { ErrorMessage, NativeSelect } from './shared'
 import type { ReviewSettings } from './types'
 
-type SettingsTab = 'general' | 'settings' | 'customisation'
+type SettingsTab = 'general' | 'settings' | 'customisation' | 'marketing'
 
 export function ReviewSettingsPage({ storeId }: RouteProps) {
   const { permissions } = usePermissions()
@@ -120,6 +122,7 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
             { id: 'general', label: 'General' },
             { id: 'settings', label: 'Settings' },
             { id: 'customisation', label: 'Appearance' },
+            { id: 'marketing', label: 'Marketing' },
           ] as const
         ).map((tab) => {
           const selected = activeTab === tab.id
@@ -896,6 +899,42 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                 </div>
               </div>
 
+              <div className="rounded-lg border bg-muted/10 p-4 space-y-4">
+                <div>
+                  <h4 className="text-sm font-semibold text-foreground">Product Card Display Style</h4>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Choose how rating stars appear on product catalog cards, search grids, and cart items.
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium">Card Rating Format</Label>
+                    <NativeSelect
+                      id="product-card-format"
+                      disabled={!canEdit}
+                      value={draft.product_card_format || 'stars_count'}
+                      onChange={(e) =>
+                        updateField('product_card_format', e.target.value as 'stars_count' | 'single_star')
+                      }
+                    >
+                      <option value="stars_count">Five stars & review count (★★★★★ (120))</option>
+                      <option value="single_star">Single star & score (4.8 ★ (120))</option>
+                    </NativeSelect>
+                  </div>
+                  <div className="flex items-center justify-between sm:justify-start gap-4 pt-4 sm:pt-6">
+                    <Switch
+                      id="card-show-count"
+                      disabled={!canEdit}
+                      checked={draft.product_card_show_count !== false}
+                      onCheckedChange={(val) => updateField('product_card_show_count', val)}
+                    />
+                    <Label htmlFor="card-show-count" className="text-xs font-medium cursor-pointer">
+                      Show review count on product cards
+                    </Label>
+                  </div>
+                </div>
+              </div>
+
               <div className="rounded-lg border bg-muted/20 p-4 space-y-3">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                   Live Storefront Preview
@@ -913,12 +952,35 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                   </div>
                   <div className="flex items-center gap-2 text-sm">
                     <span className="text-muted-foreground">Product card:</span>
-                    <StarDisplay
-                      rating={5}
-                      size="sm"
-                      color={draft.product_card_star_color || '#FBBF24'}
-                    />
-                    <span className="text-xs text-muted-foreground tabular-nums">(120)</span>
+                    {draft.product_card_format === 'single_star' ? (
+                      <div className="flex items-center gap-1 font-semibold text-foreground">
+                        <span>4.8</span>
+                        <svg
+                          className="w-4 h-4 shrink-0"
+                          style={{
+                            color: draft.product_card_star_color || '#FBBF24',
+                            fill: draft.product_card_star_color || '#FBBF24',
+                          }}
+                          viewBox="0 0 24 24"
+                        >
+                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                        </svg>
+                        {draft.product_card_show_count !== false && (
+                          <span className="text-xs text-muted-foreground font-normal tabular-nums">(120)</span>
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        <StarDisplay
+                          rating={5}
+                          size="sm"
+                          color={draft.product_card_star_color || '#FBBF24'}
+                        />
+                        {draft.product_card_show_count !== false && (
+                          <span className="text-xs text-muted-foreground tabular-nums">(120)</span>
+                        )}
+                      </>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 text-sm">
                     <span className="text-muted-foreground">Section:</span>
@@ -1132,6 +1194,15 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
           </Card>
         </div>
       )}
+
+      {activeTab === 'marketing' && (
+        <ReviewMarketingSettingsTab
+          draft={draft}
+          canEdit={canEdit}
+          storeId={storeId}
+          updateField={updateField}
+        />
+      )}
     </div>
   )
 }
@@ -1160,6 +1231,288 @@ function SettingToggle({
         <p className="text-xs text-muted-foreground">{description}</p>
       </div>
       <Switch id={id} checked={checked} disabled={disabled} onCheckedChange={onChange} />
+    </div>
+  )
+}
+
+interface ReviewEmailTemplateInfo {
+  id: string
+  name: string
+  description: string
+  subject: string
+  previewText: string
+}
+
+const REVIEW_EMAIL_TEMPLATES: ReviewEmailTemplateInfo[] = [
+  {
+    id: 'spree.product_review_mailer.review_posted_email',
+    name: 'Review Posted',
+    description: 'Sent to customers immediately after they submit a new product review.',
+    subject: '{{ store.name }} - Thank you for reviewing {{ review.product_name }}',
+    previewText:
+      'Thank you for your feedback! We have received your 5-star review for Handcrafted Wall Art Test.',
+  },
+  {
+    id: 'spree.product_review_mailer.review_approved_email',
+    name: 'Review Approved',
+    description: 'Sent to the customer when moderation approves their review and makes it live.',
+    subject: '{{ store.name }} - Your review on {{ review.product_name }} is live!',
+    previewText:
+      'Great news! Your 5-star review for Handcrafted Wall Art Test has been approved and is now live on our store.',
+  },
+  {
+    id: 'spree.product_review_mailer.review_rejected_email',
+    name: 'Review Rejected',
+    description: 'Sent to the customer if their review does not meet store guidelines.',
+    subject: '{{ store.name }} - Update regarding your review on {{ review.product_name }}',
+    previewText:
+      'Thank you for submitting a review. Unfortunately, your review could not be published because it did not meet our guidelines.',
+  },
+  {
+    id: 'spree.product_review_mailer.review_spam_email',
+    name: 'Review Spam',
+    description: 'Sent when a review is flagged as spam by automated or manual moderation.',
+    subject: '{{ store.name }} - Notice regarding your review',
+    previewText: 'Your recent review was automatically flagged by our spam filter and removed.',
+  },
+  {
+    id: 'spree.product_review_mailer.review_deleted_email',
+    name: 'Review Deleted',
+    description: 'Sent to the customer when their existing review is removed or deleted.',
+    subject: '{{ store.name }} - Your review on {{ review.product_name }} has been removed',
+    previewText: 'Your review for Handcrafted Wall Art Test has been removed from our store.',
+  },
+  {
+    id: 'spree.product_review_mailer.solicit_review_email',
+    name: 'Collect Review on Purchase',
+    description: 'Sent to customers after delivery to invite them to review their purchased products.',
+    subject: '{{ store.name }} - How do you like your recent purchase?',
+    previewText:
+      'How did we do? Thank you for your recent purchase of Handcrafted Wall Art Test! We would love to hear your thoughts.',
+  },
+]
+
+function ReviewMarketingSettingsTab({
+  draft,
+  canEdit,
+  storeId,
+  updateField,
+}: {
+  draft: ReviewSettings
+  canEdit: boolean
+  storeId: string
+  updateField: <K extends keyof ReviewSettings>(key: K, value: ReviewSettings[K]) => void
+}) {
+  const [previewTemplate, setPreviewTemplate] = useState<ReviewEmailTemplateInfo | null>(null)
+  const emailsEnabled = draft.send_review_emails_to_customers !== false
+
+  return (
+    <div className="flex flex-col gap-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Customer Email Notifications</CardTitle>
+          <CardDescription>
+            Configure automated transactional email notifications sent to customers throughout the review lifecycle.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <SettingToggle
+            id="send-review-emails-master"
+            label="Send review emails to customers"
+            description="Master toggle to enable or disable all automated customer review emails."
+            checked={emailsEnabled}
+            disabled={!canEdit}
+            onChange={(val) => updateField('send_review_emails_to_customers', val)}
+          />
+
+          {emailsEnabled && (
+            <div className="ml-2 pl-4 border-l-2 border-border/80 space-y-4 pt-2">
+              <SettingToggle
+                id="send-review-posted"
+                label="Review Submitted Confirmation"
+                description="Email customers as soon as their review is successfully submitted."
+                checked={draft.send_review_posted_email !== false}
+                disabled={!canEdit}
+                onChange={(val) => updateField('send_review_posted_email', val)}
+              />
+
+              <SettingToggle
+                id="send-review-approved"
+                label="Review Approved & Published Notification"
+                description="Notify reviewers when their submission is approved by a moderator and published live."
+                checked={draft.send_review_approved_email !== false}
+                disabled={!canEdit}
+                onChange={(val) => updateField('send_review_approved_email', val)}
+              />
+
+              <SettingToggle
+                id="send-review-rejected"
+                label="Review Rejection Notification"
+                description="Send an explanation to customers when their review cannot be published."
+                checked={Boolean(draft.send_review_rejected_email)}
+                disabled={!canEdit}
+                onChange={(val) => updateField('send_review_rejected_email', val)}
+              />
+
+              <SettingToggle
+                id="send-review-spam"
+                label="Spam Flagging Notification"
+                description="Alert customers when their review is flagged by spam protection filters."
+                checked={Boolean(draft.send_review_spam_email)}
+                disabled={!canEdit}
+                onChange={(val) => updateField('send_review_spam_email', val)}
+              />
+
+              <SettingToggle
+                id="send-review-deleted"
+                label="Review Removal Notification"
+                description="Inform customers if an existing review is deleted from the store."
+                checked={Boolean(draft.send_review_deleted_email)}
+                disabled={!canEdit}
+                onChange={(val) => updateField('send_review_deleted_email', val)}
+              />
+
+              <SettingToggle
+                id="send-solicit-review"
+                label="Collect Reviews on Purchase"
+                description="Automatically solicit feedback from buyers after their orders are completed or delivered."
+                checked={draft.send_solicit_review_email !== false}
+                disabled={!canEdit}
+                onChange={(val) => updateField('send_solicit_review_email', val)}
+              />
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <CardTitle>Email Templates</CardTitle>
+              <CardDescription>
+                Spree native Liquid and MJML email templates. Edit copy, add variables, and preview formatting.
+              </CardDescription>
+            </div>
+            <Link
+              to="/$storeId/settings/emails/templates"
+              params={{ storeId }}
+              className="inline-flex items-center text-xs font-semibold text-primary hover:underline"
+            >
+              View all store email templates →
+            </Link>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <ul className="divide-y divide-border">
+            {REVIEW_EMAIL_TEMPLATES.map((tmpl) => (
+              <li
+                key={tmpl.id}
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 hover:bg-muted/30 transition-colors"
+              >
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-sm text-foreground">{tmpl.name}</span>
+                    <Badge variant="outline" className="text-[10px] font-normal uppercase py-0 px-1.5">
+                      Default
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{tmpl.description}</p>
+                  <p className="text-xs font-mono text-muted-foreground/80 line-clamp-1">{tmpl.subject}</p>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0 pt-2 sm:pt-0">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs cursor-pointer"
+                    onClick={() => setPreviewTemplate(tmpl)}
+                  >
+                    Quick Preview
+                  </Button>
+                  <Link
+                    to="/$storeId/settings/emails/templates/$templateId"
+                    params={{ storeId, templateId: tmpl.id }}
+                    className="inline-flex items-center justify-center rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 px-3 text-xs font-medium transition-colors"
+                  >
+                    Customize in Spree Editor ↗
+                  </Link>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
+
+      {/* Quick Preview Modal */}
+      {previewTemplate && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4"
+        >
+          <div className="fixed inset-0" onClick={() => setPreviewTemplate(null)} />
+          <div className="relative z-10 w-full max-w-lg rounded-xl bg-card border shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="px-5 py-3.5 border-b flex items-center justify-between bg-muted/40">
+              <div>
+                <h4 className="text-sm font-bold text-foreground m-0">{previewTemplate.name}</h4>
+                <p className="text-xs text-muted-foreground m-0 font-mono mt-0.5">{previewTemplate.id}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewTemplate(null)}
+                className="text-muted-foreground hover:text-foreground p-1 rounded-md text-sm cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 overflow-y-auto">
+              <div className="rounded-md bg-muted/30 p-3 space-y-1 text-xs">
+                <span className="font-semibold text-muted-foreground">Subject Preview:</span>
+                <p className="font-mono text-foreground">{previewTemplate.subject}</p>
+              </div>
+
+              <div className="rounded-lg border bg-background p-6 space-y-4 shadow-xs">
+                <div className="border-b pb-3">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Artolika.Inc Store
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  <h5 className="text-base font-bold text-foreground m-0">{previewTemplate.name}</h5>
+                  <p className="text-sm text-foreground/90 leading-relaxed">{previewTemplate.previewText}</p>
+                </div>
+                <div className="pt-2">
+                  <div className="inline-block rounded-md bg-primary px-4 py-2 text-xs font-medium text-primary-foreground shadow-xs">
+                    View on Storefront
+                  </div>
+                </div>
+                <div className="border-t pt-4 text-[11px] text-muted-foreground">
+                  <p>© 2026 Artolika.Inc. All rights reserved.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-5 py-3 border-t bg-muted/20 flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Preview mode using sample data</span>
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="outline" onClick={() => setPreviewTemplate(null)}>
+                  Close
+                </Button>
+                <Link
+                  to="/$storeId/settings/emails/templates/$templateId"
+                  params={{ storeId, templateId: previewTemplate.id }}
+                  className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground hover:bg-primary/90 h-8 px-3 text-xs font-medium transition-colors"
+                >
+                  Edit in Spree Editor ↗
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

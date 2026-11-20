@@ -1,0 +1,12 @@
+---
+subject: "{{ store.name }} - Your review on {{ review.product_name }} is live!"
+---
+<mj-section>
+  <mj-column css-class="hero">
+    <mj-text mj-class="heading">Your review has been published!</mj-text>
+    <mj-text mj-class="greeting">Hello {{ review.author_name }},</mj-text>
+    <mj-text mj-class="lead">Great news! Your {{ review.rating }}-star review for <strong>{{ review.product_name }}</strong> has been approved and is now live on our store.</mj-text>
+    <mj-button href="{{ review.product_url }}">View Your Review</mj-button>
+    <mj-text mj-class="note">Thank you for helping fellow shoppers make informed choices.</mj-text>
+  </mj-column>
+</mj-section>

@@ -22,6 +22,8 @@ export interface ProductCardRatingProps {
   settings?: ReviewStoreSettings | null;
   size?: "xs" | "sm";
   showAverage?: boolean;
+  format?: "stars_count" | "single_star";
+  showCount?: boolean;
   hideWhenZero?: boolean;
   fetchIfMissing?: boolean;
   className?: string;
@@ -94,6 +96,8 @@ export function ProductCardRating({
   settings: providedSettings,
   size = "xs",
   showAverage = false,
+  format,
+  showCount,
   hideWhenZero = false,
   fetchIfMissing = true,
   className = "",
@@ -201,6 +205,52 @@ export function ProductCardRating({
           count === 1 ? "review" : "reviews"
         }`
       : "No reviews yet";
+
+  const effectiveFormat =
+    format || settings?.product_card_format || "stars_count";
+  const shouldShowCount =
+    showCount !== undefined
+      ? showCount
+      : settings?.product_card_show_count !== undefined
+        ? settings.product_card_show_count
+        : true;
+
+  if (effectiveFormat === "single_star") {
+    return (
+      <div
+        className={`inline-flex items-center gap-1 font-medium text-neutral-800 ${className}`}
+        title={ratingLabel}
+        data-testid="product-card-rating"
+      >
+        <span
+          className={`${
+            size === "xs" ? "text-xs" : "text-sm"
+          } font-bold text-neutral-900 leading-none tabular-nums`}
+        >
+          {count > 0 ? average.toFixed(1) : "0.0"}
+        </span>
+        <svg
+          className={`${size === "xs" ? "w-3.5 h-3.5" : "w-4 h-4"} shrink-0`}
+          style={{ color: resolvedStarColor, fill: resolvedStarColor }}
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+        </svg>
+        {shouldShowCount && count > 0 && (
+          <span
+            aria-hidden="true"
+            className={`${
+              size === "xs" ? "text-[11px]" : "text-xs"
+            } font-normal text-neutral-500 tabular-nums leading-none`}
+          >
+            ({count})
+          </span>
+        )}
+        <span className="sr-only">{ratingLabel}</span>
+      </div>
+    );
+  }
 
   return (
     <div

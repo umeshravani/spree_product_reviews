@@ -68,9 +68,20 @@ module SpreeProductReviews
     preference :title_star_color, :string, default: '#FBBF24'
     preference :bottom_star_color, :string, default: '#FBBF24'
     preference :product_card_star_color, :string, default: '#FBBF24'
+    preference :product_card_format, :string, default: 'stars_count'
+    preference :product_card_show_count, :boolean, default: true
     preference :verified_badge_color, :string, default: '#000000'
     preference :title_rating_format, :string, default: '({rating}) {count} reviews'
     preference :title_reviews_label, :string, default: 'reviews'
+
+    # Email notifications & Marketing
+    preference :send_review_emails_to_customers, :boolean, default: true
+    preference :send_review_posted_email, :boolean, default: true
+    preference :send_review_approved_email, :boolean, default: true
+    preference :send_review_rejected_email, :boolean, default: false
+    preference :send_review_spam_email, :boolean, default: false
+    preference :send_review_deleted_email, :boolean, default: false
+    preference :send_solicit_review_email, :boolean, default: true
 
     # Schema.org Structured Data / Rich Snippets (JSON-LD)
     preference :schema_markup_enabled, :boolean, default: true

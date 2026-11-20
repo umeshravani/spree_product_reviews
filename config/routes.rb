@@ -54,6 +54,7 @@ Spree::Core::Engine.add_routes do
               get :summary, to: 'review_summaries#show'
               get :filters, to: 'review_filters#index'
               get :questions, to: 'review_questions#index'
+              post :ask_question, to: 'review_inquiries#create'
               get :eligibility, to: 'review_eligibilities#show'
             end
           end
@@ -64,6 +65,7 @@ Spree::Core::Engine.add_routes do
               get :summary, to: 'review_summaries#show'
             end
           end
+          resources :questions, only: [:create], controller: 'review_inquiries'
         end
 
         # Backwards-compatible v1 (6.0.0) store settings route

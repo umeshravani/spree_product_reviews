@@ -1,0 +1,11 @@
+---
+subject: "{{ store.name }} - Notice regarding your review"
+---
+<mj-section>
+  <mj-column css-class="hero">
+    <mj-text mj-class="heading">Review Flagged</mj-text>
+    <mj-text mj-class="greeting">Hello {{ review.author_name }},</mj-text>
+    <mj-text mj-class="lead">Your recent review for {{ review.product_name }} was automatically flagged by our spam filter and removed.</mj-text>
+    <mj-text mj-class="note">If you believe this was an error, please reach out to customer support.</mj-text>
+  </mj-column>
+</mj-section>

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ProductReviewsClient } from "./client.js";
+import { AskQuestionModal } from "./AskQuestionModal.js";
 import { ImageLightbox } from "./ImageLightbox.js";
 import { ReviewCard } from "./ReviewCard.js";
 import { ReviewSubmissionModal } from "./ReviewSubmissionModal.js";
@@ -34,6 +35,7 @@ export interface ProductReviewsSectionProps {
   productName: string;
   variantId?: string | null;
   loginUrl?: string;
+  onAskQuestionClick?: () => void;
   className?: string;
 }
 
@@ -42,6 +44,7 @@ export function ProductReviewsSection({
   productName,
   variantId,
   loginUrl = "/account",
+  onAskQuestionClick,
   className = "",
 }: ProductReviewsSectionProps) {
   const client = useMemo(() => new ProductReviewsClient(), []);
@@ -52,6 +55,9 @@ export function ProductReviewsSection({
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [isAskQuestionOpen, setAskQuestionOpen] = useState(false);
 
   const [selectedRating, setSelectedRating] = useState<number | null>(null);
   const [withImages, setWithImages] = useState(false);
@@ -76,7 +82,6 @@ export function ProductReviewsSection({
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
 
   const [lightboxMedia, setLightboxMedia] = useState<ReviewMediaItem[]>([]);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -247,6 +252,9 @@ export function ProductReviewsSection({
           setSelectedRating(rating);
         }}
         onWriteReviewClick={() => setModalOpen(true)}
+        onAskQuestionClick={
+          onAskQuestionClick || (() => setAskQuestionOpen(true))
+        }
         canWriteReview={eligibility?.can_review ?? false}
         eligibilityMessage={eligibilityMessage}
       />
@@ -456,6 +464,14 @@ export function ProductReviewsSection({
           onUpdateReview={handleUpdateReview}
         />
       )}
+
+      {/* Ask a Question Modal */}
+      <AskQuestionModal
+        isOpen={isAskQuestionOpen}
+        onClose={() => setAskQuestionOpen(false)}
+        productName={productName}
+        productId={productId}
+      />
 
       {/* Photo & Video Lightbox */}
       <ImageLightbox
