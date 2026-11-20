@@ -167,6 +167,50 @@ export function PendingReviewsBadge() {
   )
 }
 
+export function PendingQuestionsBadge() {
+  const storeContext = useOptionalStore()
+  const storeId = storeContext?.storeId ?? 'default'
+
+  const query = useQuery({
+    queryKey: ['spree-reviews-counts', storeId],
+    queryFn: () => reviewsClient.counts(),
+    staleTime: 30_000,
+    retry: false,
+  })
+
+  const pendingQuestions = (query.data?.data as any)?.pending_questions ?? 0
+  if (pendingQuestions <= 0) return null
+
+  return (
+    <span className="ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-amber-600 dark:text-amber-400">
+      {pendingQuestions}
+    </span>
+  )
+}
+
+export function ReviewsRootNavBadge() {
+  const storeContext = useOptionalStore()
+  const storeId = storeContext?.storeId ?? 'default'
+
+  const query = useQuery({
+    queryKey: ['spree-reviews-counts', storeId],
+    queryFn: () => reviewsClient.counts(),
+    staleTime: 30_000,
+    retry: false,
+  })
+
+  const pendingReviews = query.data?.data?.pending ?? 0
+  const pendingQuestions = (query.data?.data as any)?.pending_questions ?? 0
+  const total = pendingReviews + pendingQuestions
+  if (total <= 0) return null
+
+  return (
+    <span className="ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-amber-600 dark:text-amber-400">
+      {total}
+    </span>
+  )
+}
+
 export function ProductReviewsCard({ product }: { product?: { id?: string } }) {
   const storeContext = useOptionalStore()
   const storeId = storeContext?.storeId ?? 'default'

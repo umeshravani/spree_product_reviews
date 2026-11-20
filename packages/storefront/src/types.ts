@@ -175,6 +175,12 @@ export interface ReviewStoreSettings {
   verified_badge_color?: string;
   title_rating_format: string;
   title_reviews_label: string;
+  write_review_btn_bg?: string;
+  write_review_btn_text_color?: string;
+  write_review_btn_border_color?: string;
+  ask_question_btn_bg?: string;
+  ask_question_btn_text_color?: string;
+  ask_question_btn_border_color?: string;
   send_review_emails_to_customers?: boolean;
   send_review_posted_email?: boolean;
   send_review_approved_email?: boolean;
@@ -256,6 +262,7 @@ export interface ProductQuestionItem {
   id: string;
   product_id?: string;
   author_name: string;
+  verified_purchase?: boolean;
   question: string;
   answer: string | null;
   answered_by: string | null;

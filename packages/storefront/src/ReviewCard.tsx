@@ -30,7 +30,7 @@ const REPORT_REASONS = [
   { value: "other", label: "Other issue" },
 ];
 
-function VerifiedCheckIcon({
+export function VerifiedCheckIcon({
   className = "w-4 h-4",
   color = "#000000",
 }: {

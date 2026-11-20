@@ -33,5 +33,22 @@ module Spree
         answered_at: Time.current
       )
     end
+
+    def verified_purchase?
+      return false if author_email.blank? || product.blank?
+
+      variant_ids = product.variants.pluck(:id)
+      return false if variant_ids.empty?
+
+      Spree::Order.complete
+                  .where(store_id: store_id, email: author_email)
+                  .joins(:line_items)
+                  .where(spree_line_items: { variant_id: variant_ids })
+                  .exists?
+    rescue StandardError
+      false
+    end
+
+    alias verified_purchase verified_purchase?
   end
 end

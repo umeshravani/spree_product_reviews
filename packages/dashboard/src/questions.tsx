@@ -6,6 +6,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  Checkbox,
   Input,
   Label,
   ResourceLayout,
@@ -13,20 +14,24 @@ import {
   Skeleton,
   StatusBadge,
   Switch,
+  Thumbnail,
   toastManager,
   useConfirm,
 } from '@spree/dashboard-ui'
 import {
+  CheckCircle2Icon,
   CheckIcon,
   PencilIcon,
   PlusIcon,
   SearchIcon,
   Trash2Icon,
+  XCircleIcon,
 } from '@spree/dashboard-ui/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
-import { useId, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { reviewsClient } from './client'
+import { VerifiedCheckIcon } from './components'
 import type { RouteProps } from './shared'
 import { AppLink, ErrorMessage, Field, NativeSelect, Pagination } from './shared'
 import type { Choice, ProductQuestion, Question, QuestionOption } from './types'
@@ -85,6 +90,7 @@ function CustomerQuestionsSection({ storeId }: { storeId: string }) {
   const [status, setStatus] = useState<string>('all')
   const [search, setSearch] = useState('')
   const [searchInput, setSearchInput] = useState('')
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
 
   const [replyingQuestion, setReplyingQuestion] = useState<ProductQuestion | null>(null)
   const [answerText, setAnswerText] = useState('')
@@ -111,6 +117,7 @@ function CustomerQuestionsSection({ storeId }: { storeId: string }) {
     }) => reviewsClient.updateProductQuestion(id, data),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['spree-product-questions', storeId] })
+      void queryClient.invalidateQueries({ queryKey: ['spree-reviews-counts', storeId] })
       toastManager.add({ type: 'success', title: 'Answer saved & published' })
       setReplyingQuestion(null)
     },
@@ -124,8 +131,10 @@ function CustomerQuestionsSection({ storeId }: { storeId: string }) {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => reviewsClient.deleteProductQuestion(id),
-    onSuccess: () => {
+    onSuccess: (_data, deletedId) => {
+      setSelectedIds((prev) => prev.filter((id) => id !== deletedId))
       void queryClient.invalidateQueries({ queryKey: ['spree-product-questions', storeId] })
+      void queryClient.invalidateQueries({ queryKey: ['spree-reviews-counts', storeId] })
       toastManager.add({ type: 'success', title: 'Question deleted' })
     },
     onError: (err) => {
@@ -135,6 +144,51 @@ function CustomerQuestionsSection({ storeId }: { storeId: string }) {
       })
     },
   })
+
+  const bulkMutation = useMutation({
+    mutationFn: ({
+      ids,
+      action,
+    }: {
+      ids: string[]
+      action: 'approve' | 'answered' | 'reject' | 'rejected' | 'delete'
+    }) => reviewsClient.bulkProductQuestions(ids, action),
+    onSuccess: (_res, variables) => {
+      setSelectedIds([])
+      void queryClient.invalidateQueries({ queryKey: ['spree-product-questions', storeId] })
+      void queryClient.invalidateQueries({ queryKey: ['spree-reviews-counts', storeId] })
+      const label =
+        variables.action === 'delete'
+          ? `Deleted ${variables.ids.length} questions`
+          : `Updated ${variables.ids.length} questions`
+      toastManager.add({ type: 'success', title: label })
+    },
+    onError: (err) => {
+      toastManager.add({
+        type: 'error',
+        title: err instanceof Error ? err.message : 'Bulk action failed',
+      })
+    },
+  })
+
+  const questions = query.data?.data ?? []
+  const pageQuestionIds = useMemo(() => questions.map((q) => q.id), [questions])
+  const selectedOnPage = useMemo(
+    () => questions.filter((q) => selectedIds.includes(q.id)),
+    [questions, selectedIds],
+  )
+  const allChecked = pageQuestionIds.length > 0 && selectedOnPage.length === pageQuestionIds.length
+  const someChecked = selectedOnPage.length > 0 && !allChecked
+
+  const toggleAllRows = (checked: boolean) => {
+    setSelectedIds(checked ? pageQuestionIds : [])
+  }
+
+  const toggleRow = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    )
+  }
 
   const handleOpenReply = (q: ProductQuestion) => {
     setReplyingQuestion(q)
@@ -156,10 +210,24 @@ function CustomerQuestionsSection({ storeId }: { storeId: string }) {
     deleteMutation.mutate(q.id)
   }
 
+  const handleBulkAction = async (action: 'answered' | 'rejected' | 'delete') => {
+    if (action === 'delete') {
+      const ok = await confirm({
+        title: `Delete ${selectedIds.length} questions?`,
+        message: 'This will permanently remove the selected customer questions.',
+        confirmLabel: 'Delete all',
+        variant: 'destructive',
+      })
+      if (!ok) return
+    }
+    bulkMutation.mutate({ ids: selectedIds, action })
+  }
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setPage(1)
     setSearch(searchInput)
+    setSelectedIds([])
   }
 
   const meta = query.data?.meta
@@ -169,7 +237,7 @@ function CustomerQuestionsSection({ storeId }: { storeId: string }) {
       <PageHeader
         sticky={false}
         title="Customer Questions (Q&A)"
-        subtitle="Manage customer questions asked on product pages, publish replies, and moderate inquiries."
+        subtitle="Manage customer inquiries asked on product pages, publish verified answers, and moderate questions."
       />
 
       {/* Filter and Search Bar */}
@@ -187,6 +255,7 @@ function CustomerQuestionsSection({ storeId }: { storeId: string }) {
               onClick={() => {
                 setPage(1)
                 setStatus(f.id)
+                setSelectedIds([])
               }}
               className={`px-3 py-1.5 rounded-md font-semibold cursor-pointer transition-colors ${
                 status === f.id
@@ -208,12 +277,63 @@ function CustomerQuestionsSection({ storeId }: { storeId: string }) {
           />
           <button
             type="submit"
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
           >
             <SearchIcon className="size-3.5" />
           </button>
         </form>
       </div>
+
+      {/* Bulk Actions Floating/Pinned Bar */}
+      {selectedIds.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/60 px-4 py-2.5 text-sm animate-in fade-in duration-150">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-foreground">
+              {selectedIds.length} selected
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedIds([])}
+              className="h-7 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+            >
+              Deselect all
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => void handleBulkAction('answered')}
+              disabled={bulkMutation.isPending}
+              className="h-8 gap-1.5 text-xs font-semibold cursor-pointer text-emerald-600 dark:text-emerald-400 border-emerald-600/30 hover:bg-emerald-500/10"
+            >
+              <CheckCircle2Icon className="size-3.5" />
+              Mark Answered
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => void handleBulkAction('rejected')}
+              disabled={bulkMutation.isPending}
+              className="h-8 gap-1.5 text-xs font-semibold cursor-pointer text-amber-600 dark:text-amber-400 border-amber-600/30 hover:bg-amber-500/10"
+            >
+              <XCircleIcon className="size-3.5" />
+              Reject
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => void handleBulkAction('delete')}
+              disabled={bulkMutation.isPending}
+              className="h-8 gap-1.5 text-xs font-semibold cursor-pointer"
+            >
+              <Trash2Icon className="size-3.5" />
+              Delete
+            </Button>
+          </div>
+        </div>
+      )}
 
       {query.isPending ? (
         <Skeleton className="h-48 w-full" />
@@ -225,6 +345,14 @@ function CustomerQuestionsSection({ storeId }: { storeId: string }) {
             <table className="w-full text-left text-sm">
               <thead className="bg-muted/40">
                 <tr>
+                  <th className="w-10 px-4 py-3">
+                    <Checkbox
+                      checked={allChecked}
+                      indeterminate={someChecked}
+                      onCheckedChange={(val) => toggleAllRows(Boolean(val))}
+                      aria-label="Select all questions"
+                    />
+                  </th>
                   <th className="px-4 py-3 font-medium whitespace-nowrap">Product</th>
                   <th className="px-4 py-3 font-medium whitespace-nowrap">Customer</th>
                   <th className="px-4 py-3 font-medium">Question</th>
@@ -237,101 +365,122 @@ function CustomerQuestionsSection({ storeId }: { storeId: string }) {
                 </tr>
               </thead>
               <tbody>
-                {query.data.data.map((q) => (
-                  <tr key={q.id} className="border-t align-top hover:bg-muted/20">
-                    <td className="px-4 py-3 font-medium text-xs max-w-[180px]">
-                      {q.product ? (
-                        <div className="flex items-center gap-2">
-                          {q.product.image_url ? (
-                            <img
+                {questions.map((q) => {
+                  const isSelected = selectedIds.includes(q.id)
+                  return (
+                    <tr
+                      key={q.id}
+                      className={`border-t align-top hover:bg-muted/20 transition-colors ${
+                        isSelected ? 'bg-muted/30' : ''
+                      }`}
+                    >
+                      <td className="w-10 px-4 py-3">
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => toggleRow(q.id)}
+                          aria-label={`Select question ${q.id}`}
+                        />
+                      </td>
+                      <td className="px-4 py-3 font-medium text-xs min-w-[180px] max-w-[240px]">
+                        {q.product ? (
+                          <div className="flex items-center gap-3">
+                            <Thumbnail
                               src={q.product.image_url}
-                              alt=""
-                              className="size-8 rounded object-cover shrink-0 border"
+                              alt={q.product.name}
+                              size="sm"
+                              className="size-9 rounded-md shrink-0 border"
                             />
-                          ) : (
-                            <div className="size-8 rounded bg-muted flex items-center justify-center shrink-0 text-[10px] font-bold text-muted-foreground">
-                              IMG
+                            <div className="min-w-0">
+                              <span className="font-semibold text-foreground line-clamp-2 leading-tight">
+                                {q.product.name}
+                              </span>
                             </div>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">Unknown Product</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-xs whitespace-nowrap">
+                        <div className="flex items-center gap-1.5 font-semibold text-foreground">
+                          <span>{q.author_name}</span>
+                          {q.verified_purchase && (
+                            <span title="Verified Purchaser" className="inline-flex">
+                              <VerifiedCheckIcon className="size-3.5" />
+                            </span>
                           )}
-                          <span className="line-clamp-2 leading-tight">{q.product.name}</span>
                         </div>
-                      ) : (
-                        <span className="text-muted-foreground">Unknown Product</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-xs whitespace-nowrap">
-                      <div className="font-semibold text-foreground">{q.author_name}</div>
-                      <div className="text-muted-foreground text-[11px]">{q.author_email}</div>
-                    </td>
-                    <td className="px-4 py-3 text-xs max-w-xs">
-                      <p className="line-clamp-3 leading-relaxed text-foreground font-medium m-0">
-                        {q.question}
-                      </p>
-                    </td>
-                    <td className="px-4 py-3 text-xs max-w-xs">
-                      {q.answer ? (
-                        <div className="space-y-0.5">
-                          <p className="line-clamp-2 leading-relaxed text-muted-foreground m-0">
-                            {q.answer}
-                          </p>
-                          <span className="text-[10px] text-muted-foreground font-medium">
-                            By {q.answered_by || 'Store'}
+                        <div className="text-muted-foreground text-[11px]">{q.author_email}</div>
+                      </td>
+                      <td className="px-4 py-3 text-xs max-w-xs">
+                        <p className="line-clamp-3 leading-relaxed text-foreground font-medium m-0">
+                          {q.question}
+                        </p>
+                      </td>
+                      <td className="px-4 py-3 text-xs max-w-xs">
+                        {q.answer ? (
+                          <div className="space-y-0.5">
+                            <p className="line-clamp-2 leading-relaxed text-muted-foreground m-0">
+                              {q.answer}
+                            </p>
+                            <span className="text-[10px] text-muted-foreground font-medium">
+                              By {q.answered_by || 'Store'}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-amber-600 dark:text-amber-400 font-medium italic text-[11px]">
+                            Pending answer
                           </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-xs">
+                        <StatusBadge
+                          status={q.status}
+                          label={
+                            q.status === 'answered'
+                              ? 'Answered'
+                              : q.status === 'pending'
+                                ? 'Pending'
+                                : 'Rejected'
+                          }
+                          tone={
+                            q.status === 'answered'
+                              ? 'success'
+                              : q.status === 'pending'
+                                ? 'warning'
+                                : 'destructive'
+                          }
+                        />
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-xs text-muted-foreground tabular-nums">
+                        {new Date(q.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="w-16 px-4 py-3 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleOpenReply(q)}
+                            className="h-7 text-xs font-semibold cursor-pointer px-2"
+                          >
+                            Reply
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => void handleDelete(q)}
+                            disabled={deleteMutation.isPending}
+                            className="h-7 size-7 p-0 text-muted-foreground hover:text-destructive cursor-pointer"
+                          >
+                            <Trash2Icon className="size-3.5" />
+                          </Button>
                         </div>
-                      ) : (
-                        <span className="text-amber-600 dark:text-amber-400 font-medium italic text-[11px]">
-                          Pending answer
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-xs">
-                      <StatusBadge
-                        status={q.status}
-                        label={
-                          q.status === 'answered'
-                            ? 'Answered'
-                            : q.status === 'pending'
-                              ? 'Pending'
-                              : 'Rejected'
-                        }
-                        tone={
-                          q.status === 'answered'
-                            ? 'success'
-                            : q.status === 'pending'
-                              ? 'warning'
-                              : 'destructive'
-                        }
-                      />
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-xs text-muted-foreground">
-                      {new Date(q.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="w-16 px-4 py-3 text-right whitespace-nowrap">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleOpenReply(q)}
-                          className="h-7 text-xs font-semibold cursor-pointer px-2"
-                        >
-                          Reply
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => void handleDelete(q)}
-                          disabled={deleteMutation.isPending}
-                          className="h-7 size-7 p-0 text-muted-foreground hover:text-destructive cursor-pointer"
-                        >
-                          <Trash2Icon className="size-3.5" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
-            {query.data.data.length === 0 && (
+            {questions.length === 0 && (
               <p className="p-8 text-center text-sm text-muted-foreground">
                 No customer questions found.
               </p>

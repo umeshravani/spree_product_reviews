@@ -65,6 +65,7 @@ module Spree
               answer: q.answer,
               answered_by: q.answered_by,
               status: q.status,
+              verified_purchase: q.verified_purchase?,
               created_at: q.created_at,
               answered_at: q.answered_at
             }

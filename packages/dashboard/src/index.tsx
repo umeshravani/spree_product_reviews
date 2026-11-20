@@ -1,5 +1,11 @@
 import { defineDashboardPlugin } from '@spree/dashboard-core'
-import { PendingReviewsBadge, ProductReviewsCard, ReviewsNavIcon } from './components'
+import {
+  PendingQuestionsBadge,
+  PendingReviewsBadge,
+  ProductReviewsCard,
+  ReviewsNavIcon,
+  ReviewsRootNavBadge,
+} from './components'
 import { NewQuestionPage, QuestionDetailPage, QuestionsPage } from './questions'
 import { ReviewDetailPage, ReviewsPage } from './reviews'
 import { ReviewSettingsPage } from './settings'
@@ -14,7 +20,7 @@ defineDashboardPlugin({
         icon: ReviewsNavIcon,
         position: 650,
         subject: 'review',
-        badge: PendingReviewsBadge,
+        badge: ReviewsRootNavBadge,
         children: [
           {
             key: 'reviews.list',
@@ -30,6 +36,7 @@ defineDashboardPlugin({
             path: '/review-questions',
             position: 200,
             subject: 'review_question',
+            badge: PendingQuestionsBadge,
           },
           {
             key: 'reviews.settings',
@@ -88,9 +95,11 @@ defineDashboardPlugin({
 
 export { reviewsClient } from './client'
 export {
+  PendingQuestionsBadge,
   PendingReviewsBadge,
   ProductReviewsCard,
   ReviewStatusBadge,
+  ReviewsRootNavBadge,
   StarDisplay,
   VerifiedCheckIcon,
 } from './components'

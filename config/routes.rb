@@ -21,7 +21,11 @@ Spree::Core::Engine.add_routes do
           end
         end
 
-        resources :product_questions, only: [:index, :show, :update, :destroy]
+        resources :product_questions, only: [:index, :show, :update, :destroy] do
+          collection do
+            post :bulk
+          end
+        end
 
         resources :review_questions, except: [:new, :edit] do
           resources :options, except: [:new, :edit], controller: 'review_question_options'

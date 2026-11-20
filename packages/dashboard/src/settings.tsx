@@ -1,4 +1,4 @@
-import { PageHeader, usePermissions, useStore } from '@spree/dashboard-core'
+import { PageHeader, SettingsSection, usePermissions, useStore } from '@spree/dashboard-core'
 import {
   Badge,
   Button,
@@ -13,6 +13,18 @@ import {
   Switch,
   Textarea,
 } from '@spree/dashboard-ui'
+import {
+  FileTextIcon,
+  GiftIcon,
+  ImageIcon,
+  MailIcon,
+  PaletteIcon,
+  PencilIcon,
+  SearchIcon,
+  ShieldAlertIcon,
+  ShieldCheckIcon,
+  SlidersHorizontalIcon,
+} from '@spree/dashboard-ui/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { reviewsClient } from './client'
@@ -184,14 +196,12 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
 
       {activeTab === 'general' && (
         <div className="flex flex-col gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>General Policies</CardTitle>
-              <CardDescription>
-                Control review visibility, moderation approval, and purchase verification rules.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
+          <SettingsSection
+            title="General Policies"
+            icon={<ShieldCheckIcon />}
+            description="Control review visibility, moderation approval, and purchase verification rules."
+          >
+            <CardContent className="space-y-6 pt-4">
               <SettingToggle
                 id="review-enabled"
                 label="Enable Product Reviews"
@@ -241,17 +251,14 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                 </div>
               </div>
             </CardContent>
-          </Card>
+          </SettingsSection>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Submitted &amp; Published Review Editing</CardTitle>
-              <CardDescription>
-                Control which fields and attachments customers may modify when updating a previously
-                submitted review.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
+          <SettingsSection
+            title="Submitted &amp; Published Review Editing"
+            icon={<PencilIcon />}
+            description="Control which fields and attachments customers may modify when updating a previously submitted review."
+          >
+            <CardContent className="space-y-6 pt-4">
               <SettingToggle
                 id="review-edit-rating"
                 label="Allow Editing Star Rating"
@@ -293,16 +300,14 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                 onChange={(val) => updateField('allow_edit_add_media', val)}
               />
             </CardContent>
-          </Card>
+          </SettingsSection>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Photos &amp; Video Media Uploads</CardTitle>
-              <CardDescription>
-                Configure customer photo and video upload allowances and size ceilings.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
+          <SettingsSection
+            title="Photos &amp; Video Media Uploads"
+            icon={<ImageIcon />}
+            description="Configure customer photo and video upload allowances and size ceilings."
+          >
+            <CardContent className="space-y-6 pt-4">
               <SettingToggle
                 id="review-allow-videos"
                 label="Allow Video Uploads"
@@ -362,16 +367,14 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                 </div>
               </div>
             </CardContent>
-          </Card>
+          </SettingsSection>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Spam Filtering &amp; Content Safety</CardTitle>
-              <CardDescription>
-                Automatic spam detection, URL blocking, reporting thresholds, and rate limits.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
+          <SettingsSection
+            title="Spam Filtering &amp; Content Safety"
+            icon={<ShieldAlertIcon />}
+            description="Automatic spam detection, URL blocking, reporting thresholds, and rate limits."
+          >
+            <CardContent className="space-y-6 pt-4">
               <SettingToggle
                 id="review-block-spam"
                 label="Automatic Spam Detection"
@@ -479,21 +482,18 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                 </div>
               </div>
             </CardContent>
-          </Card>
+          </SettingsSection>
         </div>
       )}
 
       {activeTab === 'settings' && (
         <div className="flex flex-col gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Submission Flow</CardTitle>
-              <CardDescription>
-                Choose how customers submit reviews and questionnaire answers in the storefront
-                modal.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
+          <SettingsSection
+            title="Submission Flow"
+            icon={<SlidersHorizontalIcon />}
+            description="Choose how customers submit reviews and questionnaire answers in the storefront modal."
+          >
+            <CardContent className="space-y-6 pt-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="space-y-1">
                   <Label className="text-sm font-medium">Modal Mode</Label>
@@ -525,16 +525,14 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                 </div>
               </div>
             </CardContent>
-          </Card>
+          </SettingsSection>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Incentivized Reviews &amp; Gift Card Rewards</CardTitle>
-              <CardDescription>
-                Automatically reward approved photo and video reviews with a store Gift Card.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
+          <SettingsSection
+            title="Incentivized Reviews &amp; Gift Card Rewards"
+            icon={<GiftIcon />}
+            description="Automatically reward approved photo and video reviews with a store Gift Card."
+          >
+            <CardContent className="space-y-6 pt-4">
               <SettingToggle
                 id="review-rewards-enabled"
                 label="Enable Automatic Gift Card Rewards"
@@ -672,17 +670,15 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                 </div>
               )}
             </CardContent>
-          </Card>
+          </SettingsSection>
 
           {!isMultiStep && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Single-Page Form Settings</CardTitle>
-                <CardDescription>
-                  Customize headers displayed inside the single-page review modal.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <SettingsSection
+              title="Single-Page Form Settings"
+              icon={<FileTextIcon />}
+              description="Customize headers displayed inside the single-page review modal."
+            >
+              <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
                 <div className="space-y-1.5">
                   <Label className="text-xs font-medium">Form Title</Label>
                   <Input
@@ -700,22 +696,19 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                   />
                 </div>
               </CardContent>
-            </Card>
+            </SettingsSection>
           )}
         </div>
       )}
 
       {activeTab === 'customisation' && (
         <div className="flex flex-col gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Multi-Step Wizard Copy</CardTitle>
-              <CardDescription>
-                Customize titles, helper subtitles, and placeholders shown across all 4 wizard
-                steps.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
+          <SettingsSection
+            title="Multi-Step Wizard Copy"
+            icon={<PencilIcon />}
+            description="Customize titles, helper subtitles, and placeholders shown across all 4 wizard steps."
+          >
+            <CardContent className="space-y-6 pt-4">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-1.5">
                   <Label className="text-xs font-medium">Step 1 Title (Stars)</Label>
@@ -802,14 +795,14 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                 </div>
               </div>
             </CardContent>
-          </Card>
+          </SettingsSection>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Single-Page Modal Labels</CardTitle>
-              <CardDescription>Applies when Single-Page Form mode is active.</CardDescription>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <SettingsSection
+            title="Single-Page Modal Labels"
+            icon={<FileTextIcon />}
+            description="Applies when Single-Page Form mode is active."
+          >
+            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium">Form Title</Label>
                 <Input
@@ -827,17 +820,14 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                 />
               </div>
             </CardContent>
-          </Card>
+          </SettingsSection>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Appearance</CardTitle>
-              <CardDescription>
-                Customize storefront star colors, Verified Purchase badge color, and label formatting
-                across product headers, product cards, and review sections.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
+          <SettingsSection
+            title="Appearance"
+            icon={<PaletteIcon />}
+            description="Customize storefront star colors, Verified Purchase badge color, and label formatting across product headers, product cards, and review sections."
+          >
+            <CardContent className="space-y-6 pt-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="space-y-1.5">
                   <Label className="text-xs font-medium">Product Header Star Color</Label>
@@ -1036,17 +1026,193 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                 </div>
               </div>
             </CardContent>
-          </Card>
+          </SettingsSection>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Search Engine Snippet &amp; Schema Markup</CardTitle>
-              <CardDescription>
-                Configure Schema.org Product structured data (JSON-LD) for Google Rich Snippets,
-                star ratings, price, stock, and delivery badges in Google Search.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
+          <SettingsSection
+            title="Action Buttons Customization"
+            icon={<SlidersHorizontalIcon />}
+            description="Customize colors and appearance for 'Write a Review' and 'Ask a Question' action buttons in the storefront."
+          >
+            <CardContent className="space-y-6 pt-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Write a Review Button Styling */}
+                <div className="rounded-xl border bg-muted/15 p-4 space-y-4">
+                  <div>
+                    <h4 className="text-sm font-semibold text-foreground">Write a Review Button</h4>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Button style used in review summary and bottom sections.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium">Background</Label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          aria-label="Write a Review Button Background"
+                          disabled={!canEdit}
+                          value={draft.write_review_btn_bg || '#FFFFFF'}
+                          onChange={(e) => updateField('write_review_btn_bg', e.target.value)}
+                          className="h-8 w-8 cursor-pointer rounded border border-border p-0.5"
+                        />
+                        <Input
+                          disabled={!canEdit}
+                          value={draft.write_review_btn_bg || '#FFFFFF'}
+                          onChange={(e) => updateField('write_review_btn_bg', e.target.value)}
+                          className="font-mono text-xs"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium">Text Color</Label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          aria-label="Write a Review Button Text Color"
+                          disabled={!canEdit}
+                          value={draft.write_review_btn_text_color || '#0A0A0A'}
+                          onChange={(e) => updateField('write_review_btn_text_color', e.target.value)}
+                          className="h-8 w-8 cursor-pointer rounded border border-border p-0.5"
+                        />
+                        <Input
+                          disabled={!canEdit}
+                          value={draft.write_review_btn_text_color || '#0A0A0A'}
+                          onChange={(e) => updateField('write_review_btn_text_color', e.target.value)}
+                          className="font-mono text-xs"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium">Border Color</Label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          aria-label="Write a Review Button Border Color"
+                          disabled={!canEdit}
+                          value={draft.write_review_btn_border_color || '#0A0A0A'}
+                          onChange={(e) => updateField('write_review_btn_border_color', e.target.value)}
+                          className="h-8 w-8 cursor-pointer rounded border border-border p-0.5"
+                        />
+                        <Input
+                          disabled={!canEdit}
+                          value={draft.write_review_btn_border_color || '#0A0A0A'}
+                          onChange={(e) => updateField('write_review_btn_border_color', e.target.value)}
+                          className="font-mono text-xs"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Ask a Question Button Styling */}
+                <div className="rounded-xl border bg-muted/15 p-4 space-y-4">
+                  <div>
+                    <h4 className="text-sm font-semibold text-foreground">Ask a Question Button</h4>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Button style used in review summary and customer Q&amp;A sections.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium">Background</Label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          aria-label="Ask a Question Button Background"
+                          disabled={!canEdit}
+                          value={draft.ask_question_btn_bg || '#404040'}
+                          onChange={(e) => updateField('ask_question_btn_bg', e.target.value)}
+                          className="h-8 w-8 cursor-pointer rounded border border-border p-0.5"
+                        />
+                        <Input
+                          disabled={!canEdit}
+                          value={draft.ask_question_btn_bg || '#404040'}
+                          onChange={(e) => updateField('ask_question_btn_bg', e.target.value)}
+                          className="font-mono text-xs"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium">Text Color</Label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          aria-label="Ask a Question Button Text Color"
+                          disabled={!canEdit}
+                          value={draft.ask_question_btn_text_color || '#FFFFFF'}
+                          onChange={(e) => updateField('ask_question_btn_text_color', e.target.value)}
+                          className="h-8 w-8 cursor-pointer rounded border border-border p-0.5"
+                        />
+                        <Input
+                          disabled={!canEdit}
+                          value={draft.ask_question_btn_text_color || '#FFFFFF'}
+                          onChange={(e) => updateField('ask_question_btn_text_color', e.target.value)}
+                          className="font-mono text-xs"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium">Border Color</Label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          aria-label="Ask a Question Button Border Color"
+                          disabled={!canEdit}
+                          value={draft.ask_question_btn_border_color || '#404040'}
+                          onChange={(e) => updateField('ask_question_btn_border_color', e.target.value)}
+                          className="h-8 w-8 cursor-pointer rounded border border-border p-0.5"
+                        />
+                        <Input
+                          disabled={!canEdit}
+                          value={draft.ask_question_btn_border_color || '#404040'}
+                          onChange={(e) => updateField('ask_question_btn_border_color', e.target.value)}
+                          className="font-mono text-xs"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Live Buttons Preview */}
+              <div className="rounded-lg border bg-muted/20 p-4 space-y-3">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  Live Action Buttons Preview
+                </p>
+                <div className="flex flex-wrap items-center gap-4">
+                  <button
+                    type="button"
+                    style={{
+                      backgroundColor: draft.write_review_btn_bg || '#FFFFFF',
+                      color: draft.write_review_btn_text_color || '#0A0A0A',
+                      borderColor: draft.write_review_btn_border_color || '#0A0A0A',
+                    }}
+                    className="px-5 py-2.5 text-xs font-semibold rounded-full border shadow-xs transition-opacity hover:opacity-90 cursor-default"
+                  >
+                    Write a review
+                  </button>
+                  <button
+                    type="button"
+                    style={{
+                      backgroundColor: draft.ask_question_btn_bg || '#404040',
+                      color: draft.ask_question_btn_text_color || '#FFFFFF',
+                      borderColor: draft.ask_question_btn_border_color || '#404040',
+                    }}
+                    className="px-5 py-2.5 text-xs font-semibold rounded-full border shadow-xs transition-opacity hover:opacity-90 cursor-default"
+                  >
+                    Ask a Question
+                  </button>
+                </div>
+              </div>
+            </CardContent>
+          </SettingsSection>
+
+          <SettingsSection
+            title="Search Engine Snippet &amp; Schema Markup"
+            icon={<SearchIcon />}
+            description="Configure Schema.org Product structured data (JSON-LD) for Google Rich Snippets, star ratings, price, stock, and delivery badges in Google Search."
+          >
+            <CardContent className="space-y-6 pt-4">
               <SettingToggle
                 id="schema-enabled"
                 label="Enable Schema.org Rich Snippets (JSON-LD)"
@@ -1276,7 +1442,7 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                 </div>
               </div>
             </CardContent>
-          </Card>
+          </SettingsSection>
         </div>
       )}
 
@@ -2063,14 +2229,12 @@ function ReviewMarketingSettingsTab({
 
   return (
     <div className="flex flex-col gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Customer Email Notifications</CardTitle>
-          <CardDescription>
-            Configure automated transactional email notifications sent to customers throughout the review lifecycle.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
+      <SettingsSection
+        title="Customer Email Notifications"
+        icon={<MailIcon />}
+        description="Configure automated transactional email notifications sent to customers throughout the review lifecycle."
+      >
+        <CardContent className="space-y-6 pt-4">
           <SettingToggle
             id="send-review-emails-master"
             label="Send review emails to customers"
@@ -2138,19 +2302,13 @@ function ReviewMarketingSettingsTab({
             </div>
           )}
         </CardContent>
-      </Card>
+      </SettingsSection>
 
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <div>
-              <CardTitle>Email Templates</CardTitle>
-              <CardDescription>
-                Customize email subjects and message contents directly inside Review Settings with instant live preview.
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
+      <SettingsSection
+        title="Email Templates"
+        icon={<FileTextIcon />}
+        description="Customize email subjects and message contents directly inside Review Settings with instant live preview."
+      >
         <CardContent className="p-0">
           <ul className="divide-y divide-border">
             {REVIEW_EMAIL_DEFINITIONS.map((tmpl) => {
@@ -2203,7 +2361,7 @@ function ReviewMarketingSettingsTab({
             })}
           </ul>
         </CardContent>
-      </Card>
+      </SettingsSection>
 
       {/* Quick Preview Modal */}
       {previewModalTemplate && (

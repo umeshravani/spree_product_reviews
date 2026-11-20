@@ -119,4 +119,8 @@ export const reviewsClient = {
     adminClient.request<{ data: ProductQuestion; message: string }>('PATCH', `/product_questions/${id}`, { body }),
   deleteProductQuestion: (id: string) =>
     adminClient.request<{ success: boolean; message: string }>('DELETE', `/product_questions/${id}`),
+  bulkProductQuestions: (ids: string[], action: 'approve' | 'answered' | 'reject' | 'rejected' | 'delete') =>
+    adminClient.request<{ success: boolean; count: number }>('POST', '/product_questions/bulk', {
+      body: { ids, action_type: action },
+    }),
 }

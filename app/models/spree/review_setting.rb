@@ -96,6 +96,12 @@ module Spree
       email_review_deleted_body
       email_solicit_review_subject
       email_solicit_review_body
+      write_review_btn_bg
+      write_review_btn_text_color
+      write_review_btn_border_color
+      ask_question_btn_bg
+      ask_question_btn_text_color
+      ask_question_btn_border_color
     ].freeze
 
     ALL_KEYS = (BOOLEAN_KEYS + INTEGER_KEYS + DECIMAL_KEYS + STRING_KEYS).freeze
@@ -163,6 +169,12 @@ module Spree
       schema_max_reviews_count
       schema_return_days
       schema_item_condition
+      write_review_btn_bg
+      write_review_btn_text_color
+      write_review_btn_border_color
+      ask_question_btn_bg
+      ask_question_btn_text_color
+      ask_question_btn_border_color
     ].freeze
 
     ALIASES = {

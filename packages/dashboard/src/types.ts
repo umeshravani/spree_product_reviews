@@ -173,6 +173,12 @@ export interface ReviewSettings {
   schema_price_valid_days?: number
   schema_max_reviews_count?: number
   schema_item_condition?: string
+  write_review_btn_bg?: string
+  write_review_btn_text_color?: string
+  write_review_btn_border_color?: string
+  ask_question_btn_bg?: string
+  ask_question_btn_text_color?: string
+  ask_question_btn_border_color?: string
 }
 
 export interface QuestionOption {
@@ -216,6 +222,7 @@ export interface ProductQuestion {
   answer: string | null
   answered_by: string | null
   status: ProductQuestionStatus
+  verified_purchase?: boolean
   created_at: string
   answered_at: string | null
   product_id: string

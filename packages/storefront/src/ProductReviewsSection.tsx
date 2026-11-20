@@ -9,15 +9,15 @@ import {
   HelpCircle,
   MessageSquare,
   MessageSquareText,
-  SlidersHorizontal,
   Video,
+  X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ProductReviewsClient } from "./client.js";
 import { AskQuestionModal } from "./AskQuestionModal.js";
 import { ImageLightbox } from "./ImageLightbox.js";
 import { ProductQaJsonLd } from "./ProductReviewsJsonLd.js";
-import { ReviewCard } from "./ReviewCard.js";
+import { ReviewCard, VerifiedCheckIcon } from "./ReviewCard.js";
 import { ReviewSubmissionModal } from "./ReviewSubmissionModal.js";
 import { ReviewsSummary } from "./ReviewsSummary.js";
 import type {
@@ -44,6 +44,16 @@ export interface ProductReviewsSectionProps {
   className?: string;
 }
 
+function formatSimpleDate(dateStr?: string | null): string {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return "";
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = d.getFullYear();
+  return `${day} ${month} ${year}`;
+}
+
 export function ProductReviewsSection({
   productId,
   productName,
@@ -63,6 +73,10 @@ export function ProductReviewsSection({
 
   const [modalOpen, setModalOpen] = useState(false);
   const [isAskQuestionOpen, setAskQuestionOpen] = useState(false);
+  const [verifiedCustomerModalQuestion, setVerifiedCustomerModalQuestion] =
+    useState<ProductQuestionItem | null>(null);
+  const [verifiedStoreAnswerModalOpen, setVerifiedStoreAnswerModalOpen] =
+    useState(false);
 
   const [selectedRating, setSelectedRating] = useState<number | null>(null);
   const [withImages, setWithImages] = useState(false);
@@ -269,6 +283,12 @@ export function ProductReviewsSection({
         summary={summary}
         selectedRating={selectedRating}
         starColor={starColor}
+        writeReviewBtnBg={settings?.write_review_btn_bg}
+        writeReviewBtnTextColor={settings?.write_review_btn_text_color}
+        writeReviewBtnBorderColor={settings?.write_review_btn_border_color}
+        askQuestionBtnBg={settings?.ask_question_btn_bg}
+        askQuestionBtnTextColor={settings?.ask_question_btn_text_color}
+        askQuestionBtnBorderColor={settings?.ask_question_btn_border_color}
         onSelectRating={(rating) => {
           setPage(1);
           setSelectedRating(rating);
@@ -312,11 +332,6 @@ export function ProductReviewsSection({
           {/* Filter & Sort Controls */}
           <div className="flex flex-wrap items-center justify-between gap-4 py-3 border-b border-neutral-200">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-neutral-500 mr-1">
-                <SlidersHorizontal className="w-3.5 h-3.5" />
-                Filter:
-              </span>
-
               <button
                 type="button"
                 onClick={() => {
@@ -517,7 +532,18 @@ export function ProductReviewsSection({
             <button
               type="button"
               onClick={() => setAskQuestionOpen(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-neutral-900 text-white text-xs font-semibold hover:bg-black transition cursor-pointer"
+              style={
+                settings?.ask_question_btn_bg ||
+                settings?.ask_question_btn_text_color ||
+                settings?.ask_question_btn_border_color
+                  ? {
+                      backgroundColor: settings.ask_question_btn_bg || "#404040",
+                      color: settings.ask_question_btn_text_color || "#FFFFFF",
+                      borderColor: settings.ask_question_btn_border_color || "#404040",
+                    }
+                  : undefined
+              }
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-neutral-900 text-white border border-neutral-900 text-xs font-semibold hover:opacity-90 transition cursor-pointer"
             >
               <MessageSquareText className="w-3.5 h-3.5" />
               Ask a Question
@@ -554,7 +580,18 @@ export function ProductReviewsSection({
               <button
                 type="button"
                 onClick={() => setAskQuestionOpen(true)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-neutral-900 text-white text-xs font-semibold hover:bg-black transition cursor-pointer mt-2"
+                style={
+                  settings?.ask_question_btn_bg ||
+                  settings?.ask_question_btn_text_color ||
+                  settings?.ask_question_btn_border_color
+                    ? {
+                        backgroundColor: settings.ask_question_btn_bg || "#404040",
+                        color: settings.ask_question_btn_text_color || "#FFFFFF",
+                        borderColor: settings.ask_question_btn_border_color || "#404040",
+                      }
+                    : undefined
+                }
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-neutral-900 text-white border border-neutral-900 text-xs font-semibold hover:opacity-90 transition cursor-pointer mt-2"
               >
                 <MessageSquareText className="w-3.5 h-3.5" />
                 Ask a Question
@@ -567,21 +604,41 @@ export function ProductReviewsSection({
                   key={q.id}
                   className="rounded-2xl border border-neutral-200/90 bg-white p-5 space-y-3.5 transition-shadow hover:shadow-xs"
                 >
-                  {/* Question */}
+                  {/* Question Header */}
                   <div className="flex items-start gap-3">
                     <span className="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-md bg-neutral-900 text-white text-xs font-black">
                       Q
                     </span>
-                    <div className="space-y-0.5">
+                    <div className="space-y-1 flex-1">
                       <h4 className="text-sm sm:text-base font-bold text-neutral-900 leading-snug m-0">
                         {q.question}
                       </h4>
-                      <p className="text-xs text-neutral-500 m-0">
-                        Asked by {q.author_name}
-                        {q.created_at && (
-                          <> • {new Date(q.created_at).toLocaleDateString()}</>
+                      <div className="flex items-center gap-2 text-xs text-neutral-500">
+                        <span>Asked by</span>
+                        <span className="font-semibold text-neutral-900">
+                          {q.author_name}
+                        </span>
+                        {q.verified_purchase && (
+                          <button
+                            type="button"
+                            onClick={() => setVerifiedCustomerModalQuestion(q)}
+                            title="Verified Purchaser"
+                            aria-label="Verified Purchaser"
+                            className="inline-flex items-center justify-center shrink-0 rounded-full p-0.5 text-neutral-900 hover:opacity-80 transition-opacity cursor-pointer"
+                          >
+                            <VerifiedCheckIcon
+                              className="w-3.5 h-3.5"
+                              color={verifiedBadgeColor}
+                            />
+                          </button>
                         )}
-                      </p>
+                        {q.created_at && (
+                          <>
+                            <span>•</span>
+                            <time dateTime={q.created_at}>{formatSimpleDate(q.created_at)}</time>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -591,22 +648,38 @@ export function ProductReviewsSection({
                       <span className="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-md bg-neutral-100 text-neutral-800 text-xs font-bold">
                         A
                       </span>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-neutral-100 text-neutral-800">
+                      <div className="space-y-1.5 flex-1">
+                        {/* Store Answer Header: Left side responder + verified check; Right side 'Verified Store Answer' */}
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="font-semibold text-sm text-neutral-900">
+                              {q.answered_by || "Store Team"}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setVerifiedStoreAnswerModalOpen(true)}
+                              title="Verified Store Team"
+                              aria-label="Verified Store Team"
+                              className="inline-flex items-center justify-center shrink-0 rounded-full p-0.5 text-neutral-900 hover:opacity-80 transition-opacity cursor-pointer"
+                            >
+                              <VerifiedCheckIcon
+                                className="w-4 h-4"
+                                color={verifiedBadgeColor}
+                              />
+                            </button>
+                          </div>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 bg-neutral-100 px-2.5 py-1 rounded-full shrink-0">
                             Verified Store Answer
                           </span>
-                          <span className="text-xs text-neutral-400">
-                            {q.answered_by || "Store Team"}
-                          </span>
                         </div>
+
                         <p className="text-xs sm:text-sm text-neutral-700 leading-relaxed m-0 whitespace-pre-wrap">
                           {q.answer}
                         </p>
+
                         {q.answered_at && (
                           <p className="text-[11px] text-neutral-400 m-0">
-                            Answered on{" "}
-                            {new Date(q.answered_at).toLocaleDateString()}
+                            Answered on {formatSimpleDate(q.answered_at)}
                           </p>
                         )}
                       </div>
@@ -661,6 +734,90 @@ export function ProductReviewsSection({
         onClose={() => setLightboxIndex(null)}
         onChangeIndex={setLightboxIndex}
       />
+
+      {/* Verified Customer Modal */}
+      {verifiedCustomerModalQuestion && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setVerifiedCustomerModalQuestion(null)}
+        >
+          <div
+            className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-xl border border-neutral-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setVerifiedCustomerModalQuestion(null)}
+              aria-label="Close modal"
+              className="absolute right-4 top-4 rounded-full p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-800 transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <div className="flex flex-col items-center text-center space-y-3">
+              <div className="flex items-center justify-center w-11 h-11 rounded-full bg-neutral-100">
+                <VerifiedCheckIcon className="w-6 h-6" color={verifiedBadgeColor} />
+              </div>
+              <h3 className="text-base font-semibold text-neutral-900">
+                Verified Purchaser
+              </h3>
+              <p className="text-sm leading-relaxed text-neutral-600">
+                This customer, <span className="font-semibold text-neutral-900">{verifiedCustomerModalQuestion.author_name}</span>, has verified orders for this item in our store.
+              </p>
+              <button
+                type="button"
+                onClick={() => setVerifiedCustomerModalQuestion(null)}
+                className="mt-2 inline-flex items-center justify-center rounded-lg bg-black px-5 py-2 text-sm font-medium text-white hover:bg-neutral-800 transition-colors cursor-pointer"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Verified Store Answer Modal */}
+      {verifiedStoreAnswerModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setVerifiedStoreAnswerModalOpen(false)}
+        >
+          <div
+            className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-xl border border-neutral-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setVerifiedStoreAnswerModalOpen(false)}
+              aria-label="Close modal"
+              className="absolute right-4 top-4 rounded-full p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-800 transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <div className="flex flex-col items-center text-center space-y-3">
+              <div className="flex items-center justify-center w-11 h-11 rounded-full bg-neutral-100">
+                <VerifiedCheckIcon className="w-6 h-6" color={verifiedBadgeColor} />
+              </div>
+              <h3 className="text-base font-semibold text-neutral-900">
+                Verified Store Team Answer
+              </h3>
+              <p className="text-sm leading-relaxed text-neutral-600">
+                This response was verified and published directly by official store administrators or certified product specialists.
+              </p>
+              <button
+                type="button"
+                onClick={() => setVerifiedStoreAnswerModalOpen(false)}
+                className="mt-2 inline-flex items-center justify-center rounded-lg bg-black px-5 py-2 text-sm font-medium text-white hover:bg-neutral-800 transition-colors cursor-pointer"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

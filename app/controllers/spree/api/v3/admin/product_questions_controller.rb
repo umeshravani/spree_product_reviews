@@ -81,6 +81,30 @@ module Spree
             render json: { success: true, message: 'Question deleted.' }, status: :ok
           end
 
+          # POST /api/v3/admin/product_questions/bulk
+          def bulk
+            raw_ids = Array(params[:ids]).map(&:to_s).reject(&:blank?).uniq
+            if raw_ids.empty?
+              return render json: { error: 'No questions selected' }, status: :unprocessable_entity
+            end
+
+            action_type = (params[:action_type].presence || params[:bulk_action]).to_s
+            scope = Spree::ProductQuestion.for_store(current_store).where(id: raw_ids)
+
+            case action_type
+            when 'approve', 'answered'
+              scope.update_all(status: 'answered', answered_at: Time.current)
+            when 'reject', 'rejected'
+              scope.update_all(status: 'rejected')
+            when 'delete', 'destroy'
+              scope.destroy_all
+            else
+              return render json: { error: "Unknown bulk action: #{action_type}" }, status: :unprocessable_entity
+            end
+
+            render json: { success: true, count: raw_ids.length }, status: :ok
+          end
+
           private
 
           def set_question
@@ -111,6 +135,7 @@ module Spree
               answer: q.answer,
               answered_by: q.answered_by,
               status: q.status,
+              verified_purchase: q.verified_purchase?,
               created_at: q.created_at,
               answered_at: q.answered_at,
               product_id: q.product_id,

@@ -97,6 +97,14 @@ module SpreeProductReviews
     preference :email_solicit_review_subject, :string, default: ''
     preference :email_solicit_review_body, :string, default: ''
 
+    # Action Button Appearance Customization
+    preference :write_review_btn_bg, :string, default: '#FFFFFF'
+    preference :write_review_btn_text_color, :string, default: '#0A0A0A'
+    preference :write_review_btn_border_color, :string, default: '#0A0A0A'
+    preference :ask_question_btn_bg, :string, default: '#404040'
+    preference :ask_question_btn_text_color, :string, default: '#FFFFFF'
+    preference :ask_question_btn_border_color, :string, default: '#404040'
+
     # Schema.org Structured Data / Rich Snippets (JSON-LD)
     preference :schema_markup_enabled, :boolean, default: true
     preference :schema_include_reviews, :boolean, default: true

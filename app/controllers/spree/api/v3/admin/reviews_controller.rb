@@ -56,11 +56,13 @@ module Spree
           def counts
             authorize! :read, Spree::Review
             base = model_class.for_store(current_store).accessible_by(current_ability, :read).not_discarded
+            pending_questions = Spree::ProductQuestion.for_store(current_store).where(status: 'pending').count
             render json: {
               data: {
                 all: base.count,
                 total: base.count,
                 pending: base.pending.count,
+                pending_questions: pending_questions,
                 approved: base.approved.count,
                 rejected: base.rejected.count,
                 spam: base.spam.count,
