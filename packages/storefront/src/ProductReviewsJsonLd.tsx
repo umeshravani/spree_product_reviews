@@ -1,4 +1,4 @@
-import type { ReviewItem, ReviewStoreSettings, ReviewSummary } from "./types.js";
+import type { ProductQuestionItem, ReviewItem, ReviewStoreSettings, ReviewSummary } from "./types.js";
 
 export interface ProductOfferSchemaInput {
   price: string | number;
@@ -99,6 +99,19 @@ export function buildProductReviewsJsonLdSchema({
             },
           }
         : {}),
+      ...(settings?.schema_show_returns !== false
+        ? {
+            hasMerchantReturnPolicy: {
+              "@type": "MerchantReturnPolicy",
+              applicableCountry: "IN",
+              returnPolicyCategory:
+                "https://schema.org/MerchantReturnFiniteReturnWindow",
+              merchantReturnDays: settings?.schema_return_days ?? 7,
+              returnMethod: "https://schema.org/ReturnByMail",
+              returnFees: "https://schema.org/FreeReturn",
+            },
+          }
+        : {}),
     });
 
     data.offers = Array.isArray(product.offers)
@@ -156,6 +169,47 @@ export function ProductReviewsJsonLd(props: ProductReviewsJsonLdProps) {
 
   const data = buildProductReviewsJsonLdSchema(props);
   const serialized = JSON.stringify(data).replaceAll("<", "\\u003c");
+
+  return (
+    <script
+      type="application/ld+json"
+      // biome-ignore lint/security/noDangerouslySetInnerHtml: Safe JSON-LD serialization with '<' escaped
+      dangerouslySetInnerHTML={{ __html: serialized }}
+    />
+  );
+}
+
+export function buildProductQaJsonLdSchema(
+  questions: ProductQuestionItem[],
+): Record<string, unknown> | null {
+  const answered = (questions || []).filter(
+    (q) => q.answer && q.answer.trim().length > 0,
+  );
+  if (answered.length === 0) return null;
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: answered.map((q) => ({
+      "@type": "Question",
+      name: q.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: q.answer,
+      },
+    })),
+  };
+}
+
+export function ProductQaJsonLd({
+  questions,
+}: {
+  questions: ProductQuestionItem[];
+}) {
+  const schema = buildProductQaJsonLdSchema(questions);
+  if (!schema) return null;
+
+  const serialized = JSON.stringify(schema).replaceAll("<", "\\u003c");
 
   return (
     <script

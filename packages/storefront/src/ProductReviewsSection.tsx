@@ -6,6 +6,9 @@ import {
   Camera,
   ChevronLeft,
   ChevronRight,
+  HelpCircle,
+  MessageSquare,
+  MessageSquareText,
   SlidersHorizontal,
   Video,
 } from "lucide-react";
@@ -13,11 +16,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ProductReviewsClient } from "./client.js";
 import { AskQuestionModal } from "./AskQuestionModal.js";
 import { ImageLightbox } from "./ImageLightbox.js";
+import { ProductQaJsonLd } from "./ProductReviewsJsonLd.js";
 import { ReviewCard } from "./ReviewCard.js";
 import { ReviewSubmissionModal } from "./ReviewSubmissionModal.js";
 import { ReviewsSummary } from "./ReviewsSummary.js";
 import type {
   CreateReviewInput,
+  ProductQuestionItem,
   ReportReviewInput,
   ReviewEligibilityResponse,
   ReviewFilter,
@@ -86,8 +91,25 @@ export function ProductReviewsSection({
   const [lightboxMedia, setLightboxMedia] = useState<ReviewMediaItem[]>([]);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
+  const [productQuestions, setProductQuestions] = useState<ProductQuestionItem[]>([]);
+  const [activeTab, setActiveTab] = useState<"reviews" | "questions">("reviews");
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
+
+  const fetchProductQuestions = useCallback(async () => {
+    setLoadingQuestions(true);
+    try {
+      const res = await client.getProductQuestions(productId);
+      setProductQuestions(res.data || []);
+    } catch (err) {
+      console.error("[ProductReviewsSection] Error loading questions:", err);
+    } finally {
+      setLoadingQuestions(false);
+    }
+  }, [client, productId]);
+
   const fetchMetadata = useCallback(async () => {
     try {
+      void fetchProductQuestions();
       const [summaryRes, filtersRes, questionsRes, eligibilityRes] =
         await Promise.all([
           client.getSummary(productId),
@@ -259,195 +281,350 @@ export function ProductReviewsSection({
         eligibilityMessage={eligibilityMessage}
       />
 
-      {/* Filter & Sort Controls */}
-      <div className="flex flex-wrap items-center justify-between gap-4 py-3 border-y border-neutral-200">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-neutral-500 mr-1">
-            <SlidersHorizontal className="w-3.5 h-3.5" />
-            Filter:
-          </span>
-
-          <button
-            type="button"
-            onClick={() => {
-              setPage(1);
-              setWithImages((prev) => !prev);
-            }}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition cursor-pointer ${
-              withImages
-                ? "bg-black text-white border-black"
-                : "bg-white text-neutral-700 border-neutral-300 hover:bg-neutral-50"
-            }`}
-          >
-            <Camera className="w-3.5 h-3.5" />
-            With photos
-          </button>
-
-          {allowVideos && (
-            <button
-              type="button"
-              onClick={() => {
-                setPage(1);
-                setWithVideos((prev) => !prev);
-              }}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition cursor-pointer ${
-                withVideos
-                  ? "bg-black text-white border-black"
-                  : "bg-white text-neutral-700 border-neutral-300 hover:bg-neutral-50"
-              }`}
-            >
-              <Video className="w-3.5 h-3.5" />
-              With videos
-            </button>
-          )}
-
-          <button
-            type="button"
-            onClick={() => {
-              setPage(1);
-              setVerifiedOnly((prev) => !prev);
-            }}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition cursor-pointer ${
-              verifiedOnly
-                ? "bg-black text-white border-black"
-                : "bg-white text-neutral-700 border-neutral-300 hover:bg-neutral-50"
-            }`}
-          >
-            <BadgeCheck className="w-3.5 h-3.5" />
-            Verified purchase
-          </button>
-
-          {questionFilters.map((qf) => (
-            <div key={qf.id} className="flex items-center gap-1.5">
-              <span className="text-xs text-neutral-400">|</span>
-              <span className="text-xs font-medium text-neutral-600">
-                {qf.label}:
-              </span>
-              {qf.values.map((val) => {
-                const active = selectedAnswers[qf.id] === val.value;
-                return (
-                  <button
-                    key={val.value}
-                    type="button"
-                    onClick={() => handleToggleAnswerFilter(qf.id, val.value)}
-                    className={`px-2.5 py-1 rounded-full text-xs font-medium border transition cursor-pointer ${
-                      active
-                        ? "bg-black text-white border-black"
-                        : "bg-white text-neutral-700 border-neutral-300 hover:bg-neutral-50"
-                    }`}
-                  >
-                    {val.label} ({val.count})
-                  </button>
-                );
-              })}
-            </div>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-2 ml-auto">
-          <label
-            htmlFor="reviews-sort-select"
-            className="text-xs font-medium text-neutral-500"
-          >
-            Sort by:
-          </label>
-          <select
-            id="reviews-sort-select"
-            value={sort}
-            onChange={(e) => {
-              setPage(1);
-              setSort(e.target.value);
-            }}
-            className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-900 focus:outline-none focus:ring-2 focus:ring-black cursor-pointer"
-          >
-            {sortOptions.map((opt) => (
-              <option key={opt.id} value={opt.id}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        </div>
+      {/* Tabs: Reviews vs Questions & Answers */}
+      <div className="flex items-center gap-6 border-b border-neutral-200">
+        <button
+          type="button"
+          onClick={() => setActiveTab("reviews")}
+          className={`pb-3 text-sm sm:text-base font-bold border-b-2 transition-all cursor-pointer ${
+            activeTab === "reviews"
+              ? "border-black text-black"
+              : "border-transparent text-neutral-400 hover:text-neutral-700"
+          }`}
+        >
+          Customer Reviews ({summary?.reviews_count ?? totalCount})
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("questions")}
+          className={`pb-3 text-sm sm:text-base font-bold border-b-2 transition-all cursor-pointer ${
+            activeTab === "questions"
+              ? "border-black text-black"
+              : "border-transparent text-neutral-400 hover:text-neutral-700"
+          }`}
+        >
+          Questions &amp; Answers ({productQuestions.length})
+        </button>
       </div>
 
-      {/* Reviews List */}
-      {error && (
-        <div className="flex items-center gap-2 p-4 rounded-xl bg-rose-50 border border-rose-200 text-sm text-rose-700">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
+      {activeTab === "reviews" ? (
+        <>
+          {/* Filter & Sort Controls */}
+          <div className="flex flex-wrap items-center justify-between gap-4 py-3 border-b border-neutral-200">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-neutral-500 mr-1">
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                Filter:
+              </span>
 
-      {loading ? (
-        <div className="space-y-4 py-4">
-          {[1, 2].map((skeleton) => (
-            <div
-              key={skeleton}
-              className="animate-pulse border-b border-neutral-200 py-6 flex gap-6"
-            >
-              <div className="w-48 space-y-2">
-                <div className="h-4 w-24 bg-neutral-200 rounded" />
-                <div className="h-3 w-32 bg-neutral-200 rounded" />
-              </div>
-              <div className="flex-1 space-y-2">
-                <div className="h-4 w-1/3 bg-neutral-200 rounded" />
-                <div className="h-12 w-full bg-neutral-200 rounded" />
+              <button
+                type="button"
+                onClick={() => {
+                  setPage(1);
+                  setWithImages((prev) => !prev);
+                }}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition cursor-pointer ${
+                  withImages
+                    ? "bg-black text-white border-black"
+                    : "bg-white text-neutral-700 border-neutral-300 hover:bg-neutral-50"
+                }`}
+              >
+                <Camera className="w-3.5 h-3.5" />
+                With photos
+              </button>
+
+              {allowVideos && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPage(1);
+                    setWithVideos((prev) => !prev);
+                  }}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition cursor-pointer ${
+                    withVideos
+                      ? "bg-black text-white border-black"
+                      : "bg-white text-neutral-700 border-neutral-300 hover:bg-neutral-50"
+                  }`}
+                >
+                  <Video className="w-3.5 h-3.5" />
+                  With videos
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  setPage(1);
+                  setVerifiedOnly((prev) => !prev);
+                }}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition cursor-pointer ${
+                  verifiedOnly
+                    ? "bg-black text-white border-black"
+                    : "bg-white text-neutral-700 border-neutral-300 hover:bg-neutral-50"
+                }`}
+              >
+                <BadgeCheck className="w-3.5 h-3.5" />
+                Verified purchase
+              </button>
+
+              {questionFilters.map((qf) => (
+                <div key={qf.id} className="flex items-center gap-1.5">
+                  <span className="text-xs text-neutral-400">|</span>
+                  <span className="text-xs font-medium text-neutral-600">
+                    {qf.label}:
+                  </span>
+                  {qf.values.map((val) => {
+                    const active = selectedAnswers[qf.id] === val.value;
+                    return (
+                      <button
+                        key={val.value}
+                        type="button"
+                        onClick={() => handleToggleAnswerFilter(qf.id, val.value)}
+                        className={`px-2.5 py-1 rounded-full text-xs font-medium border transition cursor-pointer ${
+                          active
+                            ? "bg-black text-white border-black"
+                            : "bg-white text-neutral-700 border-neutral-300 hover:bg-neutral-50"
+                        }`}
+                      >
+                        {val.label} ({val.count})
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2 ml-auto">
+              <label
+                htmlFor="reviews-sort-select"
+                className="text-xs font-medium text-neutral-500"
+              >
+                Sort by:
+              </label>
+              <select
+                id="reviews-sort-select"
+                value={sort}
+                onChange={(e) => {
+                  setPage(1);
+                  setSort(e.target.value);
+                }}
+                className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-900 focus:outline-none focus:ring-2 focus:ring-black cursor-pointer"
+              >
+                {sortOptions.map((opt) => (
+                  <option key={opt.id} value={opt.id}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Reviews List */}
+          {error && (
+            <div className="flex items-center gap-2 p-4 rounded-xl bg-rose-50 border border-rose-200 text-sm text-rose-700">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {loading ? (
+            <div className="space-y-4 py-4">
+              {[1, 2].map((skeleton) => (
+                <div
+                  key={skeleton}
+                  className="animate-pulse border-b border-neutral-200 py-6 flex gap-6"
+                >
+                  <div className="w-48 space-y-2">
+                    <div className="h-4 w-24 bg-neutral-200 rounded" />
+                    <div className="h-3 w-32 bg-neutral-200 rounded" />
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 w-1/3 bg-neutral-200 rounded" />
+                    <div className="h-12 w-full bg-neutral-200 rounded" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : reviews.length === 0 ? (
+            <div className="py-10 text-center text-sm text-neutral-500">
+              {totalCount === 0
+                ? "No reviews match your current filters."
+                : "No reviews found."}
+            </div>
+          ) : (
+            <div>
+              {reviews.map((review) => (
+                <ReviewCard
+                  key={review.id}
+                  review={review}
+                  starColor={starColor}
+                  verifiedBadgeColor={verifiedBadgeColor}
+                  onVote={handleVote}
+                  onReport={handleReport}
+                  onImageClick={(media, idx) => {
+                    setLightboxMedia(media);
+                    setLightboxIndex(idx);
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-4 border-t border-neutral-200 text-sm">
+              <span className="text-xs text-neutral-500">
+                Page {page} of {totalPages} ({totalCount} total)
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-neutral-300 text-xs font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-40 cursor-pointer"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-neutral-300 text-xs font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-40 cursor-pointer"
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
             </div>
-          ))}
-        </div>
-      ) : reviews.length === 0 ? (
-        <div className="py-10 text-center text-sm text-neutral-500">
-          {totalCount === 0
-            ? "No reviews match your current filters."
-            : "No reviews found."}
-        </div>
+          )}
+        </>
       ) : (
-        <div>
-          {reviews.map((review) => (
-            <ReviewCard
-              key={review.id}
-              review={review}
-              starColor={starColor}
-              verifiedBadgeColor={verifiedBadgeColor}
-              onVote={handleVote}
-              onReport={handleReport}
-              onImageClick={(media, idx) => {
-                setLightboxMedia(media);
-                setLightboxIndex(idx);
-              }}
-            />
-          ))}
+        /* Questions & Answers Tab Feed */
+        <div className="space-y-6 pt-2">
+          <div className="flex flex-wrap items-center justify-between gap-4 py-3 border-b border-neutral-200">
+            <div>
+              <h4 className="text-sm font-bold text-neutral-900 m-0">
+                Questions &amp; Answers
+              </h4>
+              <p className="text-xs text-neutral-500 m-0 mt-0.5">
+                {productQuestions.length}{" "}
+                {productQuestions.length === 1
+                  ? "question answered"
+                  : "questions answered"}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setAskQuestionOpen(true)}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-neutral-900 text-white text-xs font-semibold hover:bg-black transition cursor-pointer"
+            >
+              <MessageSquareText className="w-3.5 h-3.5" />
+              Ask a Question
+            </button>
+          </div>
+
+          {loadingQuestions ? (
+            <div className="space-y-4 py-4">
+              {[1, 2].map((s) => (
+                <div
+                  key={s}
+                  className="animate-pulse rounded-2xl border border-neutral-200 p-5 space-y-3"
+                >
+                  <div className="h-4 w-2/3 bg-neutral-200 rounded" />
+                  <div className="h-3 w-1/3 bg-neutral-100 rounded" />
+                  <div className="h-10 w-full bg-neutral-100 rounded mt-2" />
+                </div>
+              ))}
+            </div>
+          ) : productQuestions.length === 0 ? (
+            <div className="py-12 text-center rounded-2xl border border-dashed border-neutral-200 p-6 space-y-3">
+              <div className="w-12 h-12 mx-auto rounded-full bg-neutral-100 text-neutral-500 flex items-center justify-center">
+                <HelpCircle className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-neutral-800 m-0">
+                  Have a question about this product?
+                </p>
+                <p className="text-xs text-neutral-500 m-0">
+                  Ask our design and technical experts. Answers will appear here
+                  for other shoppers.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAskQuestionOpen(true)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-neutral-900 text-white text-xs font-semibold hover:bg-black transition cursor-pointer mt-2"
+              >
+                <MessageSquareText className="w-3.5 h-3.5" />
+                Ask a Question
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {productQuestions.map((q) => (
+                <div
+                  key={q.id}
+                  className="rounded-2xl border border-neutral-200/90 bg-white p-5 space-y-3.5 transition-shadow hover:shadow-xs"
+                >
+                  {/* Question */}
+                  <div className="flex items-start gap-3">
+                    <span className="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-md bg-neutral-900 text-white text-xs font-black">
+                      Q
+                    </span>
+                    <div className="space-y-0.5">
+                      <h4 className="text-sm sm:text-base font-bold text-neutral-900 leading-snug m-0">
+                        {q.question}
+                      </h4>
+                      <p className="text-xs text-neutral-500 m-0">
+                        Asked by {q.author_name}
+                        {q.created_at && (
+                          <> • {new Date(q.created_at).toLocaleDateString()}</>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Store Answer */}
+                  {q.answer ? (
+                    <div className="flex items-start gap-3 pl-3 sm:pl-4 border-l-2 border-neutral-200 mt-2">
+                      <span className="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-md bg-neutral-100 text-neutral-800 text-xs font-bold">
+                        A
+                      </span>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-neutral-100 text-neutral-800">
+                            Verified Store Answer
+                          </span>
+                          <span className="text-xs text-neutral-400">
+                            {q.answered_by || "Store Team"}
+                          </span>
+                        </div>
+                        <p className="text-xs sm:text-sm text-neutral-700 leading-relaxed m-0 whitespace-pre-wrap">
+                          {q.answer}
+                        </p>
+                        {q.answered_at && (
+                          <p className="text-[11px] text-neutral-400 m-0">
+                            Answered on{" "}
+                            {new Date(q.answered_at).toLocaleDateString()}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-neutral-400 italic pl-9 m-0">
+                      Awaiting response from our store team.
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between pt-4 border-t border-neutral-200 text-sm">
-          <span className="text-xs text-neutral-500">
-            Page {page} of {totalPages} ({totalCount} total)
-          </span>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              disabled={page <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-neutral-300 text-xs font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-40 cursor-pointer"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              Previous
-            </button>
-            <button
-              type="button"
-              disabled={page >= totalPages}
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-neutral-300 text-xs font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-40 cursor-pointer"
-            >
-              Next
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Structured FAQ Data for Search Engines */}
+      <ProductQaJsonLd questions={productQuestions} />
 
       {/* Write Review Modal */}
       {modalOpen && (
@@ -471,6 +648,10 @@ export function ProductReviewsSection({
         onClose={() => setAskQuestionOpen(false)}
         productName={productName}
         productId={productId}
+        onSubmitQuestion={async (data) => {
+          await client.askQuestion(productId, data);
+          await fetchProductQuestions();
+        }}
       />
 
       {/* Photo & Video Lightbox */}

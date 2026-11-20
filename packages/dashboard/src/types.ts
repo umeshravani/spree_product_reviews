@@ -168,6 +168,8 @@ export interface ReviewSettings {
   schema_include_aggregate_rating?: boolean
   schema_include_offers?: boolean
   schema_show_shipping?: boolean
+  schema_show_returns?: boolean
+  schema_return_days?: number
   schema_price_valid_days?: number
   schema_max_reviews_count?: number
   schema_item_condition?: string
@@ -203,3 +205,25 @@ export interface Choice {
   pretty_name?: string | null
   products_count?: number
 }
+
+export type ProductQuestionStatus = 'pending' | 'answered' | 'approved' | 'rejected'
+
+export interface ProductQuestion {
+  id: string
+  author_name: string
+  author_email: string
+  question: string
+  answer: string | null
+  answered_by: string | null
+  status: ProductQuestionStatus
+  created_at: string
+  answered_at: string | null
+  product_id: string
+  product?: {
+    id: string
+    name: string
+    slug: string
+    image_url?: string | null
+  } | null
+}
+

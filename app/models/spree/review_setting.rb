@@ -34,6 +34,7 @@ module Spree
       schema_include_aggregate_rating
       schema_include_offers
       schema_show_shipping
+      schema_show_returns
     ].freeze
 
     INTEGER_KEYS = %i[
@@ -48,6 +49,7 @@ module Spree
       video_reward_percentage
       schema_price_valid_days
       schema_max_reviews_count
+      schema_return_days
     ].freeze
 
     DECIMAL_KEYS = %i[
@@ -156,8 +158,10 @@ module Spree
       schema_include_aggregate_rating
       schema_include_offers
       schema_show_shipping
+      schema_show_returns
       schema_price_valid_days
       schema_max_reviews_count
+      schema_return_days
       schema_item_condition
     ].freeze
 

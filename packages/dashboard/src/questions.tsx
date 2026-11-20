@@ -29,9 +29,436 @@ import { useId, useState } from 'react'
 import { reviewsClient } from './client'
 import type { RouteProps } from './shared'
 import { AppLink, ErrorMessage, Field, NativeSelect, Pagination } from './shared'
-import type { Choice, Question, QuestionOption } from './types'
+import type { Choice, ProductQuestion, Question, QuestionOption } from './types'
 
 export function QuestionsPage({ storeId }: RouteProps) {
+  const [activeTab, setActiveTab] = useState<'customer_qa' | 'form_questions'>('customer_qa')
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div
+        role="tablist"
+        aria-label="Questions sections"
+        className="inline-flex w-fit items-center justify-center gap-1 rounded-lg bg-muted/60 p-1 text-muted-foreground"
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'customer_qa'}
+          onClick={() => setActiveTab('customer_qa')}
+          className={`inline-flex min-h-7 cursor-pointer items-center justify-center rounded-md px-3.5 py-1.5 text-sm font-medium whitespace-nowrap transition-all outline-none ${
+            activeTab === 'customer_qa'
+              ? 'bg-background text-foreground shadow-xs'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Customer Q&amp;A
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'form_questions'}
+          onClick={() => setActiveTab('form_questions')}
+          className={`inline-flex min-h-7 cursor-pointer items-center justify-center rounded-md px-3.5 py-1.5 text-sm font-medium whitespace-nowrap transition-all outline-none ${
+            activeTab === 'form_questions'
+              ? 'bg-background text-foreground shadow-xs'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Review Form Attributes
+        </button>
+      </div>
+
+      {activeTab === 'customer_qa' ? (
+        <CustomerQuestionsSection storeId={storeId} />
+      ) : (
+        <FormQuestionsSection storeId={storeId} />
+      )}
+    </div>
+  )
+}
+
+function CustomerQuestionsSection({ storeId }: { storeId: string }) {
+  const queryClient = useQueryClient()
+  const confirm = useConfirm()
+  const [page, setPage] = useState(1)
+  const [status, setStatus] = useState<string>('all')
+  const [search, setSearch] = useState('')
+  const [searchInput, setSearchInput] = useState('')
+
+  const [replyingQuestion, setReplyingQuestion] = useState<ProductQuestion | null>(null)
+  const [answerText, setAnswerText] = useState('')
+  const [answeredBy, setAnsweredBy] = useState('Store Team')
+  const [targetStatus, setTargetStatus] = useState<'answered' | 'pending' | 'rejected'>('answered')
+
+  const query = useQuery({
+    queryKey: ['spree-product-questions', storeId, page, status, search],
+    queryFn: () =>
+      reviewsClient.productQuestions({
+        page,
+        status: status !== 'all' ? status : undefined,
+        q: search || undefined,
+      }),
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string
+      data: { answer?: string; status?: string; answered_by?: string }
+    }) => reviewsClient.updateProductQuestion(id, data),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['spree-product-questions', storeId] })
+      toastManager.add({ type: 'success', title: 'Answer saved & published' })
+      setReplyingQuestion(null)
+    },
+    onError: (err) => {
+      toastManager.add({
+        type: 'error',
+        title: err instanceof Error ? err.message : 'Failed to save answer',
+      })
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => reviewsClient.deleteProductQuestion(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['spree-product-questions', storeId] })
+      toastManager.add({ type: 'success', title: 'Question deleted' })
+    },
+    onError: (err) => {
+      toastManager.add({
+        type: 'error',
+        title: err instanceof Error ? err.message : 'Failed to delete question',
+      })
+    },
+  })
+
+  const handleOpenReply = (q: ProductQuestion) => {
+    setReplyingQuestion(q)
+    setAnswerText(q.answer || '')
+    setAnsweredBy(q.answered_by || 'Store Team')
+    setTargetStatus(
+      q.status === 'rejected' ? 'rejected' : q.status === 'pending' ? 'answered' : (q.status as any),
+    )
+  }
+
+  const handleDelete = async (q: ProductQuestion) => {
+    const ok = await confirm({
+      title: 'Delete customer question?',
+      message: `Permanently delete this question from "${q.author_name}"?`,
+      confirmLabel: 'Delete',
+      variant: 'destructive',
+    })
+    if (!ok) return
+    deleteMutation.mutate(q.id)
+  }
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    setPage(1)
+    setSearch(searchInput)
+  }
+
+  const meta = query.data?.meta
+
+  return (
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        sticky={false}
+        title="Customer Questions (Q&A)"
+        subtitle="Manage customer questions asked on product pages, publish replies, and moderate inquiries."
+      />
+
+      {/* Filter and Search Bar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+        <div className="inline-flex rounded-lg border bg-muted/40 p-1 text-xs">
+          {[
+            { id: 'all', label: 'All' },
+            { id: 'pending', label: `Pending (${meta?.pending_count ?? 0})` },
+            { id: 'answered', label: `Answered (${meta?.answered_count ?? 0})` },
+            { id: 'rejected', label: 'Rejected' },
+          ].map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => {
+                setPage(1)
+                setStatus(f.id)
+              }}
+              className={`px-3 py-1.5 rounded-md font-semibold cursor-pointer transition-colors ${
+                status === f.id
+                  ? 'bg-background text-foreground shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
+        <form onSubmit={handleSearchSubmit} className="relative flex-1 sm:max-w-xs">
+          <Input
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="Search questions or author..."
+            className="pr-8 text-xs h-9"
+          />
+          <button
+            type="submit"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            <SearchIcon className="size-3.5" />
+          </button>
+        </form>
+      </div>
+
+      {query.isPending ? (
+        <Skeleton className="h-48 w-full" />
+      ) : query.error ? (
+        <ErrorMessage error={query.error} />
+      ) : (
+        <>
+          <div className="overflow-x-auto rounded-lg border bg-card">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-muted/40">
+                <tr>
+                  <th className="px-4 py-3 font-medium whitespace-nowrap">Product</th>
+                  <th className="px-4 py-3 font-medium whitespace-nowrap">Customer</th>
+                  <th className="px-4 py-3 font-medium">Question</th>
+                  <th className="px-4 py-3 font-medium">Store Reply</th>
+                  <th className="px-4 py-3 font-medium whitespace-nowrap">Status</th>
+                  <th className="px-4 py-3 font-medium whitespace-nowrap">Date</th>
+                  <th className="w-16 px-4 py-3 text-right font-medium whitespace-nowrap">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {query.data.data.map((q) => (
+                  <tr key={q.id} className="border-t align-top hover:bg-muted/20">
+                    <td className="px-4 py-3 font-medium text-xs max-w-[180px]">
+                      {q.product ? (
+                        <div className="flex items-center gap-2">
+                          {q.product.image_url ? (
+                            <img
+                              src={q.product.image_url}
+                              alt=""
+                              className="size-8 rounded object-cover shrink-0 border"
+                            />
+                          ) : (
+                            <div className="size-8 rounded bg-muted flex items-center justify-center shrink-0 text-[10px] font-bold text-muted-foreground">
+                              IMG
+                            </div>
+                          )}
+                          <span className="line-clamp-2 leading-tight">{q.product.name}</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">Unknown Product</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-xs whitespace-nowrap">
+                      <div className="font-semibold text-foreground">{q.author_name}</div>
+                      <div className="text-muted-foreground text-[11px]">{q.author_email}</div>
+                    </td>
+                    <td className="px-4 py-3 text-xs max-w-xs">
+                      <p className="line-clamp-3 leading-relaxed text-foreground font-medium m-0">
+                        {q.question}
+                      </p>
+                    </td>
+                    <td className="px-4 py-3 text-xs max-w-xs">
+                      {q.answer ? (
+                        <div className="space-y-0.5">
+                          <p className="line-clamp-2 leading-relaxed text-muted-foreground m-0">
+                            {q.answer}
+                          </p>
+                          <span className="text-[10px] text-muted-foreground font-medium">
+                            By {q.answered_by || 'Store'}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-amber-600 dark:text-amber-400 font-medium italic text-[11px]">
+                          Pending answer
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-xs">
+                      <StatusBadge
+                        status={q.status}
+                        label={
+                          q.status === 'answered'
+                            ? 'Answered'
+                            : q.status === 'pending'
+                              ? 'Pending'
+                              : 'Rejected'
+                        }
+                        tone={
+                          q.status === 'answered'
+                            ? 'success'
+                            : q.status === 'pending'
+                              ? 'warning'
+                              : 'destructive'
+                        }
+                      />
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-xs text-muted-foreground">
+                      {new Date(q.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="w-16 px-4 py-3 text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleOpenReply(q)}
+                          className="h-7 text-xs font-semibold cursor-pointer px-2"
+                        >
+                          Reply
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => void handleDelete(q)}
+                          disabled={deleteMutation.isPending}
+                          className="h-7 size-7 p-0 text-muted-foreground hover:text-destructive cursor-pointer"
+                        >
+                          <Trash2Icon className="size-3.5" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {query.data.data.length === 0 && (
+              <p className="p-8 text-center text-sm text-muted-foreground">
+                No customer questions found.
+              </p>
+            )}
+          </div>
+          {meta && meta.total_pages > 1 && (
+            <Pagination page={page} pages={meta.total_pages} setPage={setPage} />
+          )}
+        </>
+      )}
+
+      {/* Reply Modal */}
+      {replyingQuestion && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-lg rounded-2xl border bg-card p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-start justify-between border-b pb-3">
+              <div>
+                <h3 className="text-base font-bold text-foreground m-0">Reply to Question</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {replyingQuestion.product?.name || 'Product inquiry'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReplyingQuestion(null)}
+                className="text-muted-foreground hover:text-foreground text-sm font-semibold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="rounded-lg bg-muted/50 p-3.5 space-y-1 text-xs">
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span className="font-semibold text-foreground">
+                  {replyingQuestion.author_name}
+                </span>
+                <span>{replyingQuestion.author_email}</span>
+              </div>
+              <p className="text-foreground leading-relaxed m-0 font-medium">
+                "{replyingQuestion.question}"
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="question-answer-text" className="text-xs font-semibold">
+                  Store Answer
+                </Label>
+                <textarea
+                  id="question-answer-text"
+                  rows={4}
+                  value={answerText}
+                  onChange={(e) => setAnswerText(e.target.value)}
+                  placeholder="Type your official answer to display on the storefront..."
+                  className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="question-answered-by" className="text-xs font-semibold">
+                    Answered By (Signature)
+                  </Label>
+                  <Input
+                    id="question-answered-by"
+                    value={answeredBy}
+                    onChange={(e) => setAnsweredBy(e.target.value)}
+                    placeholder="e.g. WallX Support Team"
+                    className="text-xs h-8"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="question-status" className="text-xs font-semibold">
+                    Status
+                  </Label>
+                  <NativeSelect
+                    id="question-status"
+                    value={targetStatus}
+                    onChange={(e) => setTargetStatus(e.target.value as any)}
+                    className="text-xs h-8"
+                  >
+                    <option value="answered">Answered &amp; Published</option>
+                    <option value="pending">Pending Moderation</option>
+                    <option value="rejected">Rejected / Hidden</option>
+                  </NativeSelect>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setReplyingQuestion(null)}
+                className="h-8 text-xs cursor-pointer"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                disabled={!answerText.trim() || updateMutation.isPending}
+                onClick={() =>
+                  updateMutation.mutate({
+                    id: replyingQuestion.id,
+                    data: {
+                      answer: answerText.trim(),
+                      answered_by: answeredBy.trim(),
+                      status: targetStatus,
+                    },
+                  })
+                }
+                className="h-8 text-xs font-semibold cursor-pointer"
+              >
+                {updateMutation.isPending ? 'Saving...' : 'Save & Publish'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function FormQuestionsSection({ storeId }: { storeId: string }) {
   const { permissions } = usePermissions()
   const canCreate = permissions.can('create', 'review_question')
   const canDelete = permissions.can('destroy', 'review_question') || canCreate

@@ -187,6 +187,8 @@ export interface ReviewStoreSettings {
   schema_include_aggregate_rating?: boolean;
   schema_include_offers?: boolean;
   schema_show_shipping?: boolean;
+  schema_show_returns?: boolean;
+  schema_return_days?: number;
   schema_price_valid_days?: number;
   schema_max_reviews_count?: number;
   schema_item_condition?: string;
@@ -249,4 +251,17 @@ export interface ReportReviewInput {
   reason: string;
   details?: string;
 }
+
+export interface ProductQuestionItem {
+  id: string;
+  product_id?: string;
+  author_name: string;
+  question: string;
+  answer: string | null;
+  answered_by: string | null;
+  status: string;
+  created_at: string;
+  answered_at: string | null;
+}
+
 

@@ -2,6 +2,7 @@ import { computeFileMd5Base64 } from "./md5.js";
 import type {
   CreateReviewInput,
   ProductCardSummary,
+  ProductQuestionItem,
   ReportReviewInput,
   ReviewEligibilityResponse,
   ReviewFiltersResponse,
@@ -308,6 +309,28 @@ export class ProductReviewsClient {
   ): Promise<{ reported: boolean; flagged_count: number }> {
     return this.request<{ reported: boolean; flagged_count: number }>(
       `/api/v3/store/reviews/${encodeURIComponent(reviewId)}/reports`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      },
+    );
+  }
+
+  async getProductQuestions(
+    productId: string,
+  ): Promise<{ data: ProductQuestionItem[]; meta: { total_count: number } }> {
+    return this.request<{ data: ProductQuestionItem[]; meta: { total_count: number } }>(
+      `/api/v3/store/products/${encodeURIComponent(productId)}/questions`,
+    );
+  }
+
+  async askQuestion(
+    productId: string,
+    payload: { name: string; email: string; question: string },
+  ): Promise<{ data: ProductQuestionItem; message: string }> {
+    return this.request<{ data: ProductQuestionItem; message: string }>(
+      `/api/v3/store/products/${encodeURIComponent(productId)}/questions`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

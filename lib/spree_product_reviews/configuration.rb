@@ -103,6 +103,8 @@ module SpreeProductReviews
     preference :schema_include_aggregate_rating, :boolean, default: true
     preference :schema_include_offers, :boolean, default: true
     preference :schema_show_shipping, :boolean, default: true
+    preference :schema_show_returns, :boolean, default: true
+    preference :schema_return_days, :integer, default: 7
     preference :schema_price_valid_days, :integer, default: 30
     preference :schema_max_reviews_count, :integer, default: 10
     preference :schema_item_condition, :string, default: 'NewCondition'

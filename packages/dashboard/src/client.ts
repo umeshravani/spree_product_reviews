@@ -1,5 +1,5 @@
 import { adminClient } from '@spree/dashboard-core'
-import type { Choice, Page, Question, Review, ReviewCounts, ReviewSettings } from './types'
+import type { Choice, Page, ProductQuestion, Question, Review, ReviewCounts, ReviewSettings } from './types'
 
 export interface ReviewListFilters {
   page: number
@@ -101,4 +101,22 @@ export const reviewsClient = {
       params: { page, limit: 50, 'q[search]': search || undefined },
     }),
   product: (id: string) => adminClient.request<Choice>('GET', `/products/${id}`),
+  productQuestions: (params?: { page?: number; per_page?: number; status?: string; q?: string; product_id?: string }) =>
+    adminClient.request<{
+      data: ProductQuestion[]
+      meta: {
+        total_count: number
+        page: number
+        per_page: number
+        total_pages: number
+        pending_count: number
+        answered_count: number
+      }
+    }>('GET', '/product_questions', { params }),
+  productQuestion: (id: string) =>
+    adminClient.request<{ data: ProductQuestion }>('GET', `/product_questions/${id}`),
+  updateProductQuestion: (id: string, body: { answer?: string; status?: string; answered_by?: string }) =>
+    adminClient.request<{ data: ProductQuestion; message: string }>('PATCH', `/product_questions/${id}`, { body }),
+  deleteProductQuestion: (id: string) =>
+    adminClient.request<{ success: boolean; message: string }>('DELETE', `/product_questions/${id}`),
 }

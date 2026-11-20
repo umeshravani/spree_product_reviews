@@ -238,7 +238,7 @@ export function ReviewCard({
                     key={item.id ?? `${item.url}-${idx}`}
                     type="button"
                     onClick={() => onImageClick?.(review.media, idx)}
-                    className="group relative w-20 h-32 rounded-lg overflow-hidden border border-neutral-200 hover:ring-2 hover:ring-black transition focus:outline-none cursor-pointer bg-neutral-900 shrink-0"
+                    className="relative w-20 h-20 flex-shrink-0 rounded-xl overflow-hidden border-2 transition-colors bg-gray-100 border-transparent hover:border-gray-300 focus:outline-none cursor-pointer"
                     aria-label={`View ${video ? "video" : "photo"} attachment ${idx + 1}`}
                   >
                     {video ? (
@@ -248,11 +248,11 @@ export function ReviewCard({
                           preload="metadata"
                           muted
                           playsInline
-                          className="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-200"
+                          className="w-full h-full object-cover"
                         />
-                        <span className="absolute inset-0 flex items-center justify-center bg-black/25 group-hover:bg-black/35 transition-colors">
-                          <span className="w-8 h-8 rounded-full bg-white/90 text-black flex items-center justify-center shadow">
-                            <Play className="w-4 h-4 fill-current ml-0.5" />
+                        <span className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors">
+                          <span className="w-7 h-7 rounded-full bg-white/90 text-black flex items-center justify-center shadow">
+                            <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
                           </span>
                         </span>
                       </>
@@ -260,7 +260,7 @@ export function ReviewCard({
                       <img
                         src={item.url}
                         alt={item.alt || `Customer upload ${idx + 1}`}
-                        className="w-full h-full object-cover bg-neutral-100 group-hover:scale-105 transition-transform duration-200"
+                        className="w-full h-full object-cover"
                         loading="lazy"
                       />
                     )}

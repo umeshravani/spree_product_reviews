@@ -31,6 +31,23 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>('general')
   const [draft, setDraft] = useState<ReviewSettings | null>(null)
   const [savedBanner, setSavedBanner] = useState(false)
+  const [editingTemplateKey, setEditingTemplateKey] = useState<string | null>(null)
+
+  // Retrieve store email branding
+  let storeName = 'Artolika.Inc'
+  let supportEmail = 'support@example.com'
+  let senderEmail = 'no-reply@example.com'
+
+  try {
+    const storeContext = useStore()
+    if (storeContext?.store) {
+      if (storeContext.store.name) storeName = storeContext.store.name
+      if (storeContext.store.customer_support_email) supportEmail = storeContext.store.customer_support_email
+      if (storeContext.store.mail_from_address) senderEmail = storeContext.store.mail_from_address
+    }
+  } catch {
+    // Outside store provider context fallback
+  }
 
   const query = useQuery({
     queryKey: ['spree-reviews-settings', storeId],
@@ -86,8 +103,29 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
   const isMultiStep = (draft.modal_mode || 'multi') === 'multi'
   const rewardsEnabled = draft.rewards_enabled ?? true
 
+  const selectedTemplate = REVIEW_EMAIL_DEFINITIONS.find((t) => t.key === editingTemplateKey)
+
+  if (selectedTemplate && draft) {
+    return (
+      <div className="flex flex-col gap-6 w-full max-w-none">
+        <EmailTemplateCustomizerView
+          template={selectedTemplate}
+          draft={draft}
+          canEdit={canEdit}
+          storeName={storeName}
+          supportEmail={supportEmail}
+          senderEmail={senderEmail}
+          onBack={() => setEditingTemplateKey(null)}
+          updateField={updateField}
+          onSave={() => saveMutation.mutate(draft)}
+          isSaving={saveMutation.isPending}
+        />
+      </div>
+    )
+  }
+
   return (
-    <div className="flex flex-col gap-6 max-w-4xl">
+    <div className="flex flex-col gap-6 w-full max-w-5xl">
       <PageHeader
         title="Reviews Settings"
         subtitle="Configure customer feedback moderation, incentives, video uploads, and display styling."
@@ -1049,8 +1087,32 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                 disabled={!canEdit || draft.schema_markup_enabled === false}
                 onChange={(val) => updateField('schema_show_shipping', val)}
               />
+              <SettingToggle
+                id="schema-show-returns"
+                label="Include Return Policy Indicator"
+                description="Add merchant return policy (e.g. 7-day returns) metadata to Google Search offers."
+                checked={draft.schema_show_returns ?? true}
+                disabled={!canEdit || draft.schema_markup_enabled === false}
+                onChange={(val) => updateField('schema_show_returns', val)}
+              />
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Return Window (Days)</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={90}
+                    disabled={!canEdit || draft.schema_markup_enabled === false}
+                    value={draft.schema_return_days ?? 7}
+                    onChange={(e) =>
+                      updateField('schema_return_days', Number(e.target.value) || 7)
+                    }
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Days allowed for returns.
+                  </p>
+                </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-medium">Price Validity (Days)</Label>
                   <Input
@@ -1064,7 +1126,7 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                     }
                   />
                   <p className="text-[11px] text-muted-foreground">
-                    Days until offer price expiration.
+                    Offer price expiration.
                   </p>
                 </div>
                 <div className="space-y-1.5">
@@ -1080,11 +1142,11 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                     <option value="DamagedCondition">Damaged</option>
                   </NativeSelect>
                   <p className="text-[11px] text-muted-foreground">
-                    Schema.org condition specification.
+                    Schema.org condition.
                   </p>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-medium">Max Reviews in Schema</Label>
+                  <Label className="text-xs font-medium">Max Reviews</Label>
                   <Input
                     type="number"
                     min={1}
@@ -1096,7 +1158,7 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                     }
                   />
                   <p className="text-[11px] text-muted-foreground">
-                    Number of approved reviews in payload.
+                    Reviews count in schema.
                   </p>
                 </div>
               </div>
@@ -1145,12 +1207,12 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                     <span>›</span>
                     <span>products</span>
                     <span>›</span>
-                    <span className="truncate">handcrafted-wall-art-test</span>
+                    <span className="truncate">lorem-ipsum-product</span>
                   </div>
 
                   {/* Title Link */}
                   <div className="text-base text-blue-600 dark:text-blue-400 font-medium hover:underline cursor-pointer">
-                    Handcrafted Wall Art Test - Premium Canvas Artwork
+                    Lorem Ipsum Dolor - Premium Store Collection
                   </div>
 
                   {/* Rich Snippet Details Line */}
@@ -1159,9 +1221,9 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                       {draft.schema_include_aggregate_rating !== false && (
                         <div className="flex items-center gap-1 font-medium text-foreground">
                           <span style={{ color: draft.title_star_color || '#FBBF24' }}>
-                            ★★★★★
+                            ★
                           </span>
-                          <span>Rating: 4.8 · ‎120 reviews</span>
+                          <span>4.1 · ‎1.5K reviews</span>
                         </div>
                       )}
                       {draft.schema_include_offers !== false && (
@@ -1169,7 +1231,8 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                           <span>·</span>
                           <span className="font-medium text-foreground">₹2,900.00</span>
                           <span>·</span>
-                          <span className="text-emerald-700 dark:text-emerald-400 font-medium">
+                          <span className="inline-flex items-center gap-1 font-medium text-emerald-700 dark:text-emerald-400">
+                            <span className="inline-block size-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400" />
                             In stock
                           </span>
                         </>
@@ -1180,13 +1243,36 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                           <span className="text-muted-foreground">Free delivery</span>
                         </>
                       )}
+                      {draft.schema_show_returns !== false && (
+                        <>
+                          <span>·</span>
+                          <span className="text-muted-foreground">
+                            {draft.schema_return_days ?? 7}-day returns
+                          </span>
+                        </>
+                      )}
                     </div>
                   )}
 
-                  {/* Snippet Description */}
-                  <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                    Handcrafted premium quality wall art with detailed textures and rich colors. Read verified customer reviews and ratings, see customer photos, and shop online with fast delivery.
-                  </p>
+                  {/* Snippet Description with Thumbnail Image on Right */}
+                  <div className="flex items-start justify-between gap-4 pt-1">
+                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed flex-1 m-0">
+                      Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.
+                    </p>
+                    <div className="size-16 sm:size-20 rounded-lg overflow-hidden border border-border bg-muted/40 shrink-0 shadow-xs flex items-center justify-center">
+                      <svg
+                        className="size-8 text-muted-foreground/40"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                      >
+                        <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+                        <circle cx="9" cy="9" r="2" />
+                        <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+                      </svg>
+                    </div>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -1201,6 +1287,7 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
           updateField={updateField}
           onSave={() => saveMutation.mutate(draft)}
           isSaving={saveMutation.isPending}
+          onEditTemplate={(key) => setEditingTemplateKey(key)}
         />
       )}
     </div>
@@ -1651,6 +1738,7 @@ function EmailTemplateCustomizerView({
   const [previewMode, setPreviewMode] = useState<'email' | 'text'>('email')
   const [deviceMode, setDeviceMode] = useState<'desktop' | 'mobile'>('desktop')
   const starColor = draft.bottom_star_color || '#FBBF24'
+  const bodyLines = (currentBody || template.defaultBody || '').split('\n')
 
   const handleResetToDefault = () => {
     updateField(template.subjectField, '' as any)
@@ -1773,14 +1861,21 @@ function EmailTemplateCustomizerView({
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Textarea
-                disabled={!canEdit}
-                rows={14}
-                value={currentBody}
-                onChange={(e) => updateField(template.bodyField, e.target.value as any)}
-                placeholder={template.defaultBody}
-                className="font-mono text-xs bg-muted/15 border rounded-lg p-3 w-full focus:ring-1 focus:ring-primary leading-relaxed resize-y"
-              />
+              <div className="flex border rounded-lg bg-card overflow-hidden focus-within:ring-1 focus-within:ring-primary">
+                <div className="select-none bg-muted/40 px-2.5 py-3 text-right font-mono text-[11px] text-muted-foreground/60 border-r border-border leading-relaxed min-w-[2.5rem]">
+                  {bodyLines.map((_, i) => (
+                    <div key={i}>{i + 1}</div>
+                  ))}
+                </div>
+                <Textarea
+                  disabled={!canEdit}
+                  rows={Math.max(16, bodyLines.length)}
+                  value={currentBody}
+                  onChange={(e) => updateField(template.bodyField, e.target.value as any)}
+                  placeholder={template.defaultBody}
+                  className="font-mono text-xs bg-transparent border-0 rounded-none p-3 w-full focus:outline-none focus:ring-0 leading-relaxed resize-y"
+                />
+              </div>
             </CardContent>
           </Card>
 
@@ -1865,25 +1960,48 @@ function EmailTemplateCustomizerView({
                       type="button"
                       onClick={() => setDeviceMode('desktop')}
                       title="Desktop view"
-                      className={`px-2 py-1 rounded-md text-xs cursor-pointer transition-colors ${
+                      className={`p-1.5 rounded-md cursor-pointer transition-colors ${
                         deviceMode === 'desktop'
                           ? 'bg-background text-foreground shadow-xs'
                           : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
-                      🖥️
+                      <svg
+                        className="size-4"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <rect width="20" height="14" x="2" y="3" rx="2" />
+                        <line x1="8" x2="16" y1="21" y2="21" />
+                        <line x1="12" x2="12" y1="17" y2="21" />
+                      </svg>
                     </button>
                     <button
                       type="button"
                       onClick={() => setDeviceMode('mobile')}
                       title="Mobile view"
-                      className={`px-2 py-1 rounded-md text-xs cursor-pointer transition-colors ${
+                      className={`p-1.5 rounded-md cursor-pointer transition-colors ${
                         deviceMode === 'mobile'
                           ? 'bg-background text-foreground shadow-xs'
                           : 'text-muted-foreground hover:text-foreground'
                       }`}
                     >
-                      📱
+                      <svg
+                        className="size-4"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <rect width="14" height="20" x="5" y="2" rx="2" ry="2" />
+                        <line x1="12" x2="12.01" y1="18" y2="18" />
+                      </svg>
                     </button>
                   </div>
                 </div>
@@ -1913,16 +2031,17 @@ function ReviewMarketingSettingsTab({
   draft,
   canEdit,
   updateField,
-  onSave,
-  isSaving,
+  onSave: _onSave,
+  isSaving: _isSaving,
+  onEditTemplate,
 }: {
   draft: ReviewSettings
   canEdit: boolean
   updateField: <K extends keyof ReviewSettings>(key: K, value: ReviewSettings[K]) => void
   onSave: () => void
   isSaving: boolean
+  onEditTemplate: (key: string) => void
 }) {
-  const [editingTemplateKey, setEditingTemplateKey] = useState<string | null>(null)
   const [previewModalTemplate, setPreviewModalTemplate] = useState<ReviewEmailTemplateDefinition | null>(null)
   const emailsEnabled = draft.send_review_emails_to_customers !== false
 
@@ -1940,25 +2059,6 @@ function ReviewMarketingSettingsTab({
     }
   } catch {
     // Outside store provider context fallback
-  }
-
-  const selectedTemplate = REVIEW_EMAIL_DEFINITIONS.find((t) => t.key === editingTemplateKey)
-
-  if (selectedTemplate) {
-    return (
-      <EmailTemplateCustomizerView
-        template={selectedTemplate}
-        draft={draft}
-        canEdit={canEdit}
-        storeName={storeName}
-        supportEmail={supportEmail}
-        senderEmail={senderEmail}
-        onBack={() => setEditingTemplateKey(null)}
-        updateField={updateField}
-        onSave={onSave}
-        isSaving={isSaving}
-      />
-    )
   }
 
   return (
@@ -2093,7 +2193,7 @@ function ReviewMarketingSettingsTab({
                       type="button"
                       size="sm"
                       className="h-8 text-xs font-semibold cursor-pointer"
-                      onClick={() => setEditingTemplateKey(tmpl.key)}
+                      onClick={() => onEditTemplate(tmpl.key)}
                     >
                       Customize Template
                     </Button>
@@ -2157,7 +2257,7 @@ function ReviewMarketingSettingsTab({
                   onClick={() => {
                     const k = previewModalTemplate.key
                     setPreviewModalTemplate(null)
-                    setEditingTemplateKey(k)
+                    onEditTemplate(k)
                   }}
                   className="h-8 text-xs font-semibold cursor-pointer"
                 >

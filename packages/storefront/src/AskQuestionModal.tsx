@@ -66,7 +66,7 @@ export function AskQuestionModal({
         });
       } else if (productId) {
         const res = await fetch(
-          `/api/v3/store/products/${encodeURIComponent(productId)}/reviews/ask_question`,
+          `/api/v3/store/products/${encodeURIComponent(productId)}/questions`,
           {
             method: "POST",
             headers: {

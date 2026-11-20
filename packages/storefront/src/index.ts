@@ -25,8 +25,10 @@ export {
   type ProductRatingHeaderProps,
 } from "./ProductRatingHeader.js";
 export {
+  buildProductQaJsonLdSchema,
   buildProductReviewsJsonLdSchema,
   type ProductOfferSchemaInput,
+  ProductQaJsonLd,
   ProductReviewsJsonLd,
   type ProductReviewsJsonLdProps,
 } from "./ProductReviewsJsonLd.js";
