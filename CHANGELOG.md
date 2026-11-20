@@ -22,7 +22,7 @@ Companion packages:
 - **Appearance & Email Settings Preferences:** Added `product_card_format` (`stars_count` vs `single_star`), `product_card_show_count`, and email notification toggles (`send_review_emails_to_customers`, `send_review_posted_email`, etc.) to `SpreeProductReviews::Configuration` and `Spree::ReviewSetting`.
 
 #### Admin Dashboard (`@umeshravani/spree-product-reviews-dashboard` `2.0.0`)
-- **Marketing Tab in Review Settings:** Added dedicated **Marketing** tab under `/reviews/settings` with master switch "Send review emails to customers", individual lifecycle email toggles, and "Email Templates" card with direct links to Spree's native template editor (`/$storeId/settings/emails/templates/$templateId`) plus quick preview modals.
+- **In-Plugin Email Template Customizer:** Built a dedicated Spree-style template customizer directly inside `/reviews/settings` with a side-by-side editor on the left and live working preview on the right (Email vs Plain text, Desktop vs Mobile views). Automatically inherits store branding (Logo, Accent Color, Sender Address, and Customer Support Email) from `/settings/emails` without touching dashboard core files or external routes. Merged custom subject and body persistence into `Spree::ReviewSetting` and `Spree::ProductReviewMailer`.
 - **Product Card Display Appearance:** Added **Product Card Display Style** selector supporting both 5-star count and single-star formats with review count toggles and live storefront card preview.
 
 #### Storefront (`@umeshravani/spree-product-reviews-storefront` `2.0.0`)

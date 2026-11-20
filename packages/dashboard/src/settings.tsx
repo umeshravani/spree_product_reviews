@@ -1,4 +1,4 @@
-import { PageHeader, usePermissions } from '@spree/dashboard-core'
+import { PageHeader, usePermissions, useStore } from '@spree/dashboard-core'
 import {
   Badge,
   Button,
@@ -13,7 +13,6 @@ import {
   Switch,
   Textarea,
 } from '@spree/dashboard-ui'
-import { Link } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { reviewsClient } from './client'
@@ -1199,8 +1198,9 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
         <ReviewMarketingSettingsTab
           draft={draft}
           canEdit={canEdit}
-          storeId={storeId}
           updateField={updateField}
+          onSave={() => saveMutation.mutate(draft)}
+          isSaving={saveMutation.isPending}
         />
       )}
     </div>
@@ -1235,76 +1235,731 @@ function SettingToggle({
   )
 }
 
-interface ReviewEmailTemplateInfo {
+interface ReviewEmailTemplateDefinition {
+  key: string
   id: string
   name: string
   description: string
-  subject: string
-  previewText: string
+  subjectField: keyof ReviewSettings
+  bodyField: keyof ReviewSettings
+  defaultSubject: string
+  defaultBody: string
+  variables: { name: string; desc: string }[]
 }
 
-const REVIEW_EMAIL_TEMPLATES: ReviewEmailTemplateInfo[] = [
+const REVIEW_EMAIL_DEFINITIONS: ReviewEmailTemplateDefinition[] = [
   {
+    key: 'review_posted',
     id: 'spree.product_review_mailer.review_posted_email',
     name: 'Review Posted',
     description: 'Sent to customers immediately after they submit a new product review.',
-    subject: '{{ store.name }} - Thank you for reviewing {{ review.product_name }}',
-    previewText:
-      'Thank you for your feedback! We have received your 5-star review for Handcrafted Wall Art Test.',
+    subjectField: 'email_review_posted_subject',
+    bodyField: 'email_review_posted_body',
+    defaultSubject: '{{ store.name }} - Thank you for reviewing {{ review.product_name }}',
+    defaultBody: `<mj-section>
+  <mj-column css-class="hero">
+    <mj-text mj-class="heading">Thank you for your feedback!</mj-text>
+    <mj-text mj-class="greeting">Hello {{ review.author_name }},</mj-text>
+    <mj-text mj-class="lead">We have received your {{ review.rating }}-star review for <strong>{{ review.product_name }}</strong>.</mj-text>
+    <mj-text mj-class="body">"{{ review.body }}"</mj-text>
+    <mj-button href="{{ review.product_url }}">View Product</mj-button>
+    <mj-text mj-class="note">Your review will be visible once reviewed by our moderation team.</mj-text>
+  </mj-column>
+</mj-section>`,
+    variables: [
+      { name: '{{ store.name }}', desc: 'Your store name' },
+      { name: '{{ store.url }}', desc: 'Storefront URL' },
+      { name: '{{ review.author_name }}', desc: 'Reviewer name' },
+      { name: '{{ review.product_name }}', desc: 'Product title' },
+      { name: '{{ review.rating }}', desc: 'Numeric rating (1-5)' },
+      { name: '{{ review.body }}', desc: 'Review text' },
+      { name: '{{ review.product_url }}', desc: 'Product page URL' },
+    ],
   },
   {
+    key: 'review_approved',
     id: 'spree.product_review_mailer.review_approved_email',
-    name: 'Review Approved',
+    name: 'Review Approved & Published',
     description: 'Sent to the customer when moderation approves their review and makes it live.',
-    subject: '{{ store.name }} - Your review on {{ review.product_name }} is live!',
-    previewText:
-      'Great news! Your 5-star review for Handcrafted Wall Art Test has been approved and is now live on our store.',
+    subjectField: 'email_review_approved_subject',
+    bodyField: 'email_review_approved_body',
+    defaultSubject: '{{ store.name }} - Your review on {{ review.product_name }} is live!',
+    defaultBody: `<mj-section>
+  <mj-column css-class="hero">
+    <mj-text mj-class="heading">Your review has been published!</mj-text>
+    <mj-text mj-class="greeting">Hello {{ review.author_name }},</mj-text>
+    <mj-text mj-class="lead">Great news! Your {{ review.rating }}-star review for <strong>{{ review.product_name }}</strong> has been approved and is now live on our store.</mj-text>
+    <mj-button href="{{ review.product_url }}">View Your Review</mj-button>
+    <mj-text mj-class="note">Thank you for helping fellow shoppers make informed choices.</mj-text>
+  </mj-column>
+</mj-section>`,
+    variables: [
+      { name: '{{ store.name }}', desc: 'Your store name' },
+      { name: '{{ review.author_name }}', desc: 'Reviewer name' },
+      { name: '{{ review.product_name }}', desc: 'Product title' },
+      { name: '{{ review.rating }}', desc: 'Numeric rating (1-5)' },
+      { name: '{{ review.product_url }}', desc: 'Product page URL' },
+    ],
   },
   {
+    key: 'review_rejected',
     id: 'spree.product_review_mailer.review_rejected_email',
     name: 'Review Rejected',
     description: 'Sent to the customer if their review does not meet store guidelines.',
-    subject: '{{ store.name }} - Update regarding your review on {{ review.product_name }}',
-    previewText:
-      'Thank you for submitting a review. Unfortunately, your review could not be published because it did not meet our guidelines.',
+    subjectField: 'email_review_rejected_subject',
+    bodyField: 'email_review_rejected_body',
+    defaultSubject: '{{ store.name }} - Update regarding your review on {{ review.product_name }}',
+    defaultBody: `<mj-section>
+  <mj-column css-class="hero">
+    <mj-text mj-class="heading">Review Update</mj-text>
+    <mj-text mj-class="greeting">Hello {{ review.author_name }},</mj-text>
+    <mj-text mj-class="lead">Thank you for submitting a review for <strong>{{ review.product_name }}</strong>. Unfortunately, your submission could not be published because it did not meet our community guidelines.</mj-text>
+    {% if review.moderator_note != blank %}
+    <mj-text mj-class="body">Reason: {{ review.moderator_note }}</mj-text>
+    {% endif %}
+    <mj-button href="{{ review.product_url }}">Visit Product Page</mj-button>
+  </mj-column>
+</mj-section>`,
+    variables: [
+      { name: '{{ store.name }}', desc: 'Your store name' },
+      { name: '{{ review.author_name }}', desc: 'Reviewer name' },
+      { name: '{{ review.product_name }}', desc: 'Product title' },
+      { name: '{{ review.moderator_note }}', desc: 'Staff explanation note' },
+      { name: '{{ review.product_url }}', desc: 'Product page URL' },
+    ],
   },
   {
+    key: 'review_spam',
     id: 'spree.product_review_mailer.review_spam_email',
-    name: 'Review Spam',
+    name: 'Review Spam Flagged',
     description: 'Sent when a review is flagged as spam by automated or manual moderation.',
-    subject: '{{ store.name }} - Notice regarding your review',
-    previewText: 'Your recent review was automatically flagged by our spam filter and removed.',
+    subjectField: 'email_review_spam_subject',
+    bodyField: 'email_review_spam_body',
+    defaultSubject: '{{ store.name }} - Notice regarding your review',
+    defaultBody: `<mj-section>
+  <mj-column css-class="hero">
+    <mj-text mj-class="heading">Review Flagged</mj-text>
+    <mj-text mj-class="greeting">Hello {{ review.author_name }},</mj-text>
+    <mj-text mj-class="lead">Your recent review for {{ review.product_name }} was automatically flagged by our spam filter and removed.</mj-text>
+    <mj-text mj-class="note">If you believe this was an error, please reach out to customer support.</mj-text>
+  </mj-column>
+</mj-section>`,
+    variables: [
+      { name: '{{ store.name }}', desc: 'Your store name' },
+      { name: '{{ review.author_name }}', desc: 'Reviewer name' },
+      { name: '{{ review.product_name }}', desc: 'Product title' },
+    ],
   },
   {
+    key: 'review_deleted',
     id: 'spree.product_review_mailer.review_deleted_email',
     name: 'Review Deleted',
     description: 'Sent to the customer when their existing review is removed or deleted.',
-    subject: '{{ store.name }} - Your review on {{ review.product_name }} has been removed',
-    previewText: 'Your review for Handcrafted Wall Art Test has been removed from our store.',
+    subjectField: 'email_review_deleted_subject',
+    bodyField: 'email_review_deleted_body',
+    defaultSubject: '{{ store.name }} - Your review on {{ review.product_name }} has been removed',
+    defaultBody: `<mj-section>
+  <mj-column css-class="hero">
+    <mj-text mj-class="heading">Review Removed</mj-text>
+    <mj-text mj-class="greeting">Hello {{ review.author_name }},</mj-text>
+    <mj-text mj-class="lead">Your review for <strong>{{ review.product_name }}</strong> has been removed from our store.</mj-text>
+    <mj-text mj-class="note">If you have any questions or concerns, please contact our support team.</mj-text>
+  </mj-column>
+</mj-section>`,
+    variables: [
+      { name: '{{ store.name }}', desc: 'Your store name' },
+      { name: '{{ review.author_name }}', desc: 'Reviewer name' },
+      { name: '{{ review.product_name }}', desc: 'Product title' },
+    ],
   },
   {
+    key: 'solicit_review',
     id: 'spree.product_review_mailer.solicit_review_email',
     name: 'Collect Review on Purchase',
     description: 'Sent to customers after delivery to invite them to review their purchased products.',
-    subject: '{{ store.name }} - How do you like your recent purchase?',
-    previewText:
-      'How did we do? Thank you for your recent purchase of Handcrafted Wall Art Test! We would love to hear your thoughts.',
+    subjectField: 'email_solicit_review_subject',
+    bodyField: 'email_solicit_review_body',
+    defaultSubject: '{{ store.name }} - How do you like your recent purchase?',
+    defaultBody: `<mj-section>
+  <mj-column css-class="hero">
+    <mj-text mj-class="heading">How did we do?</mj-text>
+    <mj-text mj-class="greeting">Hello,</mj-text>
+    <mj-text mj-class="lead">Thank you for your recent purchase of <strong>{{ product.name }}</strong>! We would love to hear your thoughts.</mj-text>
+    <mj-button href="{{ product.url }}">Write a Review</mj-button>
+    <mj-text mj-class="note">It only takes a minute and helps fellow customers make informed decisions.</mj-text>
+  </mj-column>
+</mj-section>`,
+    variables: [
+      { name: '{{ store.name }}', desc: 'Your store name' },
+      { name: '{{ product.name }}', desc: 'Purchased product title' },
+      { name: '{{ product.url }}', desc: 'Link to leave review' },
+    ],
   },
 ]
+
+const SAMPLE_PREVIEW_DATA = {
+  store: {
+    name: 'Artolika.Inc',
+    url: 'https://thewallx.com',
+    customer_support_email: 'care@thewallx.com',
+    mail_from_address: 'no-reply@thewallx.com',
+  },
+  review: {
+    author_name: 'Aarav P.',
+    product_name: 'Handcrafted Wall Art Test',
+    rating: 5,
+    title: 'Stunning Canvas Artwork',
+    body: 'The craftsmanship on this canvas is exceptional! Textures and rich colors look even better in person.',
+    product_url: 'https://thewallx.com/products/handcrafted-wall-art-test',
+    moderator_note: 'Contains promotional links or spam patterns.',
+  },
+  product: {
+    name: 'Handcrafted Wall Art Test',
+    url: 'https://thewallx.com/products/handcrafted-wall-art-test',
+  },
+}
+
+function interpolateVariables(
+  text: string,
+  storeName?: string,
+  supportEmail?: string,
+  fromEmail?: string,
+): string {
+  if (!text) return ''
+  const sName = storeName || SAMPLE_PREVIEW_DATA.store.name
+  const supEmail = supportEmail || SAMPLE_PREVIEW_DATA.store.customer_support_email
+  const frmEmail = fromEmail || SAMPLE_PREVIEW_DATA.store.mail_from_address
+  const rev = SAMPLE_PREVIEW_DATA.review
+  const prod = SAMPLE_PREVIEW_DATA.product
+
+  return text
+    .replace(/\{\{\s*store\.name\s*\}\}/g, sName)
+    .replace(/\{\{\s*store\.url\s*\}\}/g, SAMPLE_PREVIEW_DATA.store.url)
+    .replace(/\{\{\s*store\.customer_support_email\s*\}\}/g, supEmail)
+    .replace(/\{\{\s*store\.mail_from_address\s*\}\}/g, frmEmail)
+    .replace(/\{\{\s*review\.product_name\s*\}\}/g, rev.product_name)
+    .replace(/\{\{\s*review\.author_name\s*\}\}/g, rev.author_name)
+    .replace(/\{\{\s*review\.rating\s*\}\}/g, String(rev.rating))
+    .replace(/\{\{\s*review\.title\s*\}\}/g, rev.title)
+    .replace(/\{\{\s*review\.body\s*\}\}/g, rev.body)
+    .replace(/\{\{\s*review\.product_url\s*\}\}/g, rev.product_url)
+    .replace(/\{\{\s*review\.moderator_note\s*\}\}/g, rev.moderator_note)
+    .replace(/\{\{\s*product\.name\s*\}\}/g, prod.name)
+    .replace(/\{\{\s*product\.url\s*\}\}/g, prod.url)
+    .replace(/\{%\s*if\s+resend\s*%\}.*?\{%\s*endif\s*%\}/g, '')
+    .replace(/\{%\s*if\s+review\.moderator_note\s*!=\s*blank\s*%\}([\s\S]*?)\{%\s*endif\s*%\}/g, '$1')
+}
+
+function parseMjmlElements(content: string) {
+  let heading = ''
+  let greeting = ''
+  let lead = ''
+  let bodyQuote = ''
+  let buttonText = ''
+  let buttonHref = ''
+  let note = ''
+
+  const headingMatch = content.match(/<mj-text[^>]*mj-class=["']heading["'][^>]*>([\s\S]*?)<\/mj-text>/i)
+  if (headingMatch) heading = headingMatch[1].replace(/<\/?[^>]+(>|$)/g, '').trim()
+
+  const greetingMatch = content.match(/<mj-text[^>]*mj-class=["']greeting["'][^>]*>([\s\S]*?)<\/mj-text>/i)
+  if (greetingMatch) greeting = greetingMatch[1].replace(/<\/?[^>]+(>|$)/g, '').trim()
+
+  const leadMatch = content.match(/<mj-text[^>]*mj-class=["']lead["'][^>]*>([\s\S]*?)<\/mj-text>/i)
+  if (leadMatch) lead = leadMatch[1].replace(/<\/?[^>]+(>|$)/g, '').trim()
+
+  const bodyMatch = content.match(/<mj-text[^>]*mj-class=["']body["'][^>]*>([\s\S]*?)<\/mj-text>/i)
+  if (bodyMatch) bodyQuote = bodyMatch[1].replace(/<\/?[^>]+(>|$)/g, '').trim()
+
+  const buttonMatch = content.match(/<mj-button[^>]*href=["']([^"']*)["'][^>]*>([\s\S]*?)<\/mj-button>/i)
+  if (buttonMatch) {
+    buttonHref = buttonMatch[1]
+    buttonText = buttonMatch[2].replace(/<\/?[^>]+(>|$)/g, '').trim()
+  }
+
+  const noteMatch = content.match(/<mj-text[^>]*mj-class=["']note["'][^>]*>([\s\S]*?)<\/mj-text>/i)
+  if (noteMatch) note = noteMatch[1].replace(/<\/?[^>]+(>|$)/g, '').trim()
+
+  return { heading, greeting, lead, bodyQuote, buttonText, buttonHref, note }
+}
+
+function EmailLivePreviewCard({
+  template,
+  subject,
+  body,
+  starColor,
+  storeName,
+  supportEmail,
+  senderEmail,
+  mode,
+  device,
+}: {
+  template: ReviewEmailTemplateDefinition
+  subject: string
+  body: string
+  starColor: string
+  storeName: string
+  supportEmail: string
+  senderEmail: string
+  mode: 'email' | 'text'
+  device: 'desktop' | 'mobile'
+}) {
+  const interpolatedSubject = interpolateVariables(subject, storeName, supportEmail, senderEmail)
+  const interpolatedBody = interpolateVariables(body, storeName, supportEmail, senderEmail)
+  const parsed = parseMjmlElements(interpolatedBody)
+  const isReviewTemplate = template.key === 'review_posted' || template.key === 'review_approved'
+
+  return (
+    <div className="space-y-3">
+      {/* Subject Line Bar */}
+      <div className="rounded-lg bg-muted/40 border px-3.5 py-2.5 flex items-center gap-2 text-xs">
+        <span className="font-semibold text-muted-foreground shrink-0 uppercase tracking-wider text-[10px]">
+          Subject:
+        </span>
+        <span className="font-medium text-foreground truncate">{interpolatedSubject}</span>
+      </div>
+
+      {mode === 'text' ? (
+        <div className="rounded-xl border bg-muted/20 p-5 font-mono text-xs text-foreground whitespace-pre-wrap leading-relaxed max-h-[460px] overflow-y-auto">
+          {`Subject: ${interpolatedSubject}\n\n`}
+          {`${storeName.toUpperCase()}\n----------------------------------------\n\n`}
+          {parsed.heading ? `${parsed.heading}\n\n` : ''}
+          {parsed.greeting ? `${parsed.greeting}\n\n` : ''}
+          {parsed.lead ? `${parsed.lead}\n\n` : ''}
+          {parsed.bodyQuote ? `"${parsed.bodyQuote}"\n\n` : ''}
+          {parsed.buttonText ? `[ ${parsed.buttonText} ] -> ${parsed.buttonHref || 'https://thewallx.com'}\n\n` : ''}
+          {parsed.note ? `${parsed.note}\n\n` : ''}
+          {`----------------------------------------\n© 2026 ${storeName}. All rights reserved.\nSupport: ${supportEmail}`}
+        </div>
+      ) : (
+        <div className="rounded-xl border bg-neutral-100 dark:bg-neutral-950 p-4 sm:p-6 flex justify-center overflow-x-auto min-h-[420px]">
+          <div
+            className={`transition-all duration-200 bg-white dark:bg-neutral-900 border border-neutral-200/90 dark:border-neutral-800 shadow-md ${
+              device === 'mobile'
+                ? 'w-[320px] rounded-3xl p-4 border-4 border-neutral-700 shadow-xl'
+                : 'w-full max-w-[500px] rounded-xl p-6'
+            }`}
+          >
+            {/* Email Header */}
+            <div className="border-b border-neutral-200/80 dark:border-neutral-800 pb-3 flex items-center justify-between">
+              <span className="text-xs font-black tracking-widest uppercase text-neutral-900 dark:text-white">
+                {storeName}
+              </span>
+              <span className="text-[10px] text-neutral-400 font-mono">Storefront Email</span>
+            </div>
+
+            {/* Email Body */}
+            <div className="py-5 space-y-3.5">
+              {parsed.heading && (
+                <h4 className="text-base font-bold text-neutral-900 dark:text-white m-0 leading-snug">
+                  {parsed.heading}
+                </h4>
+              )}
+
+              {parsed.greeting && (
+                <p className="text-xs font-semibold text-neutral-800 dark:text-neutral-200 m-0">
+                  {parsed.greeting}
+                </p>
+              )}
+
+              {parsed.lead && (
+                <p className="text-xs text-neutral-700 dark:text-neutral-300 leading-relaxed m-0">
+                  {parsed.lead}
+                </p>
+              )}
+
+              {isReviewTemplate && (
+                <div className="flex items-center gap-1 py-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <svg
+                      key={star}
+                      className="w-4 h-4 shrink-0"
+                      style={{ color: starColor, fill: starColor }}
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                    </svg>
+                  ))}
+                  <span className="text-[11px] font-semibold text-neutral-500 ml-1">5.0 / 5</span>
+                </div>
+              )}
+
+              {parsed.bodyQuote && (
+                <div className="rounded-lg bg-neutral-50 dark:bg-neutral-800/60 border border-neutral-200/60 dark:border-neutral-700/60 p-3 italic text-xs text-neutral-800 dark:text-neutral-200 leading-relaxed">
+                  "{parsed.bodyQuote}"
+                </div>
+              )}
+
+              {parsed.buttonText && (
+                <div className="pt-2">
+                  <div className="inline-block px-4 py-2 bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 text-xs font-semibold rounded-lg shadow-xs hover:opacity-95 cursor-default">
+                    {parsed.buttonText}
+                  </div>
+                </div>
+              )}
+
+              {parsed.note && (
+                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 m-0 pt-1 leading-relaxed">
+                  {parsed.note}
+                </p>
+              )}
+            </div>
+
+            {/* Email Footer */}
+            <div className="border-t border-neutral-200/80 dark:border-neutral-800 pt-3 text-[10px] text-neutral-400 space-y-1">
+              <p className="m-0">© 2026 {storeName}. All rights reserved.</p>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                <span>Support: {supportEmail}</span>
+                <span>•</span>
+                <span>From: {senderEmail}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function EmailTemplateCustomizerView({
+  template,
+  draft,
+  canEdit,
+  storeName,
+  supportEmail,
+  senderEmail,
+  onBack,
+  updateField,
+  onSave,
+  isSaving,
+}: {
+  template: ReviewEmailTemplateDefinition
+  draft: ReviewSettings
+  canEdit: boolean
+  storeName: string
+  supportEmail: string
+  senderEmail: string
+  onBack: () => void
+  updateField: <K extends keyof ReviewSettings>(key: K, value: ReviewSettings[K]) => void
+  onSave: () => void
+  isSaving: boolean
+}) {
+  const currentSubject = (draft[template.subjectField] as string) || template.defaultSubject
+  const currentBody = (draft[template.bodyField] as string) || template.defaultBody
+  const isCustomized = Boolean(draft[template.subjectField] || draft[template.bodyField])
+
+  const [previewMode, setPreviewMode] = useState<'email' | 'text'>('email')
+  const [deviceMode, setDeviceMode] = useState<'desktop' | 'mobile'>('desktop')
+  const starColor = draft.bottom_star_color || '#FBBF24'
+
+  const handleResetToDefault = () => {
+    updateField(template.subjectField, '' as any)
+    updateField(template.bodyField, '' as any)
+  }
+
+  const handleInsertVariable = (varName: string) => {
+    const existing = currentBody || template.defaultBody
+    updateField(template.bodyField, (existing + ` ${varName}`) as any)
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Editor Subheader */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b pb-4">
+        <div className="flex items-center gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onBack}
+            className="h-8 gap-1.5 text-xs font-semibold cursor-pointer"
+          >
+            ← Back to templates
+          </Button>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-bold tracking-tight text-foreground m-0">
+                {template.name}
+              </h3>
+              {isCustomized ? (
+                <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[10px] font-semibold uppercase">
+                  Customized
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-[10px] uppercase font-normal text-muted-foreground">
+                  Default template
+                </Badge>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">{template.description}</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 self-end sm:self-auto">
+          {isCustomized && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!canEdit || isSaving}
+              onClick={handleResetToDefault}
+              className="h-8 text-xs cursor-pointer text-muted-foreground hover:text-foreground"
+            >
+              Reset to default
+            </Button>
+          )}
+          <Button
+            type="button"
+            size="sm"
+            disabled={!canEdit || isSaving}
+            onClick={onSave}
+            className="h-8 text-xs font-semibold cursor-pointer"
+          >
+            {isSaving ? 'Saving...' : 'Save changes'}
+          </Button>
+        </div>
+      </div>
+
+      {/* 2-Column Split: Editor (Left) & Preview (Right) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        {/* Left: Template Editor */}
+        <div className="space-y-5">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-bold">Email Subject</CardTitle>
+              <CardDescription className="text-xs">
+                Subject line rendered in the customer's inbox.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Input
+                disabled={!canEdit}
+                value={currentSubject}
+                onChange={(e) => updateField(template.subjectField, e.target.value as any)}
+                placeholder={template.defaultSubject}
+                className="font-mono text-xs sm:text-sm"
+              />
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <span className="text-[11px] text-muted-foreground mr-1">Insert:</span>
+                {template.variables.slice(0, 4).map((v) => (
+                  <button
+                    key={v.name}
+                    type="button"
+                    disabled={!canEdit}
+                    onClick={() => {
+                      updateField(template.subjectField, `${currentSubject} ${v.name}` as any)
+                    }}
+                    className="inline-flex items-center px-1.5 py-0.5 rounded bg-muted/60 hover:bg-muted text-[11px] font-mono text-foreground/80 cursor-pointer transition-colors"
+                  >
+                    {v.name}
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-sm font-bold">Template Content</CardTitle>
+                  <CardDescription className="text-xs">
+                    Liquid markup and MJML email elements.
+                  </CardDescription>
+                </div>
+                <span className="text-[10px] font-mono text-muted-foreground uppercase bg-muted/60 px-2 py-0.5 rounded">
+                  MJML / Liquid
+                </span>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Textarea
+                disabled={!canEdit}
+                rows={14}
+                value={currentBody}
+                onChange={(e) => updateField(template.bodyField, e.target.value as any)}
+                placeholder={template.defaultBody}
+                className="font-mono text-xs bg-muted/15 border rounded-lg p-3 w-full focus:ring-1 focus:ring-primary leading-relaxed resize-y"
+              />
+            </CardContent>
+          </Card>
+
+          {/* Variables Reference */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Available Dynamic Variables
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="divide-y divide-border text-xs">
+                {template.variables.map((v) => (
+                  <div
+                    key={v.name}
+                    className="flex items-center justify-between px-4 py-2 hover:bg-muted/20 transition-colors"
+                  >
+                    <div className="space-y-0.5">
+                      <code className="text-[11px] font-bold text-foreground bg-muted/50 px-1 py-0.5 rounded">
+                        {v.name}
+                      </code>
+                      <p className="text-[11px] text-muted-foreground">{v.desc}</p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-[10px] px-2 text-primary hover:text-primary cursor-pointer"
+                      onClick={() => handleInsertVariable(v.name)}
+                    >
+                      + Insert
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right: Live Working Preview */}
+        <div className="space-y-4">
+          <Card>
+            <CardHeader className="pb-3 border-b">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <CardTitle className="text-sm font-bold">Live Customer Preview</CardTitle>
+                  <CardDescription className="text-xs">
+                    Real-time rendering using store email branding &amp; sample data.
+                  </CardDescription>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {/* Mode Switcher */}
+                  <div className="inline-flex rounded-lg border bg-muted/30 p-0.5 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewMode('email')}
+                      className={`px-2.5 py-1 rounded-md text-xs font-semibold cursor-pointer transition-colors ${
+                        previewMode === 'email'
+                          ? 'bg-background text-foreground shadow-xs'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      Email
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewMode('text')}
+                      className={`px-2.5 py-1 rounded-md text-xs font-semibold cursor-pointer transition-colors ${
+                        previewMode === 'text'
+                          ? 'bg-background text-foreground shadow-xs'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      Plain text
+                    </button>
+                  </div>
+
+                  {/* Device Switcher */}
+                  <div className="inline-flex rounded-lg border bg-muted/30 p-0.5 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setDeviceMode('desktop')}
+                      title="Desktop view"
+                      className={`px-2 py-1 rounded-md text-xs cursor-pointer transition-colors ${
+                        deviceMode === 'desktop'
+                          ? 'bg-background text-foreground shadow-xs'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      🖥️
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeviceMode('mobile')}
+                      title="Mobile view"
+                      className={`px-2 py-1 rounded-md text-xs cursor-pointer transition-colors ${
+                        deviceMode === 'mobile'
+                          ? 'bg-background text-foreground shadow-xs'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      📱
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-4">
+              <EmailLivePreviewCard
+                template={template}
+                subject={currentSubject}
+                body={currentBody}
+                starColor={starColor}
+                storeName={storeName}
+                supportEmail={supportEmail}
+                senderEmail={senderEmail}
+                mode={previewMode}
+                device={deviceMode}
+              />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function ReviewMarketingSettingsTab({
   draft,
   canEdit,
-  storeId,
   updateField,
+  onSave,
+  isSaving,
 }: {
   draft: ReviewSettings
   canEdit: boolean
-  storeId: string
   updateField: <K extends keyof ReviewSettings>(key: K, value: ReviewSettings[K]) => void
+  onSave: () => void
+  isSaving: boolean
 }) {
-  const [previewTemplate, setPreviewTemplate] = useState<ReviewEmailTemplateInfo | null>(null)
+  const [editingTemplateKey, setEditingTemplateKey] = useState<string | null>(null)
+  const [previewModalTemplate, setPreviewModalTemplate] = useState<ReviewEmailTemplateDefinition | null>(null)
   const emailsEnabled = draft.send_review_emails_to_customers !== false
+
+  // Retrieve store email branding from @spree/dashboard-core
+  let storeName = 'Artolika.Inc'
+  let supportEmail = 'support@example.com'
+  let senderEmail = 'no-reply@example.com'
+
+  try {
+    const storeContext = useStore()
+    if (storeContext?.store) {
+      if (storeContext.store.name) storeName = storeContext.store.name
+      if (storeContext.store.customer_support_email) supportEmail = storeContext.store.customer_support_email
+      if (storeContext.store.mail_from_address) senderEmail = storeContext.store.mail_from_address
+    }
+  } catch {
+    // Outside store provider context fallback
+  }
+
+  const selectedTemplate = REVIEW_EMAIL_DEFINITIONS.find((t) => t.key === editingTemplateKey)
+
+  if (selectedTemplate) {
+    return (
+      <EmailTemplateCustomizerView
+        template={selectedTemplate}
+        draft={draft}
+        canEdit={canEdit}
+        storeName={storeName}
+        supportEmail={supportEmail}
+        senderEmail={senderEmail}
+        onBack={() => setEditingTemplateKey(null)}
+        updateField={updateField}
+        onSave={onSave}
+        isSaving={isSaving}
+      />
+    )
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -1338,7 +1993,7 @@ function ReviewMarketingSettingsTab({
 
               <SettingToggle
                 id="send-review-approved"
-                label="Review Approved & Published Notification"
+                label="Review Approved &amp; Published Notification"
                 description="Notify reviewers when their submission is approved by a moderator and published live."
                 checked={draft.send_review_approved_email !== false}
                 disabled={!canEdit}
@@ -1391,123 +2046,123 @@ function ReviewMarketingSettingsTab({
             <div>
               <CardTitle>Email Templates</CardTitle>
               <CardDescription>
-                Spree native Liquid and MJML email templates. Edit copy, add variables, and preview formatting.
+                Customize email subjects and message contents directly inside Review Settings with instant live preview.
               </CardDescription>
             </div>
-            <Link
-              to="/$storeId/settings/emails/templates"
-              params={{ storeId }}
-              className="inline-flex items-center text-xs font-semibold text-primary hover:underline"
-            >
-              View all store email templates →
-            </Link>
           </div>
         </CardHeader>
         <CardContent className="p-0">
           <ul className="divide-y divide-border">
-            {REVIEW_EMAIL_TEMPLATES.map((tmpl) => (
-              <li
-                key={tmpl.id}
-                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 hover:bg-muted/30 transition-colors"
-              >
-                <div className="min-w-0 flex-1 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-sm text-foreground">{tmpl.name}</span>
-                    <Badge variant="outline" className="text-[10px] font-normal uppercase py-0 px-1.5">
-                      Default
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground">{tmpl.description}</p>
-                  <p className="text-xs font-mono text-muted-foreground/80 line-clamp-1">{tmpl.subject}</p>
-                </div>
+            {REVIEW_EMAIL_DEFINITIONS.map((tmpl) => {
+              const currentSubject = (draft[tmpl.subjectField] as string) || tmpl.defaultSubject
+              const isCustomized = Boolean(draft[tmpl.subjectField] || draft[tmpl.bodyField])
 
-                <div className="flex items-center gap-2 shrink-0 pt-2 sm:pt-0">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="h-8 text-xs cursor-pointer"
-                    onClick={() => setPreviewTemplate(tmpl)}
-                  >
-                    Quick Preview
-                  </Button>
-                  <Link
-                    to="/$storeId/settings/emails/templates/$templateId"
-                    params={{ storeId, templateId: tmpl.id }}
-                    className="inline-flex items-center justify-center rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 px-3 text-xs font-medium transition-colors"
-                  >
-                    Customize in Spree Editor ↗
-                  </Link>
-                </div>
-              </li>
-            ))}
+              return (
+                <li
+                  key={tmpl.id}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 hover:bg-muted/30 transition-colors"
+                >
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-sm text-foreground">{tmpl.name}</span>
+                      {isCustomized ? (
+                        <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-[10px] font-semibold uppercase py-0 px-1.5">
+                          Customized
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[10px] font-normal uppercase py-0 px-1.5">
+                          Default
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">{tmpl.description}</p>
+                    <p className="text-xs font-mono text-muted-foreground/80 line-clamp-1">{currentSubject}</p>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0 pt-2 sm:pt-0">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-xs cursor-pointer"
+                      onClick={() => setPreviewModalTemplate(tmpl)}
+                    >
+                      Quick Preview
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-8 text-xs font-semibold cursor-pointer"
+                      onClick={() => setEditingTemplateKey(tmpl.key)}
+                    >
+                      Customize Template
+                    </Button>
+                  </div>
+                </li>
+              )
+            })}
           </ul>
         </CardContent>
       </Card>
 
       {/* Quick Preview Modal */}
-      {previewTemplate && (
+      {previewModalTemplate && (
         <div
           role="dialog"
           aria-modal="true"
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4"
         >
-          <div className="fixed inset-0" onClick={() => setPreviewTemplate(null)} />
-          <div className="relative z-10 w-full max-w-lg rounded-xl bg-card border shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="fixed inset-0" onClick={() => setPreviewModalTemplate(null)} />
+          <div className="relative z-10 w-full max-w-2xl rounded-xl bg-card border shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
             <div className="px-5 py-3.5 border-b flex items-center justify-between bg-muted/40">
               <div>
-                <h4 className="text-sm font-bold text-foreground m-0">{previewTemplate.name}</h4>
-                <p className="text-xs text-muted-foreground m-0 font-mono mt-0.5">{previewTemplate.id}</p>
+                <h4 className="text-sm font-bold text-foreground m-0">{previewModalTemplate.name}</h4>
+                <p className="text-xs text-muted-foreground m-0 font-mono mt-0.5">{previewModalTemplate.id}</p>
               </div>
               <button
                 type="button"
-                onClick={() => setPreviewTemplate(null)}
+                onClick={() => setPreviewModalTemplate(null)}
                 className="text-muted-foreground hover:text-foreground p-1 rounded-md text-sm cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <div className="p-5 space-y-4 overflow-y-auto">
-              <div className="rounded-md bg-muted/30 p-3 space-y-1 text-xs">
-                <span className="font-semibold text-muted-foreground">Subject Preview:</span>
-                <p className="font-mono text-foreground">{previewTemplate.subject}</p>
-              </div>
-
-              <div className="rounded-lg border bg-background p-6 space-y-4 shadow-xs">
-                <div className="border-b pb-3">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Artolika.Inc Store
-                  </span>
-                </div>
-                <div className="space-y-2">
-                  <h5 className="text-base font-bold text-foreground m-0">{previewTemplate.name}</h5>
-                  <p className="text-sm text-foreground/90 leading-relaxed">{previewTemplate.previewText}</p>
-                </div>
-                <div className="pt-2">
-                  <div className="inline-block rounded-md bg-primary px-4 py-2 text-xs font-medium text-primary-foreground shadow-xs">
-                    View on Storefront
-                  </div>
-                </div>
-                <div className="border-t pt-4 text-[11px] text-muted-foreground">
-                  <p>© 2026 Artolika.Inc. All rights reserved.</p>
-                </div>
-              </div>
+            <div className="p-5 overflow-y-auto">
+              <EmailLivePreviewCard
+                template={previewModalTemplate}
+                subject={
+                  (draft[previewModalTemplate.subjectField] as string) || previewModalTemplate.defaultSubject
+                }
+                body={
+                  (draft[previewModalTemplate.bodyField] as string) || previewModalTemplate.defaultBody
+                }
+                starColor={draft.bottom_star_color || '#FBBF24'}
+                storeName={storeName}
+                supportEmail={supportEmail}
+                senderEmail={senderEmail}
+                mode="email"
+                device="desktop"
+              />
             </div>
 
             <div className="px-5 py-3 border-t bg-muted/20 flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Preview mode using sample data</span>
+              <span className="text-xs text-muted-foreground">Preview mode using store branding</span>
               <div className="flex items-center gap-2">
-                <Button size="sm" variant="outline" onClick={() => setPreviewTemplate(null)}>
+                <Button size="sm" variant="outline" onClick={() => setPreviewModalTemplate(null)}>
                   Close
                 </Button>
-                <Link
-                  to="/$storeId/settings/emails/templates/$templateId"
-                  params={{ storeId, templateId: previewTemplate.id }}
-                  className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground hover:bg-primary/90 h-8 px-3 text-xs font-medium transition-colors"
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    const k = previewModalTemplate.key
+                    setPreviewModalTemplate(null)
+                    setEditingTemplateKey(k)
+                  }}
+                  className="h-8 text-xs font-semibold cursor-pointer"
                 >
-                  Edit in Spree Editor ↗
-                </Link>
+                  Customize Template
+                </Button>
               </div>
             </div>
           </div>

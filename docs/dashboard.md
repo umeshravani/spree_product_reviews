@@ -28,7 +28,7 @@ Organized into four tabs:
   - Customize all Multi-Step Wizard headings, placeholders, and button labels.
 - **Marketing**:
   - **Customer Email Notifications**: Master toggle "Send review emails to customers" and individual sub-toggles for: `Review Posted`, `Review Approved`, `Review Rejected`, `Review Spam`, `Review Deleted`, and `Collect Review on purchase`.
-  - **Email Templates**: Direct deep links to Spree 6 native Liquid/MJML email template editor (`/$storeId/settings/emails/templates/$templateId`) and an inline quick preview modal to inspect templates with sample review data before publishing.
+  - **In-Plugin Email Template Customizer**: Customize email subjects and Liquid/MJML contents directly inside `reviews/settings` with a side-by-side editor on the left and live working preview on the right. Automatically inherits store branding (Logo, Accent Color, Sender Address, and Customer Support Email) configured in `/settings/emails`. Includes Desktop / Mobile device toggles, Email vs. Plain text modes, variable quick-insert chips, and a Reset to Default option.
 
 ## Product Sidebar Slot
 

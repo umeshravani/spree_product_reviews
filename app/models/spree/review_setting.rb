@@ -82,6 +82,18 @@ module Spree
       title_rating_format
       title_reviews_label
       schema_item_condition
+      email_review_posted_subject
+      email_review_posted_body
+      email_review_approved_subject
+      email_review_approved_body
+      email_review_rejected_subject
+      email_review_rejected_body
+      email_review_spam_subject
+      email_review_spam_body
+      email_review_deleted_subject
+      email_review_deleted_body
+      email_solicit_review_subject
+      email_solicit_review_body
     ].freeze
 
     ALL_KEYS = (BOOLEAN_KEYS + INTEGER_KEYS + DECIMAL_KEYS + STRING_KEYS).freeze

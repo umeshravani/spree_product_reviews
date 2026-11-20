@@ -108,3 +108,15 @@ Configured under **Reviews -> Settings -> Marketing**. All templates are registe
 | `send_review_spam_email` | Boolean | `true` | Sends notification email when a review is flagged as spam (`product_review_mailer/review_spam_email`). |
 | `send_review_deleted_email` | Boolean | `true` | Sends notification email when a review is deleted (`product_review_mailer/review_deleted_email`). |
 | `send_solicit_review_email` | Boolean | `true` | Sends post-purchase review collection email to buyers (`product_review_mailer/solicit_review_email`). |
+| `email_review_posted_subject` | String | `''` | Custom subject line for Review Posted email. |
+| `email_review_posted_body` | String | `''` | Custom Liquid/MJML content for Review Posted email. |
+| `email_review_approved_subject` | String | `''` | Custom subject line for Review Approved email. |
+| `email_review_approved_body` | String | `''` | Custom Liquid/MJML content for Review Approved email. |
+| `email_review_rejected_subject` | String | `''` | Custom subject line for Review Rejected email. |
+| `email_review_rejected_body` | String | `''` | Custom Liquid/MJML content for Review Rejected email. |
+| `email_review_spam_subject` | String | `''` | Custom subject line for Review Spam email. |
+| `email_review_spam_body` | String | `''` | Custom Liquid/MJML content for Review Spam email. |
+| `email_review_deleted_subject` | String | `''` | Custom subject line for Review Deleted email. |
+| `email_review_deleted_body` | String | `''` | Custom Liquid/MJML content for Review Deleted email. |
+| `email_solicit_review_subject` | String | `''` | Custom subject line for Collect Review on Purchase email. |
+| `email_solicit_review_body` | String | `''` | Custom Liquid/MJML content for Collect Review on Purchase email. |

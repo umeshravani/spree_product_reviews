@@ -151,6 +151,18 @@ export interface ReviewSettings {
   send_review_spam_email?: boolean
   send_review_deleted_email?: boolean
   send_solicit_review_email?: boolean
+  email_review_posted_subject?: string
+  email_review_posted_body?: string
+  email_review_approved_subject?: string
+  email_review_approved_body?: string
+  email_review_rejected_subject?: string
+  email_review_rejected_body?: string
+  email_review_spam_subject?: string
+  email_review_spam_body?: string
+  email_review_deleted_subject?: string
+  email_review_deleted_body?: string
+  email_solicit_review_subject?: string
+  email_solicit_review_body?: string
   schema_markup_enabled?: boolean
   schema_include_reviews?: boolean
   schema_include_aggregate_rating?: boolean

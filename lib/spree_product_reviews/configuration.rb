@@ -83,6 +83,20 @@ module SpreeProductReviews
     preference :send_review_deleted_email, :boolean, default: false
     preference :send_solicit_review_email, :boolean, default: true
 
+    # Custom Email Templates (Subject & Liquid/MJML Content)
+    preference :email_review_posted_subject, :string, default: ''
+    preference :email_review_posted_body, :string, default: ''
+    preference :email_review_approved_subject, :string, default: ''
+    preference :email_review_approved_body, :string, default: ''
+    preference :email_review_rejected_subject, :string, default: ''
+    preference :email_review_rejected_body, :string, default: ''
+    preference :email_review_spam_subject, :string, default: ''
+    preference :email_review_spam_body, :string, default: ''
+    preference :email_review_deleted_subject, :string, default: ''
+    preference :email_review_deleted_body, :string, default: ''
+    preference :email_solicit_review_subject, :string, default: ''
+    preference :email_solicit_review_body, :string, default: ''
+
     # Schema.org Structured Data / Rich Snippets (JSON-LD)
     preference :schema_markup_enabled, :boolean, default: true
     preference :schema_include_reviews, :boolean, default: true
