@@ -228,11 +228,15 @@ export interface ProductQuestion {
   created_at: string
   answered_at: string | null
   product_id: string
+  product_name?: string
+  product_thumbnail_url?: string | null
   product?: {
     id: string
     name: string
     slug: string
     image_url?: string | null
+    thumbnail_url?: string | null
+    product_thumbnail_url?: string | null
   } | null
 }
 

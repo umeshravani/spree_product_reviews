@@ -1,6 +1,6 @@
 {
   "name": "@umeshravani/spree-product-reviews-storefront",
-  "version": "2.0.0",
+  "version": "6.0.5",
   "description": "Production storefront components and Store API client for Spree Product Reviews",
   "type": "module",
   "main": "./dist/index.js",

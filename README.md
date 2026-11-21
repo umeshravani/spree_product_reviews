@@ -1,29 +1,29 @@
 # Spree Product Reviews 6
 
-[![Gem Version](https://img.shields.io/badge/gem-6.1.1-red.svg)](https://github.com/umeshravani/spree_product_reviews)
-[![Dashboard Plugin](https://img.shields.io/badge/%40umeshravani%2Fspree--product--reviews--dashboard-2.0.0-black.svg)](packages/dashboard/package.json)
-[![Storefront Package](https://img.shields.io/badge/%40umeshravani%2Fspree--product--reviews--storefront-2.0.0-black.svg)](packages/storefront/package.json)
-[![Spree Commerce](https://img.shields.io/badge/Spree_Commerce-6.x-red.svg)](https://spreecommerce.org)
+[![Gem Version](https://img.shields.io/badge/gem-6.0.5-red.svg)](https://github.com/umeshravani/spree_product_reviews)
+[![Dashboard Plugin](https://img.shields.io/badge/%40umeshravani%2Fspree--product--reviews--dashboard-6.0.5-black.svg)](packages/dashboard/package.json)
+[![Storefront Package](https://img.shields.io/badge/%40umeshravani%2Fspree--product--reviews--storefront-6.0.5-black.svg)](packages/storefront/package.json)
+[![Spree Commerce](https://img.shields.io/badge/Spree_Commerce-6.0.5-red.svg)](https://spreecommerce.org)
 [![Rails](https://img.shields.io/badge/Rails-8.1-CC0000.svg)](https://rubyonrails.org)
 [![React](https://img.shields.io/badge/React-18%20%2F%2019-61DAFB.svg)](https://react.dev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A production-grade Product Reviews, Ratings, Dynamic Q&A, Photo/Video Uploads, and Gift Card Rewards suite engineered natively for **Spree Commerce 6**, **Rails 8.1**, **@spree/dashboard**, and **React / Next.js App Router** storefronts.
+A production-grade Product Reviews, Ratings, Dynamic Q&A, Photo/Video Uploads, and Gift Card Rewards suite engineered natively for **Spree Commerce 6.0.5**, **Rails 8.1**, **@spree/dashboard**, and **React / Next.js App Router** storefronts.
 
 ---
 
 ## Architecture Overview
 
 ```
-spree_product_reviews/ (gem v6.1.0)
+spree_product_reviews/ (gem v6.0.5)
 ├── app/                     # Rails Engine: Store API v3, Admin API v3, Models, Serializers, Services
 ├── config/routes.rb         # Store + Admin v3 endpoints + v6.0 compatibility route aliases
-├── db/migrate/              # Idempotent v6.1 schema + automatic v6.0 -> v6.1 data & media upgrade
+├── db/migrate/              # Idempotent v6.0.5 schema + data & media upgrades
 ├── lib/                     # Engine, Configuration, Install Generator, Rake tasks
 ├── spec/                    # Comprehensive RSpec suite (models, API v3, upgrade migration, rewards)
 ├── packages/
-│   ├── dashboard/           # @umeshravani/spree-product-reviews-dashboard@2.0.0
-│   └── storefront/          # @umeshravani/spree-product-reviews-storefront@2.0.0
+│   ├── dashboard/           # @umeshravani/spree-product-reviews-dashboard@6.0.5
+│   └── storefront/          # @umeshravani/spree-product-reviews-storefront@6.0.5
 └── docs/                    # Setup, Upgrade, Dashboard, Storefront, Configuration & API guides
 ```
 

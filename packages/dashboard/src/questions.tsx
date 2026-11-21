@@ -492,17 +492,22 @@ function CustomerQuestionsSection({ storeId }: { storeId: string }) {
                         />
                       </td>
                       <td className="px-4 py-3 font-medium text-xs min-w-[180px] max-w-[240px]">
-                        {q.product ? (
+                        {q.product || q.product_name ? (
                           <div className="flex items-center gap-3">
                             <Thumbnail
-                              src={q.product.image_url}
-                              alt={q.product.name}
+                              src={
+                                q.product?.image_url ||
+                                q.product?.thumbnail_url ||
+                                q.product?.product_thumbnail_url ||
+                                q.product_thumbnail_url
+                              }
+                              alt={q.product?.name || q.product_name || 'Product'}
                               size="sm"
                               className="size-9 rounded-md shrink-0 border"
                             />
                             <div className="min-w-0">
                               <span className="font-semibold text-foreground line-clamp-2 leading-tight">
-                                {q.product.name}
+                                {q.product?.name || q.product_name}
                               </span>
                             </div>
                           </div>

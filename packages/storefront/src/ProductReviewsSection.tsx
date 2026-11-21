@@ -2,8 +2,10 @@
 
 import {
   AlertCircle,
+  ArrowUpDown,
   BadgeCheck,
   Camera,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   HelpCircle,
@@ -423,21 +425,19 @@ export function ProductReviewsSection({
               ))}
             </div>
 
-            <div className="flex items-center gap-2 ml-auto">
-              <label
-                htmlFor="reviews-sort-select"
-                className="text-xs font-medium text-neutral-500"
-              >
-                Sort by:
-              </label>
+            <div className="relative inline-flex items-center ml-auto">
+              <span className="pointer-events-none absolute left-3 flex items-center text-neutral-500">
+                <ArrowUpDown className="w-3.5 h-3.5" />
+              </span>
               <select
                 id="reviews-sort-select"
+                aria-label="Sort reviews"
                 value={sort}
                 onChange={(e) => {
                   setPage(1);
                   setSort(e.target.value);
                 }}
-                className="rounded-lg border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-900 focus:outline-none focus:ring-2 focus:ring-black cursor-pointer"
+                className="appearance-none rounded-full border border-neutral-300 bg-white pl-8 pr-7 py-1.5 text-xs font-medium text-neutral-800 hover:border-neutral-400 focus:outline-none focus:ring-2 focus:ring-black cursor-pointer transition-colors shadow-xs"
               >
                 {sortOptions.map((opt) => (
                   <option key={opt.id} value={opt.id}>
@@ -445,6 +445,9 @@ export function ProductReviewsSection({
                   </option>
                 ))}
               </select>
+              <span className="pointer-events-none absolute right-2.5 flex items-center text-neutral-400">
+                <ChevronDown className="w-3 h-3" />
+              </span>
             </div>
           </div>
 
@@ -683,7 +686,7 @@ export function ProductReviewsSection({
                             </button>
                           </div>
                           <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 bg-neutral-100 px-2.5 py-1 rounded-full shrink-0">
-                            Verified Store Answer
+                            Verified Response
                           </span>
                         </div>
 
@@ -816,7 +819,7 @@ export function ProductReviewsSection({
                 <VerifiedCheckIcon className="w-6 h-6" color={verifiedBadgeColor} />
               </div>
               <h3 className="text-base font-semibold text-neutral-900">
-                Verified Store Team Answer
+                Verified Response
               </h3>
               <p className="text-sm leading-relaxed text-neutral-600">
                 This response was verified and published directly by official store administrators or certified product specialists.

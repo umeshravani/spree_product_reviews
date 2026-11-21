@@ -181,6 +181,7 @@ Includes:
 - **With photos**, **With videos**, **Verified purchase**, and dynamic **Review Question** filters
 - Sort dropdown (`Most recent`, `Highest rating`, `Lowest rating`, `Most helpful`)
 - **Verified Purchase Check & Modal**: Renders a clickable verified checkmark colored by `verified_badge_color` beside the reviewer's name for verified buyers that opens an informational **Verified Purchase** modal
+- **Verified Response Check & Modal**: Official store answers feature a **Verified Response** pill badge and verified checkmark that opens an informational dialog confirming official store verification
 - 2-column review cards with `80x128` portrait photo & playable video thumbnails, lightbox viewer (`ImageLightbox`), helpful/not-helpful voting, customer review reporting, and author reward badge
 - **ReviewSubmissionModal**: Responsive sizing (`540px` desktop modal, full mobile sheet), supporting **Multi-Step Wizard** (`modal_mode === 'multi'`), **Single-Page Form** (`modal_mode === 'single'`), `{percentage}` substitution in incentive cards, and **Update Your Review** mode prefilled with existing review fields governed by Admin edit settings
 

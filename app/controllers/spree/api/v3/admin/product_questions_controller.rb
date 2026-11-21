@@ -157,11 +157,15 @@ module Spree
               created_at: q.created_at,
               answered_at: q.answered_at,
               product_id: q.product_id,
+              product_name: product&.name,
+              product_thumbnail_url: image_url,
               product: product ? {
                 id: product.id,
                 name: product.name,
                 slug: product.slug,
-                image_url: image_url
+                image_url: image_url,
+                thumbnail_url: image_url,
+                product_thumbnail_url: image_url
               } : nil
             }
           end
