@@ -10,6 +10,8 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuTrigger,
   Input,
   Label,
@@ -25,6 +27,7 @@ import {
   useConfirm,
 } from '@spree/dashboard-ui'
 import {
+  ArrowUpDownIcon,
   CheckCircle2Icon,
   CheckIcon,
   ChevronDownIcon,
@@ -94,7 +97,9 @@ function CustomerQuestionsSection({ storeId }: { storeId: string }) {
   const queryClient = useQueryClient()
   const confirm = useConfirm()
   const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState(25)
   const [status, setStatus] = useState<string>('all')
+  const [sort, setSort] = useState<string>('')
   const [search, setSearch] = useState('')
   const [selectedIds, setSelectedIds] = useState<string[]>([])
 
@@ -104,10 +109,11 @@ function CustomerQuestionsSection({ storeId }: { storeId: string }) {
   const [targetStatus, setTargetStatus] = useState<'answered' | 'pending' | 'rejected'>('answered')
 
   const query = useQuery({
-    queryKey: ['spree-product-questions', storeId, page, status, search],
+    queryKey: ['spree-product-questions', storeId, page, perPage, status, sort, search],
     queryFn: () =>
       reviewsClient.productQuestions({
         page,
+        per_page: perPage,
         status: status !== 'all' ? status : undefined,
         q: search || undefined,
       }),
@@ -263,19 +269,25 @@ function CustomerQuestionsSection({ storeId }: { storeId: string }) {
                 aria-label="Filter by status"
                 className="h-[2.125rem] gap-2 bg-card text-xs font-normal"
               >
-                <StatusDot
-                  status={status}
-                  tone={
-                    status === 'answered'
-                      ? 'success'
-                      : status === 'pending'
-                        ? 'warning'
-                        : status === 'rejected'
-                          ? 'destructive'
-                          : 'neutral'
-                  }
-                  className="size-2.5"
-                />
+                {status === 'all' ? (
+                  <span className="flex items-center -space-x-1" aria-hidden="true">
+                    <StatusDot status="pending" tone="warning" className="size-2.5 ring-2 ring-card" />
+                    <StatusDot status="answered" tone="success" className="size-2.5 ring-2 ring-card" />
+                    <StatusDot status="rejected" tone="destructive" className="size-2.5 ring-2 ring-card" />
+                  </span>
+                ) : (
+                  <StatusDot
+                    status={status}
+                    tone={
+                      status === 'answered'
+                        ? 'success'
+                        : status === 'pending'
+                          ? 'warning'
+                          : 'destructive'
+                    }
+                    className="size-2.5"
+                  />
+                )}
                 <span className="text-muted-foreground font-normal">Status</span>
                 <span className="font-medium capitalize">{status === 'all' ? 'All' : status}</span>
                 <ChevronDownIcon className="size-3.5 text-muted-foreground" />
@@ -341,6 +353,35 @@ function CustomerQuestionsSection({ storeId }: { storeId: string }) {
             </Button>
           )}
         </div>
+
+        {/* Sort Menu */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              aria-label="Sort questions"
+              className="h-[2.125rem] bg-card"
+            >
+              <ArrowUpDownIcon className="size-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuRadioGroup
+              value={sort}
+              onValueChange={(nextSort) => {
+                setSort(nextSort)
+                setPage(1)
+                setSelectedIds([])
+              }}
+            >
+              <DropdownMenuRadioItem value="">Default (Newest first)</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="oldest">Oldest first</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="unanswered">Unanswered first</DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {query.isPending ? (
@@ -429,9 +470,7 @@ function CustomerQuestionsSection({ storeId }: { storeId: string }) {
                     <th className="px-4 py-3 font-medium">Store Reply</th>
                     <th className="px-4 py-3 font-medium whitespace-nowrap">Status</th>
                     <th className="px-4 py-3 font-medium whitespace-nowrap">Date</th>
-                    <th className="w-20 px-4 py-3 text-right font-medium whitespace-nowrap">
-                      Actions
-                    </th>
+                    <th className="w-12 px-2 py-3 text-right font-medium whitespace-nowrap" />
                   </tr>
                 )}
               </thead>
@@ -525,27 +564,46 @@ function CustomerQuestionsSection({ storeId }: { storeId: string }) {
                       <td className="px-4 py-3 whitespace-nowrap text-xs text-muted-foreground tabular-nums">
                         {new Date(q.created_at).toLocaleDateString()}
                       </td>
-                      <td className="w-20 px-4 py-3 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleOpenReply(q)}
-                            className="h-7 text-xs font-semibold cursor-pointer px-2.5"
-                          >
-                            Reply
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => void handleDelete(q)}
-                            disabled={deleteMutation.isPending}
-                            className="h-7 size-7 p-0 text-muted-foreground hover:text-destructive cursor-pointer"
-                            title="Delete question"
-                          >
-                            <Trash2Icon className="size-3.5" />
-                          </Button>
-                        </div>
+                      <td className="w-12 px-2 py-3 text-right whitespace-nowrap">
+                        <RowActions
+                          actions={[
+                            {
+                              key: 'reply',
+                              label: q.answer ? 'View / Edit reply' : 'Reply',
+                              icon: <PencilIcon className="size-4" />,
+                              onSelect: () => handleOpenReply(q),
+                            },
+                            {
+                              key: 'mark_answered',
+                              label: 'Mark Answered',
+                              icon: <CheckCircle2Icon className="size-4" />,
+                              disabled: q.status === 'answered',
+                              onSelect: () =>
+                                updateMutation.mutate({
+                                  id: q.id,
+                                  data: { status: 'answered' },
+                                }),
+                            },
+                            {
+                              key: 'reject',
+                              label: 'Reject',
+                              icon: <XCircleIcon className="size-4" />,
+                              disabled: q.status === 'rejected',
+                              onSelect: () =>
+                                updateMutation.mutate({
+                                  id: q.id,
+                                  data: { status: 'rejected' },
+                                }),
+                            },
+                            {
+                              key: 'delete',
+                              label: 'Delete',
+                              icon: <Trash2Icon className="size-4" />,
+                              destructive: true,
+                              onSelect: () => void handleDelete(q),
+                            },
+                          ]}
+                        />
                       </td>
                     </tr>
                   )
@@ -558,8 +616,15 @@ function CustomerQuestionsSection({ storeId }: { storeId: string }) {
               </p>
             )}
           </div>
-          {meta && meta.total_pages > 1 && (
-            <Pagination page={page} pages={meta.total_pages} setPage={setPage} />
+          {meta && (
+            <Pagination
+              page={page}
+              pages={meta.total_pages}
+              totalCount={meta.total_count}
+              perPage={perPage}
+              setPage={setPage}
+              setPerPage={setPerPage}
+            />
           )}
         </>
       )}
@@ -820,7 +885,16 @@ function FormQuestionsSection({ storeId }: { storeId: string }) {
               </p>
             )}
           </div>
-          <Pagination page={page} pages={query.data.meta.pages} setPage={setPage} />
+          <Pagination
+            page={page}
+            pages={query.data.meta.pages}
+            totalCount={
+              'total_count' in query.data.meta
+                ? (query.data.meta as { total_count?: number }).total_count
+                : query.data.meta.count
+            }
+            setPage={setPage}
+          />
         </>
       )}
     </div>

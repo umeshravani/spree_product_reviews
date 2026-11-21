@@ -125,7 +125,25 @@ module Spree
 
           def serialize_admin_question(q)
             product = q.product
-            image_url = product&.gallery&.images&.first&.url rescue nil
+            image_url = begin
+              media = product.try(:primary_media) || product.try(:media)&.first || product.try(:images)&.first
+              attachment = media&.try(:attachment) || media
+              if attachment&.respond_to?(:attached?) && attachment.attached?
+                if Rails.application.routes.url_helpers.respond_to?(:cdn_image_url)
+                  Rails.application.routes.url_helpers.cdn_image_url(attachment)
+                elsif Rails.application.routes.url_helpers.respond_to?(:rails_blob_url)
+                  Rails.application.routes.url_helpers.rails_blob_url(attachment, only_path: true)
+                else
+                  attachment.url
+                end
+              elsif attachment&.respond_to?(:url)
+                attachment.url
+              else
+                nil
+              end
+            rescue StandardError
+              nil
+            end
 
             {
               id: q.id,

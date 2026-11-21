@@ -199,6 +199,7 @@ export interface ReviewStoreSettings {
   schema_price_valid_days?: number;
   schema_max_reviews_count?: number;
   schema_item_condition?: string;
+  schema_rating_display_style?: 'stars_count' | 'single_star';
 }
 
 export interface ReviewEligibilityResponse {

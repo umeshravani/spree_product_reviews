@@ -28,7 +28,7 @@ import type { RouteProps } from './shared'
 import { AppLink, ErrorMessage, NativeSelect } from './shared'
 import type { ReviewSettings } from './types'
 
-type SettingsTab = 'general' | 'settings' | 'customisation' | 'marketing'
+type SettingsTab = 'general' | 'settings' | 'customisation' | 'schema' | 'marketing'
 
 export function ReviewSettingsPage({ storeId }: RouteProps) {
   const { permissions } = usePermissions()
@@ -140,6 +140,7 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
             { id: 'general', label: 'General' },
             { id: 'settings', label: 'Settings' },
             { id: 'customisation', label: 'Appearance' },
+            { id: 'schema', label: 'Schema' },
             { id: 'marketing', label: 'Marketing' },
           ] as const
         ).map((tab) => {
@@ -1214,6 +1215,11 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
             </CardContent>
           </SettingsSection>
 
+        </div>
+      )}
+
+      {activeTab === 'schema' && (
+        <div className="space-y-6">
           <SettingsSection
             title="Search Engine Snippet &amp; Schema Markup"
             icon={<SearchIcon />}
@@ -1269,7 +1275,26 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                 onChange={(val) => updateField('schema_show_returns', val)}
               />
 
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 pt-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Rating Display Style</Label>
+                  <NativeSelect
+                    disabled={!canEdit || draft.schema_markup_enabled === false}
+                    value={draft.schema_rating_display_style || 'single_star'}
+                    onChange={(e) =>
+                      updateField(
+                        'schema_rating_display_style',
+                        e.target.value as 'single_star' | 'stars_count',
+                      )
+                    }
+                  >
+                    <option value="single_star">Single Star (e.g. 4.8 ★)</option>
+                    <option value="stars_count">Five Stars (e.g. ★★★★★ 4.8)</option>
+                  </NativeSelect>
+                  <p className="text-[11px] text-muted-foreground">
+                    Snippet rating display.
+                  </p>
+                </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-medium">Return Window (Days)</Label>
                   <Input
@@ -1336,11 +1361,11 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                 </div>
               </div>
 
-              {/* Live Google Search Snippet Preview */}
-              <div className="rounded-lg border bg-[#202124] text-[#bdc1c6] p-5 shadow-xs space-y-3 font-sans">
-                <div className="flex items-center justify-between border-b border-[#3c4043] pb-2">
+              {/* Live Google Search Snippet Preview - Responsive Light and Dark Mode */}
+              <div className="rounded-lg border bg-white dark:bg-[#202124] text-[#4d5156] dark:text-[#bdc1c6] border-[#dadce0] dark:border-[#3c4043] p-5 shadow-xs space-y-3 font-sans transition-colors">
+                <div className="flex items-center justify-between border-b border-[#ebebeb] dark:border-[#3c4043] pb-2">
                   <div className="flex items-center gap-2">
-                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none">
+                    <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none">
                       <path
                         d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                         fill="#4285F4"
@@ -1358,36 +1383,36 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                         fill="#EA4335"
                       />
                     </svg>
-                    <span className="text-xs font-semibold uppercase tracking-wider text-[#9aa0a6]">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-[#70757a] dark:text-[#9aa0a6]">
                       Google Search Result Snippet Preview
                     </span>
                   </div>
                   {draft.schema_markup_enabled === false ? (
-                    <span className="text-xs font-medium text-amber-400 bg-amber-950/40 px-2 py-0.5 rounded">
+                    <span className="text-xs font-medium text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-800">
                       Structured Data Disabled
                     </span>
                   ) : (
-                    <span className="text-xs font-medium text-emerald-400 bg-emerald-950/40 px-2 py-0.5 rounded">
+                    <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
                       Rich Snippet Active
                     </span>
                   )}
                 </div>
 
-                {/* Google Search Card matching media_1795205891099_c3012959.png */}
+                {/* Google Search Card matching Google Search typography and layout */}
                 <div className="pt-1 space-y-1">
                   {/* Top Line: Favicon circle + Site name + URL breadcrumbs + ⋮ */}
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="size-7 rounded-full bg-white flex items-center justify-center shrink-0 shadow-xs">
-                        <span className="text-xs font-bold text-neutral-900">
+                      <div className="size-7 rounded-full bg-[#f1f3f4] dark:bg-white flex items-center justify-center shrink-0 shadow-xs border border-neutral-200 dark:border-transparent">
+                        <span className="text-xs font-bold text-neutral-800 dark:text-neutral-900">
                           {storeName.slice(0, 1).toUpperCase()}
                         </span>
                       </div>
                       <div className="min-w-0 flex flex-col justify-center">
-                        <span className="text-sm font-medium text-[#e8eaed] leading-tight truncate">
+                        <span className="text-sm font-medium text-[#202124] dark:text-[#e8eaed] leading-tight truncate">
                           {storeName}
                         </span>
-                        <div className="text-xs text-[#bdc1c6] leading-tight truncate flex items-center gap-1">
+                        <div className="text-xs text-[#4d5156] dark:text-[#bdc1c6] leading-tight truncate flex items-center gap-1">
                           <span>https://example-store.com</span>
                           <span>›</span>
                           <span>Collections</span>
@@ -1399,7 +1424,7 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                     <button
                       type="button"
                       aria-label="More options"
-                      className="text-[#bdc1c6] hover:text-white p-1 text-sm font-bold leading-none cursor-default"
+                      className="text-[#70757a] dark:text-[#bdc1c6] hover:text-black dark:hover:text-white p-1 text-sm font-bold leading-none cursor-default"
                     >
                       ⋮
                     </button>
@@ -1409,39 +1434,50 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                   <div className="flex items-center justify-between gap-4 pt-1">
                     <div className="min-w-0 flex-1 space-y-1">
                       {/* Title link in Google blue */}
-                      <div className="text-lg sm:text-[20px] text-[#8ab4f8] font-normal leading-snug hover:underline cursor-pointer">
+                      <div className="text-lg sm:text-[20px] text-[#1a0dab] dark:text-[#8ab4f8] font-normal leading-snug hover:underline cursor-pointer">
                         Lorem Ipsum Dolor - Premium Handcrafted Wall Art
                       </div>
 
                       {/* Meta Description */}
-                      <p className="text-xs sm:text-sm text-[#bdc1c6] leading-relaxed line-clamp-2 m-0">
+                      <p className="text-xs sm:text-sm text-[#4d5156] dark:text-[#bdc1c6] leading-relaxed line-clamp-2 m-0">
                         Jeweled with a 2.4cm thick aluminum frame; Pixel-perfect direct printing on Acrylic; Acrylic Chemical treatment before printing; Super HD print output 1200 ...{' '}
-                        <span className="text-[#8ab4f8] hover:underline cursor-pointer">Read more</span>
+                        <span className="text-[#1a0dab] dark:text-[#8ab4f8] hover:underline cursor-pointer">Read more</span>
                       </p>
 
                       {/* Rich Snippet Data Row below Meta Description */}
                       {draft.schema_markup_enabled !== false && (
-                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs sm:text-sm text-[#bdc1c6] pt-1">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs sm:text-sm text-[#4d5156] dark:text-[#bdc1c6] pt-1">
                           {draft.schema_include_aggregate_rating !== false && (
                             <>
-                              <div className="inline-flex items-center gap-1 font-medium text-[#e8eaed]">
-                                <span>4.8</span>
-                                <span style={{ color: draft.title_star_color || '#FBBF24' }}>
-                                  ★
-                                </span>
-                                <span>store rating (1.5K)</span>
+                              <div className="inline-flex items-center gap-1 font-medium text-[#202124] dark:text-[#e8eaed]">
+                                {draft.schema_rating_display_style === 'stars_count' ? (
+                                  <>
+                                    <span style={{ color: draft.title_star_color || '#FBBF24' }}>
+                                      ★★★★★
+                                    </span>
+                                    <span>4.8 (1.5K)</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span>4.8</span>
+                                    <span style={{ color: draft.title_star_color || '#FBBF24' }}>
+                                      ★
+                                    </span>
+                                    <span>store rating (1.5K)</span>
+                                  </>
+                                )}
                               </div>
                               <span>·</span>
                             </>
                           )}
                           {draft.schema_include_offers !== false && (
                             <>
-                              <span className="font-semibold text-[#e8eaed]">
+                              <span className="font-semibold text-[#202124] dark:text-[#e8eaed]">
                                 ₹2,900.00 to ₹7,599.00
                               </span>
                               <span>·</span>
-                              <span className="inline-flex items-center gap-1 font-medium text-emerald-400">
-                                <span className="inline-block size-1.5 rounded-full bg-emerald-400" />
+                              <span className="inline-flex items-center gap-1 font-medium text-[#137333] dark:text-emerald-400">
+                                <span className="inline-block size-1.5 rounded-full bg-[#137333] dark:bg-emerald-400" />
                                 In stock
                               </span>
                             </>
@@ -1463,10 +1499,10 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                     </div>
 
                     {/* Centered Thumbnail Image on Right */}
-                    <div className="size-20 sm:size-24 rounded-2xl overflow-hidden bg-[#303134] border border-[#3c4043] shrink-0 shadow-md flex items-center justify-center self-center">
-                      <div className="w-full h-full bg-linear-to-br from-amber-700/40 via-amber-900/60 to-neutral-900 flex flex-col items-center justify-center p-2 text-center">
-                        <ImageIcon className="size-6 text-[#bdc1c6]/70 mb-1" />
-                        <span className="text-[10px] text-[#bdc1c6]/80 font-medium leading-none">
+                    <div className="size-20 sm:size-24 rounded-2xl overflow-hidden bg-[#f8f9fa] dark:bg-[#303134] border border-[#dadce0] dark:border-[#3c4043] shrink-0 shadow-xs flex items-center justify-center self-center">
+                      <div className="w-full h-full bg-linear-to-br from-amber-600/20 via-amber-700/30 to-neutral-200 dark:from-amber-700/40 dark:via-amber-900/60 dark:to-neutral-900 flex flex-col items-center justify-center p-2 text-center">
+                        <ImageIcon className="size-6 text-[#5f6368] dark:text-[#bdc1c6]/70 mb-1" />
+                        <span className="text-[10px] text-[#5f6368] dark:text-[#bdc1c6]/80 font-medium leading-none">
                           Product Art
                         </span>
                       </div>

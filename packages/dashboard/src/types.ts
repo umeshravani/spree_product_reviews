@@ -174,6 +174,7 @@ export interface ReviewSettings {
   schema_price_valid_days?: number
   schema_max_reviews_count?: number
   schema_item_condition?: string
+  schema_rating_display_style?: 'single_star' | 'stars_count'
   write_review_btn_bg?: string
   write_review_btn_text_color?: string
   write_review_btn_border_color?: string

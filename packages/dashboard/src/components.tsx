@@ -4,6 +4,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  SidebarMenuBadge,
   Skeleton,
   StatusBadge,
   type StatusTone,
@@ -160,11 +161,7 @@ export function PendingReviewsBadge() {
   const pendingCount = query.data?.data?.pending ?? 0
   if (pendingCount <= 0) return null
 
-  return (
-    <span className="ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-amber-600 dark:text-amber-400">
-      {pendingCount}
-    </span>
-  )
+  return <SidebarMenuBadge>{pendingCount}</SidebarMenuBadge>
 }
 
 export function PendingQuestionsBadge() {
@@ -181,11 +178,7 @@ export function PendingQuestionsBadge() {
   const pendingQuestions = (query.data?.data as any)?.pending_questions ?? 0
   if (pendingQuestions <= 0) return null
 
-  return (
-    <span className="ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-amber-600 dark:text-amber-400">
-      {pendingQuestions}
-    </span>
-  )
+  return <SidebarMenuBadge>{pendingQuestions}</SidebarMenuBadge>
 }
 
 export function ReviewsRootNavBadge() {
@@ -204,11 +197,7 @@ export function ReviewsRootNavBadge() {
   const total = pendingReviews + pendingQuestions
   if (total <= 0) return null
 
-  return (
-    <span className="ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-amber-600 dark:text-amber-400">
-      {total}
-    </span>
-  )
+  return <SidebarMenuBadge>{total}</SidebarMenuBadge>
 }
 
 export function ProductReviewsCard({ product }: { product?: { id?: string } }) {

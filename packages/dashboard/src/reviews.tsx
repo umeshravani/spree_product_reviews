@@ -140,6 +140,7 @@ export function ReviewsPage({ storeId }: RouteProps) {
   const confirm = useConfirm()
 
   const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState(25)
   const [statuses, setStatuses] = useState<FilterStatusKey[]>([])
   const [rating, setRating] = useState('')
   const [productId, setProductId] = useState('')
@@ -162,6 +163,7 @@ export function ReviewsPage({ storeId }: RouteProps) {
       'spree-reviews',
       storeId,
       page,
+      perPage,
       statuses,
       rating,
       productId,
@@ -173,6 +175,7 @@ export function ReviewsPage({ storeId }: RouteProps) {
     queryFn: () =>
       reviewsClient.list({
         page,
+        limit: perPage,
         statuses: statuses.length > 0 ? statuses : undefined,
         rating: rating || undefined,
         productId: productId || undefined,
@@ -909,7 +912,18 @@ export function ReviewsPage({ storeId }: RouteProps) {
               <p className="p-6 text-sm text-muted-foreground">No reviews match this filter.</p>
             )}
           </div>
-          <Pagination page={page} pages={query.data.meta.pages} setPage={setPage} />
+          <Pagination
+            page={page}
+            pages={query.data.meta.pages}
+            totalCount={
+              'total_count' in query.data.meta
+                ? (query.data.meta as { total_count?: number }).total_count
+                : query.data.meta.count
+            }
+            perPage={perPage}
+            setPage={setPage}
+            setPerPage={setPerPage}
+          />
         </>
       )}
 
