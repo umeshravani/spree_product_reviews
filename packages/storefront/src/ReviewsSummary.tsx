@@ -51,9 +51,9 @@ export function ReviewsSummary({
       </div>
 
       {/* Main 3-column layout matching reference UI */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 md:gap-8 rounded-2xl bg-white p-4 sm:p-6 border border-neutral-200/80 shadow-xs">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 md:gap-8 lg:gap-12 rounded-2xl bg-white p-5 sm:p-7 border border-neutral-200/80 shadow-xs">
         {/* Left: Rating number, 5 stars, review count */}
-        <div className="shrink-0 flex flex-col items-start gap-1 min-w-[130px]">
+        <div className="shrink-0 flex flex-col items-start justify-center gap-1 min-w-[140px]">
           <span className="text-4xl sm:text-5xl font-black text-neutral-900 tracking-tight leading-none">
             {reviewCount > 0 ? averageRating.toFixed(1) : "0.0"}
           </span>
@@ -117,66 +117,74 @@ export function ReviewsSummary({
             )}
         </div>
 
-        {/* Middle: Star breakdown progress bars */}
-        <div className="min-w-0 flex-1 space-y-1.5">
-          {[5, 4, 3, 2, 1].map((stars) => {
-            const count = Number(distribution[String(stars)] ?? 0);
-            const percentage =
-              reviewCount > 0 ? (count / reviewCount) * 100 : 0;
-            const isSelected = selectedRating === stars;
+        {/* First Vertical divider line after rating */}
+        <div
+          className="hidden md:block w-px bg-neutral-200 self-stretch my-2"
+          aria-hidden="true"
+        />
 
-            return (
-              <button
-                key={stars}
-                type="button"
-                onClick={() => onSelectRating?.(isSelected ? null : stars)}
-                className={`flex items-center gap-2 sm:gap-3 py-1 px-2 rounded-lg transition-all cursor-pointer w-full text-left group ${
-                  isSelected
-                    ? "bg-neutral-100 ring-1 ring-neutral-300"
-                    : "hover:bg-neutral-50"
-                }`}
-                title={`Filter by ${stars} star reviews (${count})`}
-              >
-                <div className="flex items-center gap-1 w-8 sm:w-10 shrink-0">
-                  <span className="text-xs sm:text-sm font-semibold text-neutral-800">
-                    {stars}
+        {/* Middle: Star breakdown progress bars (actual compact width, placed center) */}
+        <div className="min-w-0 flex-1 flex justify-center items-center py-1">
+          <div className="w-full max-w-[280px] sm:max-w-[320px] space-y-1.5">
+            {[5, 4, 3, 2, 1].map((stars) => {
+              const count = Number(distribution[String(stars)] ?? 0);
+              const percentage =
+                reviewCount > 0 ? (count / reviewCount) * 100 : 0;
+              const isSelected = selectedRating === stars;
+
+              return (
+                <button
+                  key={stars}
+                  type="button"
+                  onClick={() => onSelectRating?.(isSelected ? null : stars)}
+                  className={`flex items-center gap-2 sm:gap-3 py-1 px-2 rounded-lg transition-all cursor-pointer w-full text-left group ${
+                    isSelected
+                      ? "bg-neutral-100 ring-1 ring-neutral-300"
+                      : "hover:bg-neutral-50"
+                  }`}
+                  title={`Filter by ${stars} star reviews (${count})`}
+                >
+                  <div className="flex items-center gap-1 w-8 sm:w-10 shrink-0">
+                    <span className="text-xs sm:text-sm font-semibold text-neutral-800">
+                      {stars}
+                    </span>
+                    <svg
+                      className="w-3.5 h-3.5 shrink-0"
+                      style={{ color: starColor, fill: starColor }}
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                    </svg>
+                  </div>
+
+                  <div className="h-2 flex-1 max-w-[140px] xs:max-w-[160px] sm:max-w-[200px] rounded-full bg-neutral-200 overflow-hidden">
+                    <div
+                      className="h-2 rounded-full transition-all duration-300"
+                      style={{
+                        width: `${percentage}%`,
+                        backgroundColor: starColor,
+                      }}
+                    />
+                  </div>
+
+                  <span className="text-xs sm:text-sm font-medium text-neutral-500 tabular-nums shrink-0 min-w-[2rem]">
+                    ({count.toLocaleString()})
                   </span>
-                  <svg
-                    className="w-3.5 h-3.5 shrink-0"
-                    style={{ color: starColor, fill: starColor }}
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                  >
-                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                  </svg>
-                </div>
-
-                <div className="h-2 flex-1 max-w-[140px] xs:max-w-[180px] sm:max-w-[220px] md:max-w-[260px] rounded-full bg-neutral-200 overflow-hidden">
-                  <div
-                    className="h-2 rounded-full transition-all duration-300"
-                    style={{
-                      width: `${percentage}%`,
-                      backgroundColor: starColor,
-                    }}
-                  />
-                </div>
-
-                <span className="text-xs sm:text-sm font-medium text-neutral-500 tabular-nums shrink-0 min-w-[2rem]">
-                  ({count.toLocaleString()})
-                </span>
-              </button>
-            );
-          })}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Vertical divider line */}
+        {/* Second Vertical divider line before buttons */}
         <div
-          className="hidden md:block w-px bg-neutral-200 self-stretch my-1"
+          className="hidden md:block w-px bg-neutral-200 self-stretch my-2"
           aria-hidden="true"
         />
 
         {/* Right: Stacked action buttons */}
-        <div className="shrink-0 flex flex-col gap-2.5 sm:gap-3 w-full md:w-auto items-stretch md:items-center justify-center">
+        <div className="shrink-0 flex flex-col gap-2.5 sm:gap-3 w-full md:w-auto items-stretch md:items-center justify-center min-w-[150px] sm:min-w-[170px]">
           {onWriteReviewClick && (
             <button
               type="button"
@@ -185,15 +193,15 @@ export function ReviewsSummary({
                 canWriteReview &&
                 (writeReviewBtnBg || writeReviewBtnTextColor || writeReviewBtnBorderColor)
                   ? {
-                      backgroundColor: writeReviewBtnBg || "#FFFFFF",
-                      color: writeReviewBtnTextColor || "#0A0A0A",
-                      borderColor: writeReviewBtnBorderColor || "#0A0A0A",
+                      backgroundColor: writeReviewBtnBg || "#FAFAFA",
+                      color: writeReviewBtnTextColor || "#262626",
+                      borderColor: writeReviewBtnBorderColor || "#E5E5E5",
                     }
                   : undefined
               }
               className={`inline-flex items-center justify-center rounded-full px-6 py-2.5 text-xs sm:text-sm font-semibold transition-all shadow-xs cursor-pointer whitespace-nowrap min-w-[150px] sm:min-w-[170px] ${
                 canWriteReview
-                  ? "bg-white hover:bg-neutral-50 text-neutral-900 border border-neutral-900"
+                  ? "bg-neutral-50/90 hover:bg-neutral-100 text-neutral-800 border border-neutral-200/90"
                   : "bg-neutral-100 hover:bg-neutral-200 text-neutral-500 border border-neutral-300 cursor-not-allowed"
               }`}
             >
@@ -208,13 +216,13 @@ export function ReviewsSummary({
               style={
                 askQuestionBtnBg || askQuestionBtnTextColor || askQuestionBtnBorderColor
                   ? {
-                      backgroundColor: askQuestionBtnBg || "#404040",
+                      backgroundColor: askQuestionBtnBg || "#000000",
                       color: askQuestionBtnTextColor || "#FFFFFF",
-                      borderColor: askQuestionBtnBorderColor || "#404040",
+                      borderColor: askQuestionBtnBorderColor || "#000000",
                     }
                   : undefined
               }
-              className="inline-flex items-center justify-center rounded-full px-6 py-2.5 text-xs sm:text-sm font-semibold transition-all shadow-xs cursor-pointer whitespace-nowrap min-w-[150px] sm:min-w-[170px] bg-neutral-700 hover:bg-neutral-800 text-white border border-neutral-700"
+              className="inline-flex items-center justify-center rounded-full px-6 py-2.5 text-xs sm:text-sm font-semibold transition-all shadow-xs cursor-pointer whitespace-nowrap min-w-[150px] sm:min-w-[170px] bg-black hover:bg-neutral-800 text-white border border-black"
             >
               Ask a Question
             </button>

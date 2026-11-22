@@ -1028,7 +1028,7 @@ export function ReviewSubmissionModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="write-review-title"
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4"
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-2.5 sm:p-4 animate-in fade-in duration-200"
       onClick={onClose}
     >
       <style>{`
@@ -1037,7 +1037,7 @@ export function ReviewSubmissionModal({
         @media (min-width: 1024px) { .spree-review-modal-panel { max-width: 540px; } }
       `}</style>
       <div
-        className="spree-review-modal-panel bg-white rounded-2xl shadow-2xl border border-neutral-200 w-full max-w-full sm:max-w-2xl lg:max-w-[540px] max-h-[92vh] sm:max-h-[90vh] flex flex-col overflow-hidden relative"
+        className="spree-review-modal-panel bg-white rounded-2xl shadow-2xl border border-neutral-200 w-full max-w-full sm:max-w-2xl lg:max-w-[540px] max-h-[92vh] sm:max-h-[90vh] flex flex-col overflow-hidden relative animate-in fade-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         <button

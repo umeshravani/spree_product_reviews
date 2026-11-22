@@ -50,11 +50,11 @@ export function ImageLightbox({
       role="dialog"
       aria-modal="true"
       aria-label="Review media viewer"
-      className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xs flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div
-        className="relative max-w-4xl w-full flex items-center justify-center"
+        className="relative max-w-4xl w-full flex items-center justify-center animate-in fade-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         <button
