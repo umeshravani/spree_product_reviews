@@ -346,86 +346,84 @@ export function ProductReviewsSection({
       {activeTab === "reviews" ? (
         <>
           {/* Filter & Sort Controls */}
-          <div className="flex flex-wrap items-center justify-between gap-4 py-3 border-b border-neutral-200">
-            <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 py-3 border-b border-neutral-200">
+            <button
+              type="button"
+              onClick={() => {
+                setPage(1);
+                setWithImages((prev) => !prev);
+              }}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition cursor-pointer ${
+                withImages
+                  ? "bg-black text-white border-black"
+                  : "bg-white text-neutral-700 border-neutral-300 hover:bg-neutral-50"
+              }`}
+            >
+              <Camera className="w-3.5 h-3.5" />
+              With photos
+            </button>
+
+            {allowVideos && (
               <button
                 type="button"
                 onClick={() => {
                   setPage(1);
-                  setWithImages((prev) => !prev);
+                  setWithVideos((prev) => !prev);
                 }}
                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition cursor-pointer ${
-                  withImages
+                  withVideos
                     ? "bg-black text-white border-black"
                     : "bg-white text-neutral-700 border-neutral-300 hover:bg-neutral-50"
                 }`}
               >
-                <Camera className="w-3.5 h-3.5" />
-                With photos
+                <Video className="w-3.5 h-3.5" />
+                With videos
               </button>
+            )}
 
-              {allowVideos && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPage(1);
-                    setWithVideos((prev) => !prev);
-                  }}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition cursor-pointer ${
-                    withVideos
-                      ? "bg-black text-white border-black"
-                      : "bg-white text-neutral-700 border-neutral-300 hover:bg-neutral-50"
-                  }`}
-                >
-                  <Video className="w-3.5 h-3.5" />
-                  With videos
-                </button>
-              )}
+            <button
+              type="button"
+              onClick={() => {
+                setPage(1);
+                setVerifiedOnly((prev) => !prev);
+              }}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition cursor-pointer ${
+                verifiedOnly
+                  ? "bg-black text-white border-black"
+                  : "bg-white text-neutral-700 border-neutral-300 hover:bg-neutral-50"
+              }`}
+            >
+              <BadgeCheck className="w-3.5 h-3.5" />
+              Verified purchase
+            </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setPage(1);
-                  setVerifiedOnly((prev) => !prev);
-                }}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition cursor-pointer ${
-                  verifiedOnly
-                    ? "bg-black text-white border-black"
-                    : "bg-white text-neutral-700 border-neutral-300 hover:bg-neutral-50"
-                }`}
-              >
-                <BadgeCheck className="w-3.5 h-3.5" />
-                Verified purchase
-              </button>
+            {questionFilters.map((qf) => (
+              <div key={qf.id} className="flex items-center gap-1.5">
+                <span className="text-xs text-neutral-400">|</span>
+                <span className="text-xs font-medium text-neutral-600">
+                  {qf.label}:
+                </span>
+                {qf.values.map((val) => {
+                  const active = selectedAnswers[qf.id] === val.value;
+                  return (
+                    <button
+                      key={val.value}
+                      type="button"
+                      onClick={() => handleToggleAnswerFilter(qf.id, val.value)}
+                      className={`px-2.5 py-1 rounded-full text-xs font-medium border transition cursor-pointer ${
+                        active
+                          ? "bg-black text-white border-black"
+                          : "bg-white text-neutral-700 border-neutral-300 hover:bg-neutral-50"
+                      }`}
+                    >
+                      {val.label} ({val.count})
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
 
-              {questionFilters.map((qf) => (
-                <div key={qf.id} className="flex items-center gap-1.5">
-                  <span className="text-xs text-neutral-400">|</span>
-                  <span className="text-xs font-medium text-neutral-600">
-                    {qf.label}:
-                  </span>
-                  {qf.values.map((val) => {
-                    const active = selectedAnswers[qf.id] === val.value;
-                    return (
-                      <button
-                        key={val.value}
-                        type="button"
-                        onClick={() => handleToggleAnswerFilter(qf.id, val.value)}
-                        className={`px-2.5 py-1 rounded-full text-xs font-medium border transition cursor-pointer ${
-                          active
-                            ? "bg-black text-white border-black"
-                            : "bg-white text-neutral-700 border-neutral-300 hover:bg-neutral-50"
-                        }`}
-                      >
-                        {val.label} ({val.count})
-                      </button>
-                    );
-                  })}
-                </div>
-              ))}
-            </div>
-
-            <div className="relative inline-flex items-center ml-auto">
+            <div className="relative inline-flex items-center sm:ml-auto">
               <span className="pointer-events-none absolute left-3 flex items-center text-neutral-500">
                 <ArrowUpDown className="w-3.5 h-3.5" />
               </span>

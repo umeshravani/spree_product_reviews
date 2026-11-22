@@ -52,8 +52,8 @@ export function ReviewsSummary({
 
       {/* Main 3-column layout matching reference UI */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 md:gap-8 lg:gap-12 rounded-2xl bg-white p-5 sm:p-7 border border-neutral-200/80 shadow-xs">
-        {/* Left: Rating number, 5 stars, review count */}
-        <div className="shrink-0 flex flex-col items-start justify-center gap-1 min-w-[140px]">
+        {/* Left: Rating number, 5 stars, review count (centered on mobile, left on desktop) */}
+        <div className="shrink-0 flex flex-col items-center text-center md:items-start md:text-left justify-center gap-1 min-w-[140px]">
           <span className="text-4xl sm:text-5xl font-black text-neutral-900 tracking-tight leading-none">
             {reviewCount > 0 ? averageRating.toFixed(1) : "0.0"}
           </span>

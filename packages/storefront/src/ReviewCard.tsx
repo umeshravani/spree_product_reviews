@@ -1,6 +1,6 @@
 "use client";
 
-import { Flag, Gift, Play, ThumbsDown, ThumbsUp, X } from "lucide-react";
+import { Flag, Play, ThumbsDown, ThumbsUp, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { isVideoItem } from "./ImageLightbox.js";
 import { StarRating } from "./StarRating.js";
@@ -178,15 +178,6 @@ export function ReviewCard({
                 ))}
               </div>
             )}
-
-          {review.reward_code && (
-            <div className="pt-1">
-              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
-                <Gift className="w-3 h-3" aria-hidden="true" />
-                Reward: {review.reward_code}
-              </span>
-            </div>
-          )}
         </div>
 
         {/* Right Column: Title, Body, Question Answers, 80x128 Photos/Videos, Helpful & Report */}
@@ -270,101 +261,155 @@ export function ReviewCard({
             </div>
           )}
 
-          {/* Footer: Helpful votes & Report */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-2 text-xs text-neutral-500">
-            <div className="flex flex-wrap items-center gap-3">
-              <span>Was this review helpful to you?</span>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleVoteClick("helpful")}
-                  disabled={isVoting}
-                  aria-pressed={currentVote === "helpful"}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium transition-colors cursor-pointer ${currentVote === "helpful"
-                      ? "border-emerald-600 bg-emerald-50 text-emerald-700"
-                      : "border-neutral-200 hover:bg-neutral-100 text-neutral-700"
-                    }`}
-                >
-                  <ThumbsUp
-                    className={`w-3.5 h-3.5 ${currentVote === "helpful" ? "fill-current" : ""}`}
-                    aria-hidden="true"
-                  />
-                  <span>Yes ({helpfulCount})</span>
-                </button>
+          {/* Footer: Helpful votes & Report aligned */}
+          <div className="flex flex-wrap items-center gap-3 pt-2 text-xs text-neutral-500">
+            <span>Was this review helpful to you?</span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handleVoteClick("helpful")}
+                disabled={isVoting}
+                aria-pressed={currentVote === "helpful"}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium transition-colors cursor-pointer ${
+                  currentVote === "helpful"
+                    ? "border-emerald-600 bg-emerald-50 text-emerald-700"
+                    : "border-neutral-200 hover:bg-neutral-100 text-neutral-700"
+                }`}
+              >
+                <ThumbsUp
+                  className={`w-3.5 h-3.5 ${currentVote === "helpful" ? "fill-current" : ""}`}
+                  aria-hidden="true"
+                />
+                <span>Yes ({helpfulCount})</span>
+              </button>
 
-                <button
-                  type="button"
-                  onClick={() => handleVoteClick("not_helpful")}
-                  disabled={isVoting}
-                  aria-pressed={currentVote === "not_helpful"}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium transition-colors cursor-pointer ${currentVote === "not_helpful"
-                      ? "border-rose-600 bg-rose-50 text-rose-700"
-                      : "border-neutral-200 hover:bg-neutral-100 text-neutral-700"
-                    }`}
-                >
-                  <ThumbsDown
-                    className={`w-3.5 h-3.5 ${currentVote === "not_helpful" ? "fill-current" : ""}`}
-                    aria-hidden="true"
-                  />
-                  <span>No ({notHelpfulCount})</span>
-                </button>
-              </div>
-            </div>
+              <button
+                type="button"
+                onClick={() => handleVoteClick("not_helpful")}
+                disabled={isVoting}
+                aria-pressed={currentVote === "not_helpful"}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium transition-colors cursor-pointer ${
+                  currentVote === "not_helpful"
+                    ? "border-rose-600 bg-rose-50 text-rose-700"
+                    : "border-neutral-200 hover:bg-neutral-100 text-neutral-700"
+                }`}
+              >
+                <ThumbsDown
+                  className={`w-3.5 h-3.5 ${currentVote === "not_helpful" ? "fill-current" : ""}`}
+                  aria-hidden="true"
+                />
+                <span>No ({notHelpfulCount})</span>
+              </button>
 
-            {onReport && (
-              <div>
-                {reportedDone ? (
-                  <span className="text-xs text-neutral-400">Reported</span>
+              {onReport && (
+                reportedDone ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-neutral-200 bg-neutral-50 text-xs font-medium text-neutral-400">
+                    <Flag className="w-3.5 h-3.5" aria-hidden="true" />
+                    <span>Reported</span>
+                  </span>
                 ) : (
                   <button
                     type="button"
-                    onClick={() => setReportOpen((prev) => !prev)}
-                    className="inline-flex items-center gap-1 text-xs text-neutral-400 hover:text-neutral-700 transition-colors cursor-pointer"
+                    onClick={() => {
+                      setReportError(null);
+                      setReportOpen(true);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-neutral-200 hover:bg-neutral-100 text-xs font-medium text-neutral-700 transition-colors cursor-pointer"
                   >
-                    <Flag className="w-3.5 h-3.5" aria-hidden="true" />
+                    <Flag className="w-3.5 h-3.5 text-neutral-500" aria-hidden="true" />
                     <span>Report</span>
                   </button>
-                )}
-              </div>
-            )}
+                )
+              )}
+            </div>
           </div>
+        </div>
+      </div>
 
-          {reportOpen && onReport && (
-            <div className="mt-2 rounded-lg border border-neutral-200 bg-neutral-50 p-3 flex flex-wrap items-center gap-2 text-xs">
-              <select
-                value={reportReason}
-                onChange={(e) => setReportReason(e.target.value)}
-                aria-label="Report reason"
-                className="rounded border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-800"
-              >
-                {REPORT_REASONS.map((r) => (
-                  <option key={r.value} value={r.value}>
-                    {r.label}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={handleReportSubmit}
-                disabled={reporting}
-                className="px-3 py-1 rounded bg-black text-white font-medium hover:bg-neutral-800 cursor-pointer disabled:opacity-50"
-              >
-                {reporting ? "Submitting..." : "Submit report"}
-              </button>
+      {/* Report Modal */}
+      {reportOpen && onReport && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={`report-review-title-${review.id}`}
+          onClick={() => setReportOpen(false)}
+        >
+          <div
+            className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-xl border border-neutral-200 animate-in fade-in zoom-in-95 duration-200"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-neutral-200 mb-4">
+              <div>
+                <h3
+                  id={`report-review-title-${review.id}`}
+                  className="text-lg font-bold text-neutral-900"
+                >
+                  Report Review
+                </h3>
+                <p className="text-xs text-neutral-500 mt-0.5">
+                  Help us understand what is wrong with this review.
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={() => setReportOpen(false)}
-                className="px-2 py-1 text-neutral-600 hover:text-neutral-900 cursor-pointer"
+                className="w-8 h-8 rounded-full hover:bg-neutral-100 flex items-center justify-center text-neutral-400 hover:text-neutral-700 transition-colors cursor-pointer shrink-0"
+                aria-label="Close"
               >
-                Cancel
+                <X className="w-5 h-5" />
               </button>
-              {reportError && (
-                <span className="w-full text-rose-600">{reportError}</span>
-              )}
             </div>
-          )}
+
+            <div className="space-y-4">
+              <div>
+                <label
+                  htmlFor={`report-reason-${review.id}`}
+                  className="block text-xs font-semibold text-neutral-700 mb-1.5"
+                >
+                  Reason for reporting
+                </label>
+                <select
+                  id={`report-reason-${review.id}`}
+                  value={reportReason}
+                  onChange={(e) => setReportReason(e.target.value)}
+                  className="w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-black cursor-pointer"
+                >
+                  {REPORT_REASONS.map((r) => (
+                    <option key={r.value} value={r.value}>
+                      {r.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {reportError && (
+                <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-700">
+                  {reportError}
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setReportOpen(false)}
+                  className="px-4 py-2 rounded-full border border-neutral-300 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 cursor-pointer transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleReportSubmit}
+                  disabled={reporting}
+                  className="px-5 py-2 rounded-full bg-black text-white text-xs font-semibold hover:bg-neutral-800 disabled:opacity-50 cursor-pointer transition-colors"
+                >
+                  {reporting ? "Submitting..." : "Submit Report"}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
       {verifiedInfoOpen && (
         <div
