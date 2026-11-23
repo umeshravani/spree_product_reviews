@@ -35,6 +35,7 @@ module Spree
       schema_include_offers
       schema_show_shipping
       schema_show_returns
+      hide_stars_on_empty
     ].freeze
 
     INTEGER_KEYS = %i[
@@ -103,6 +104,8 @@ module Spree
       ask_question_btn_bg
       ask_question_btn_text_color
       ask_question_btn_border_color
+      empty_reviews_text
+      schema_rating_display_style
     ].freeze
 
     ALL_KEYS = (BOOLEAN_KEYS + INTEGER_KEYS + DECIMAL_KEYS + STRING_KEYS).freeze
@@ -177,6 +180,9 @@ module Spree
       ask_question_btn_bg
       ask_question_btn_text_color
       ask_question_btn_border_color
+      empty_reviews_text
+      schema_rating_display_style
+      hide_stars_on_empty
     ].freeze
 
     ALIASES = {

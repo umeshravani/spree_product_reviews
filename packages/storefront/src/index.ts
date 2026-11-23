@@ -11,6 +11,10 @@ export {
   type AskQuestionModalProps,
 } from "./AskQuestionModal.js";
 export {
+  HelpCenter,
+  type HelpCenterProps,
+} from "./HelpCenter.js";
+export {
   ImageLightbox,
   type ImageLightboxProps,
   isVideoItem,

@@ -496,14 +496,13 @@ function CustomerQuestionsSection({ storeId }: { storeId: string }) {
                           <div className="flex items-center gap-3">
                             <Thumbnail
                               src={
-                                q.product?.image_url ||
-                                q.product?.thumbnail_url ||
+                                q.product_thumbnail_url ||
                                 q.product?.product_thumbnail_url ||
-                                q.product_thumbnail_url
+                                q.product?.image_url ||
+                                q.product?.thumbnail_url
                               }
                               alt={q.product?.name || q.product_name || 'Product'}
-                              size="sm"
-                              className="size-9 rounded-md shrink-0 border"
+                              size="md"
                             />
                             <div className="min-w-0">
                               <span className="font-semibold text-foreground line-clamp-2 leading-tight">

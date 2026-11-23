@@ -74,6 +74,8 @@ module SpreeProductReviews
     preference :verified_badge_color, :string, default: '#000000'
     preference :title_rating_format, :string, default: '({rating}) {count} reviews'
     preference :title_reviews_label, :string, default: 'reviews'
+    preference :hide_stars_on_empty, :boolean, default: false
+    preference :empty_reviews_text, :string, default: 'Be the First to Review'
 
     # Email notifications & Marketing
     preference :send_review_emails_to_customers, :boolean, default: true
@@ -117,6 +119,7 @@ module SpreeProductReviews
     preference :schema_price_valid_days, :integer, default: 30
     preference :schema_max_reviews_count, :integer, default: 10
     preference :schema_item_condition, :string, default: 'NewCondition'
+    preference :schema_rating_display_style, :string, default: 'single_star'
 
     # Legacy v1 (6.0.0) & preferred_* compatibility accessors
     alias_method :max_images_upload, :max_images_per_review

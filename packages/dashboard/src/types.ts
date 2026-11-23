@@ -181,6 +181,8 @@ export interface ReviewSettings {
   ask_question_btn_bg?: string
   ask_question_btn_text_color?: string
   ask_question_btn_border_color?: string
+  hide_stars_on_empty?: boolean
+  empty_reviews_text?: string
 }
 
 export interface QuestionOption {

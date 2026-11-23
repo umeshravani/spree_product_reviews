@@ -943,6 +943,39 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                       Show review count on product cards
                     </Label>
                   </div>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-3 border-t sm:col-span-2">
+                    <div className="flex items-center gap-4">
+                      <Switch
+                        id="hide-stars-on-empty"
+                        disabled={!canEdit}
+                        checked={draft.hide_stars_on_empty === true}
+                        onCheckedChange={(val) => updateField('hide_stars_on_empty', val)}
+                      />
+                      <div>
+                        <Label htmlFor="hide-stars-on-empty" className="text-xs font-medium cursor-pointer">
+                          Hide Stars on Empty Reviews
+                        </Label>
+                        <p className="text-[11px] text-muted-foreground">
+                          When a product has 0 reviews, hides stars and rating, showing only a prompt link.
+                        </p>
+                      </div>
+                    </div>
+                    {draft.hide_stars_on_empty && (
+                      <div className="flex items-center gap-2 sm:max-w-xs w-full">
+                        <Label htmlFor="empty-reviews-text" className="text-xs font-medium shrink-0">
+                          Empty Prompt:
+                        </Label>
+                        <Input
+                          id="empty-reviews-text"
+                          disabled={!canEdit}
+                          value={draft.empty_reviews_text || 'Be the First to Review'}
+                          placeholder="Be the First to Review"
+                          onChange={(e) => updateField('empty_reviews_text', e.target.value)}
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -953,9 +986,13 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                 <div className="flex flex-wrap items-center gap-8">
                   <div className="flex items-center gap-2 text-sm">
                     <span className="text-muted-foreground">Header:</span>
-                    {draft.title_rating_display_style === 'single_star' ? (
+                    {draft.hide_stars_on_empty ? (
+                      <span className="text-xs font-medium underline text-foreground">
+                        {draft.empty_reviews_text || 'Be the First to Review'}
+                      </span>
+                    ) : draft.title_rating_display_style === 'single_star' ? (
                       <div className="flex items-center gap-1 font-semibold text-foreground">
-                        <span>5.0</span>
+                        <span>5.0/5</span>
                         <svg
                           className="w-4 h-4 shrink-0"
                           style={{
@@ -966,23 +1003,18 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                         >
                           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                         </svg>
-                        <span className="text-xs text-muted-foreground font-normal">
-                          {(draft.title_rating_format || '({rating}) {count} reviews')
-                            .replace('{rating}', '5.0')
-                            .replace('{count}', '1')
-                            .replace('reviews', draft.title_reviews_label || 'reviews')}
+                        <span className="text-xs text-muted-foreground font-normal underline underline-offset-4">
+                          1+ review
                         </span>
                       </div>
                     ) : (
-                      <>
-                        <StarDisplay rating={5} size="md" color={draft.title_star_color || '#FBBF24'} />
-                        <span className="font-medium">
-                          {(draft.title_rating_format || '({rating}) {count} reviews')
-                            .replace('{rating}', '4.9')
-                            .replace('{count}', '120')
-                            .replace('reviews', draft.title_reviews_label || 'reviews')}
+                      <div className="flex items-center gap-1.5">
+                        <StarDisplay rating={5} size="sm" color={draft.title_star_color || '#000000'} />
+                        <span className="font-semibold text-sm">5.0/5</span>
+                        <span className="text-xs font-normal underline underline-offset-4 cursor-pointer">
+                          1+ review
                         </span>
-                      </>
+                      </div>
                     )}
                   </div>
                   <div className="flex items-center gap-2 text-sm">
@@ -1432,21 +1464,15 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
 
                   {/* Side-by-Side Flex: Left content + Right Centered Thumbnail */}
                   <div className="flex items-center justify-between gap-4 pt-1">
-                    <div className="min-w-0 flex-1 space-y-1">
+                    <div className="min-w-0 flex-1 space-y-1.5">
                       {/* Title link in Google blue */}
                       <div className="text-lg sm:text-[20px] text-[#1a0dab] dark:text-[#8ab4f8] font-normal leading-snug hover:underline cursor-pointer">
-                        Lorem Ipsum Dolor - Premium Handcrafted Wall Art
+                        Lorem Ipsum Dolor - Premium Store Collection
                       </div>
 
-                      {/* Meta Description */}
-                      <p className="text-xs sm:text-sm text-[#4d5156] dark:text-[#bdc1c6] leading-relaxed line-clamp-2 m-0">
-                        Jeweled with a 2.4cm thick aluminum frame; Pixel-perfect direct printing on Acrylic; Acrylic Chemical treatment before printing; Super HD print output 1200 ...{' '}
-                        <span className="text-[#1a0dab] dark:text-[#8ab4f8] hover:underline cursor-pointer">Read more</span>
-                      </p>
-
-                      {/* Rich Snippet Data Row below Meta Description */}
+                      {/* Rich Snippet Data Row below Title */}
                       {draft.schema_markup_enabled !== false && (
-                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs sm:text-sm text-[#4d5156] dark:text-[#bdc1c6] pt-1">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs sm:text-sm text-[#4d5156] dark:text-[#bdc1c6]">
                           {draft.schema_include_aggregate_rating !== false && (
                             <>
                               <div className="inline-flex items-center gap-1 font-medium text-[#202124] dark:text-[#e8eaed]">
@@ -1455,15 +1481,12 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                                     <span style={{ color: draft.title_star_color || '#FBBF24' }}>
                                       ★★★★★
                                     </span>
-                                    <span>4.8 (1.5K)</span>
+                                    <span>4.1 · 1.5K reviews</span>
                                   </>
                                 ) : (
                                   <>
-                                    <span>4.8</span>
-                                    <span style={{ color: draft.title_star_color || '#FBBF24' }}>
-                                      ★
-                                    </span>
-                                    <span>store rating (1.5K)</span>
+                                    <span style={{ color: draft.title_star_color || '#FBBF24' }}>★</span>
+                                    <span>4.1 · 1.5K reviews</span>
                                   </>
                                 )}
                               </div>
@@ -1473,7 +1496,7 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                           {draft.schema_include_offers !== false && (
                             <>
                               <span className="font-semibold text-[#202124] dark:text-[#e8eaed]">
-                                ₹2,900.00 to ₹7,599.00
+                                ₹2,900.00
                               </span>
                               <span>·</span>
                               <span className="inline-flex items-center gap-1 font-medium text-[#137333] dark:text-emerald-400">
@@ -1496,14 +1519,19 @@ export function ReviewSettingsPage({ storeId }: RouteProps) {
                           )}
                         </div>
                       )}
+
+                      {/* Meta Description */}
+                      <p className="text-xs sm:text-sm text-[#4d5156] dark:text-[#bdc1c6] leading-relaxed line-clamp-2 m-0">
+                        Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostru...
+                      </p>
                     </div>
 
                     {/* Centered Thumbnail Image on Right */}
-                    <div className="size-20 sm:size-24 rounded-2xl overflow-hidden bg-[#f8f9fa] dark:bg-[#303134] border border-[#dadce0] dark:border-[#3c4043] shrink-0 shadow-xs flex items-center justify-center self-center">
+                    <div className="size-24 sm:size-28 rounded-xl overflow-hidden bg-[#f8f9fa] dark:bg-[#303134] border border-[#dadce0] dark:border-[#3c4043] shrink-0 shadow-xs flex items-center justify-center self-center">
                       <div className="w-full h-full bg-linear-to-br from-amber-600/20 via-amber-700/30 to-neutral-200 dark:from-amber-700/40 dark:via-amber-900/60 dark:to-neutral-900 flex flex-col items-center justify-center p-2 text-center">
-                        <ImageIcon className="size-6 text-[#5f6368] dark:text-[#bdc1c6]/70 mb-1" />
+                        <ImageIcon className="size-7 text-[#5f6368] dark:text-[#bdc1c6]/70 mb-1" />
                         <span className="text-[10px] text-[#5f6368] dark:text-[#bdc1c6]/80 font-medium leading-none">
-                          Product Art
+                          Product Preview
                         </span>
                       </div>
                     </div>

@@ -153,12 +153,16 @@ export function ProductReviewsSection({
       }
       if (eligibilityRes.status === "fulfilled") {
         setEligibility(eligibilityRes.value);
-        if (eligibilityRes.value.settings) {
-          setSettings(eligibilityRes.value.settings);
-        }
+      }
+      const mergedSettings: Partial<ReviewStoreSettings> = {};
+      if (eligibilityRes.status === "fulfilled" && eligibilityRes.value.settings) {
+        Object.assign(mergedSettings, eligibilityRes.value.settings);
       }
       if (settingsRes.status === "fulfilled" && settingsRes.value) {
-        setSettings((prev) => ({ ...settingsRes.value, ...(prev || {}) }));
+        Object.assign(mergedSettings, settingsRes.value);
+      }
+      if (Object.keys(mergedSettings).length > 0) {
+        setSettings((prev) => ({ ...prev, ...mergedSettings } as ReviewStoreSettings));
       }
     } catch (err) {
       console.error("[ProductReviewsSection] Metadata error:", err);
@@ -213,6 +217,16 @@ export function ProductReviewsSection({
       fetchReviews();
     }
   }, [productId, fetchReviews]);
+
+  useEffect(() => {
+    const handleOpenQuestions = () => {
+      setActiveTab("questions");
+    };
+    window.addEventListener("spree:reviews:open-questions", handleOpenQuestions);
+    return () => {
+      window.removeEventListener("spree:reviews:open-questions", handleOpenQuestions);
+    };
+  }, []);
 
   const questionFilters = useMemo(
     () =>
@@ -318,7 +332,11 @@ export function ProductReviewsSection({
       />
 
       {/* Tabs: Reviews vs Questions & Answers */}
-      <div className="flex items-center gap-6 border-b border-neutral-200">
+      <div
+        id="reviews-tabs"
+        data-reviews-tabs
+        className="flex items-center gap-6 border-b border-neutral-200"
+      >
         <button
           type="button"
           onClick={() => setActiveTab("reviews")}
@@ -423,7 +441,7 @@ export function ProductReviewsSection({
               </div>
             ))}
 
-            <div className="relative inline-flex items-center sm:ml-auto">
+            <div className="relative inline-flex items-center ml-auto">
               <span className="pointer-events-none absolute left-3 flex items-center text-neutral-500">
                 <ArrowUpDown className="w-3.5 h-3.5" />
               </span>

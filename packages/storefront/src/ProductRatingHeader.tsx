@@ -86,13 +86,27 @@ export function ProductRatingHeader({
     }
   };
 
+  if (count === 0 && settings?.hide_stars_on_empty) {
+    return (
+      <div className={`mt-2.5 flex items-center ${className}`}>
+        <button
+          type="button"
+          onClick={handleClick}
+          className="text-sm font-medium leading-none text-gray-900 underline underline-offset-4 hover:text-black cursor-pointer"
+        >
+          {settings.empty_reviews_text?.trim() || "Be the First to Review"}
+        </button>
+      </div>
+    );
+  }
+
   const isSingleStar = settings?.title_rating_display_style === "single_star";
 
   if (isSingleStar) {
     return (
       <div className={`mt-2.5 flex items-center gap-1.5 ${className}`}>
         <span className="text-sm font-bold text-gray-900 leading-none tabular-nums">
-          {formattedAverage}
+          {formattedAverage}/5
         </span>
         <svg
           className="w-4 h-4 shrink-0"
@@ -105,9 +119,9 @@ export function ProductRatingHeader({
         <button
           type="button"
           onClick={handleClick}
-          className="text-sm font-medium leading-none text-gray-600 hover:text-gray-900 hover:underline cursor-pointer ml-0.5"
+          className="text-sm font-medium leading-none text-gray-600 hover:text-gray-900 underline underline-offset-4 cursor-pointer ml-0.5"
         >
-          {formattedCustomText || (count > 0 ? `${count} ${reviewsLabel}` : `0 ${reviewsLabel}`)}
+          {formattedCustomText || (count > 0 ? `${count}+ ${count === 1 ? "review" : "reviews"}` : `0 ${reviewsLabel}`)}
         </button>
       </div>
     );
@@ -124,21 +138,21 @@ export function ProductRatingHeader({
         <button
           type="button"
           onClick={handleClick}
-          className="text-sm font-medium leading-none text-gray-900 hover:underline cursor-pointer"
+          className="text-sm font-medium leading-none text-gray-900 underline underline-offset-4 cursor-pointer"
         >
           {formattedCustomText}
         </button>
       ) : (
         <>
-          <p className="text-sm font-medium leading-none text-gray-500">
-            ({formattedAverage})
-          </p>
+          <span className="text-sm font-bold leading-none text-gray-900 tabular-nums">
+            {formattedAverage}/5
+          </span>
           <button
             type="button"
             onClick={handleClick}
-            className="text-sm font-medium leading-none text-gray-900 hover:underline cursor-pointer"
+            className="text-sm font-medium leading-none text-gray-900 underline underline-offset-4 cursor-pointer"
           >
-            {count} {reviewsLabel}
+            {count > 0 ? `${count}+ ${count === 1 ? "review" : "reviews"}` : `0 ${reviewsLabel}`}
           </button>
         </>
       )}

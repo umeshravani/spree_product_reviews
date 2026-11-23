@@ -128,18 +128,22 @@ module Spree
             image_url = begin
               media = product.try(:primary_media) || product.try(:media)&.first || product.try(:images)&.first
               attachment = media&.try(:attachment) || media
-              if attachment&.respond_to?(:attached?) && attachment.attached?
-                if Rails.application.routes.url_helpers.respond_to?(:cdn_image_url)
+              if attachment.respond_to?(:attached?) ? attachment.attached? : attachment.present?
+                begin
                   Rails.application.routes.url_helpers.cdn_image_url(attachment)
-                elsif Rails.application.routes.url_helpers.respond_to?(:rails_blob_url)
-                  Rails.application.routes.url_helpers.rails_blob_url(attachment, only_path: true)
-                else
-                  attachment.url
+                rescue StandardError
+                  begin
+                    Rails.application.routes.url_helpers.rails_blob_path(attachment, only_path: true)
+                  rescue StandardError
+                    begin
+                      url_for(attachment)
+                    rescue StandardError
+                      attachment.try(:url)
+                    end
+                  end
                 end
-              elsif attachment&.respond_to?(:url)
+              elsif attachment.respond_to?(:url)
                 attachment.url
-              else
-                nil
               end
             rescue StandardError
               nil

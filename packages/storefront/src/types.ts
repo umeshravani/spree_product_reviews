@@ -200,6 +200,8 @@ export interface ReviewStoreSettings {
   schema_max_reviews_count?: number;
   schema_item_condition?: string;
   schema_rating_display_style?: 'stars_count' | 'single_star';
+  hide_stars_on_empty?: boolean;
+  empty_reviews_text?: string;
 }
 
 export interface ReviewEligibilityResponse {

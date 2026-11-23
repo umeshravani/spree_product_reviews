@@ -184,7 +184,7 @@ export function ReviewsSummary({
         />
 
         {/* Right: Stacked action buttons */}
-        <div className="shrink-0 flex flex-col gap-2.5 sm:gap-3 w-full md:w-auto items-stretch md:items-center justify-center min-w-[150px] sm:min-w-[170px]">
+        <div className="shrink-0 flex flex-col gap-2.5 sm:gap-3 w-full max-w-[280px] sm:max-w-[320px] mx-auto md:mx-0 md:w-auto items-stretch md:items-center justify-center min-w-[150px] sm:min-w-[170px]">
           {onWriteReviewClick && (
             <button
               type="button"
@@ -199,10 +199,12 @@ export function ReviewsSummary({
                     }
                   : undefined
               }
-              className={`inline-flex items-center justify-center rounded-full px-6 py-2.5 text-xs sm:text-sm font-semibold transition-all shadow-xs cursor-pointer whitespace-nowrap min-w-[150px] sm:min-w-[170px] ${
-                canWriteReview
-                  ? "bg-neutral-50/90 hover:bg-neutral-100 text-neutral-800 border border-neutral-200/90"
-                  : "bg-neutral-100 hover:bg-neutral-200 text-neutral-500 border border-neutral-300 cursor-not-allowed"
+              className={`inline-flex items-center justify-center rounded-full px-6 py-2.5 text-xs sm:text-sm font-semibold transition-all shadow-xs cursor-pointer whitespace-nowrap min-w-[150px] sm:min-w-[170px] border ${
+                !canWriteReview
+                  ? "bg-neutral-100 hover:bg-neutral-200 text-neutral-500 border-neutral-300 cursor-not-allowed"
+                  : writeReviewBtnBg || writeReviewBtnTextColor || writeReviewBtnBorderColor
+                    ? "hover:opacity-90"
+                    : "bg-neutral-50/90 hover:bg-neutral-100 text-neutral-800 border-neutral-200/90"
               }`}
             >
               Write a review
@@ -222,7 +224,11 @@ export function ReviewsSummary({
                     }
                   : undefined
               }
-              className="inline-flex items-center justify-center rounded-full px-6 py-2.5 text-xs sm:text-sm font-semibold transition-all shadow-xs cursor-pointer whitespace-nowrap min-w-[150px] sm:min-w-[170px] bg-black hover:bg-neutral-800 text-white border border-black"
+              className={`inline-flex items-center justify-center rounded-full px-6 py-2.5 text-xs sm:text-sm font-semibold transition-all shadow-xs cursor-pointer whitespace-nowrap min-w-[150px] sm:min-w-[170px] border ${
+                askQuestionBtnBg || askQuestionBtnTextColor || askQuestionBtnBorderColor
+                  ? "hover:opacity-90"
+                  : "bg-black hover:bg-neutral-800 text-white border-black"
+              }`}
             >
               Ask a Question
             </button>

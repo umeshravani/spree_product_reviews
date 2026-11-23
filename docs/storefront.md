@@ -243,3 +243,24 @@ import { ProductReviewsJsonLd } from "@umeshravani/spree-product-reviews-storefr
   reviews={reviewsSeo.reviews}
 />
 ```
+
+---
+
+### 5. Help Center Consultation & Inquiry Modal (`HelpCenter`)
+
+Render `<HelpCenter />` directly on your Product Details page. It provides quick access to expert consultation via WhatsApp direct chat or the built-in Contact Form, which closes the modal and automatically smooth-scrolls the customer to the Questions & Answers tab (`#reviews-tabs`):
+
+```tsx
+import { HelpCenter } from "@umeshravani/spree-product-reviews-storefront";
+
+<HelpCenter
+  title="Help Center?"
+  subtitle="Book an appointment with our design experts for customisation"
+  askButtonText="Ask a question"
+  whatsappUrl="https://wa.me/918976897691"
+  whatsappTitle="WhatsApp Chat"
+  whatsappSubtitle="Chat with an expert directly"
+  contactTitle="Contact Form"
+  contactSubtitle="Send us a detailed message"
+/>
+```
