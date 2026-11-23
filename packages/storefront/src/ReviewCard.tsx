@@ -224,22 +224,25 @@ export function ReviewCard({
               {review.media.map((item, idx) => {
                 if (!item.url) return null;
                 const video = isVideoItem(item);
+                const videoSrc = item.url.includes("#t=")
+                  ? item.url
+                  : `${item.url}#t=0.001`;
                 return (
                   <button
                     key={item.id ?? `${item.url}-${idx}`}
                     type="button"
                     onClick={() => onImageClick?.(review.media, idx)}
-                    className="relative w-20 h-20 flex-shrink-0 rounded-xl overflow-hidden border-2 transition-colors bg-gray-100 border-transparent hover:border-gray-300 focus:outline-none cursor-pointer"
+                    className="relative w-20 h-32 flex-shrink-0 rounded-xl overflow-hidden border-2 transition-colors bg-gray-100 border-transparent hover:border-gray-300 focus:outline-none cursor-pointer"
                     aria-label={`View ${video ? "video" : "photo"} attachment ${idx + 1}`}
                   >
                     {video ? (
                       <>
                         <video
-                          src={item.url}
+                          src={videoSrc}
                           preload="metadata"
                           muted
                           playsInline
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover pointer-events-none"
                         />
                         <span className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-colors">
                           <span className="w-7 h-7 rounded-full bg-white/90 text-black flex items-center justify-center shadow">
