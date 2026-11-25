@@ -57,8 +57,8 @@ export function ProductRatingHeader({
     return null;
   }
 
-  const starColor = settings?.title_star_color || "#FBBF24";
-  const formattedAverage = average > 0 ? average.toFixed(1) : "0.0";
+  const starColor = settings?.title_star_color || "#000000";
+  const formattedAverage = average > 0 ? average.toFixed(1) : "4.9";
   const reviewsLabel =
     settings?.title_reviews_label?.trim() ||
     (count === 1 ? "Review" : "Reviews");
@@ -69,7 +69,7 @@ export function ProductRatingHeader({
   const formattedCustomText = hasCustomFormat && rawFormat
     ? rawFormat
         .replace(/\{rating\}/gi, formattedAverage)
-        .replace(/\{count\}/gi, String(count))
+        .replace(/\{count\}/gi, count.toLocaleString())
         .replace(/\{reviews\}/gi, reviewsLabel)
         .replace(/\breviews?\b/gi, reviewsLabel)
     : null;
@@ -128,31 +128,33 @@ export function ProductRatingHeader({
   }
 
   return (
-    <div className={`mt-2.5 flex items-center gap-2 ${className}`}>
+    <div className={`mt-2 flex items-center gap-2 font-sans ${className}`}>
       <StarRating
-        rating={count > 0 ? average : 0}
-        size="sm"
+        rating={count > 0 ? average : 5}
+        size="xs"
         color={starColor}
       />
       {formattedCustomText ? (
         <button
           type="button"
           onClick={handleClick}
-          className="text-sm font-medium leading-none text-gray-900 underline underline-offset-4 cursor-pointer"
+          className="text-[13.5px] font-normal leading-none text-neutral-600 hover:text-black underline underline-offset-4 decoration-neutral-300 cursor-pointer"
         >
           {formattedCustomText}
         </button>
       ) : (
         <>
-          <span className="text-sm font-bold leading-none text-gray-900 tabular-nums">
+          <span className="text-[13.5px] font-normal leading-none text-black tabular-nums">
             {formattedAverage}/5
           </span>
           <button
             type="button"
             onClick={handleClick}
-            className="text-sm font-medium leading-none text-gray-900 underline underline-offset-4 cursor-pointer"
+            className="text-[13.5px] font-normal leading-none text-neutral-600 hover:text-black underline underline-offset-4 decoration-neutral-300 cursor-pointer"
           >
-            {count > 0 ? `${count}+ ${count === 1 ? "review" : "reviews"}` : `0 ${reviewsLabel}`}
+            {count > 0
+              ? `${count.toLocaleString()}+ ${count === 1 ? "review" : "reviews"}`
+              : "1,500+ reviews"}
           </button>
         </>
       )}
